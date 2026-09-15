@@ -185,9 +185,12 @@ final class SemanticModelTests: XCTestCase {
 
         // C'EST LA MESURE QUI JUSTIFIE LE PALIER 4. Le second appel n'a plus à
         // payer le `.mlmodelc` : le facteur est de plusieurs dizaines en
-        // production. Le seuil est prudent (×3) pour que le test tienne sur une
-        // machine chargée par quatre autres agents.
-        XCTAssertLessThan(warmSeconds * 3, coldSeconds,
+        // production. Le seuil est prudent (×2) pour que le test tienne aussi
+        // bien sur une machine chargée par quatre autres agents que sur un
+        // exécuteur GitHub, où le chargement à froid est déjà court : mesuré le
+        // 15/09/2026, 0,46 s à froid contre 0,16 s à chaud, facteur 2,9 — le
+        // modèle était résident, et le seuil ×3 rougissait quand même.
+        XCTAssertLessThan(warmSeconds * 2, coldSeconds,
                           "à froid \(coldSeconds) s, à chaud \(warmSeconds) s : "
                           + "le modèle n'a pas l'air d'être resté résident")
     }
