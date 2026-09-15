@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Droits utilisés UNIQUEMENT quand IDENTITY est vide, c'est-à-dire en signature
+  AD HOC : builds locaux et job d'empaquetage de la CI. Ce fichier ne part
+  JAMAIS dans une version distribuée — le Makefile choisit
+  Packaging/Fouine.entitlements (vide) dès qu'une identité Developer ID est
+  fournie. Palier 2.9, audit D13.
+
+  ─── POURQUOI IL EXISTE ──────────────────────────────────────────────────
+  Le runtime durci active la VALIDATION DE BIBLIOTHÈQUE : un processus ne peut
+  charger que des bibliothèques signées par la même équipe que lui, ou par
+  Apple. Deux signatures ad hoc n'ont AUCUN identifiant d'équipe, et dyld ne
+  traite pas « aucune équipe » et « aucune équipe » comme la même équipe. Depuis
+  que Sparkle.framework est embarqué, un build ad hoc échouait donc au
+  lancement, avant même la première ligne de code de l'app :
+
+      dyld: Library not loaded: @rpath/Sparkle.framework/Versions/B/Sparkle
+      Reason: … code signature … not valid for use in process:
+              mapping process and mapped file (non-platform)
+              have different Team IDs
+
+  Reproduit sur cette machine le 02/09/2026, avec un framework et une app tous
+  deux signés en ad hoc et en runtime durci (`codesign` avec « sign - » et
+  « options runtime » ; les tirets doubles sont interdits dans un commentaire
+  XML, d'où cette périphrase).
+
+  ─── POURQUOI CE N'EST PAS UNE RÉGRESSION EN PRODUCTION ──────────────────
+  Une version distribuée est signée Developer ID : l'app ET Sparkle.framework
+  portent alors le MÊME identifiant d'équipe, la validation de bibliothèque
+  passe d'elle-même, et ce droit n'est pas demandé — Packaging/Fouine.entitlements
+  reste vide, comme son commentaire l'explique. Le droit ci-dessous n'existe que
+  pour un binaire qui, par construction, ne s'ouvre que sur la machine qui l'a
+  bâti et ne peut pas être notarisé.
+
+  À vérifier avec `make release` : la sortie annonce quel fichier de droits a
+  été employé, et `verify` affiche « TeamIdentifier absent → signature AD HOC ».
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+</dict>
+</plist>

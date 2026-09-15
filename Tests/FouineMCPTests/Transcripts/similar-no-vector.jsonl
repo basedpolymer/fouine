@@ -1,0 +1,47 @@
+# similar-no-vector.jsonl — `fouine_similar_pages` quand la page source n'a pas
+# de vecteur, et quand elle en a un.
+#
+# Base jetable de six pages dont DEUX sont vectorisées (33,33 % de couverture) —
+# c'est-à-dire l'état ordinaire d'un corpus dont la campagne `fouine embed` n'a
+# pas fini, et donc le cas qu'il faut traiter proprement.
+#
+# `source_has_vector: false` est un SUCCÈS, pas une erreur. Le modèle apprend
+# que la question était bonne et que la donnée manque, ce qui est exactement ce
+# qu'il faut pour qu'il enchaîne sur `fouine_search` plutôt que d'abandonner.
+#
+# Aucun appel de cette séance ne charge CoreML : les voisins se lisent sur les
+# vecteurs déjà en base. C'est le contrat de l'outil, et `fouine_status` le
+# vérifie à la fin.
+
+> {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{}}}
+< {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"fouine","title":"Fouine","version":"1.0.0-test"},"instructions":"<any>"}}
+
+# 1. Page 3 du document 2 : elle existe, elle n'a pas de vecteur.
+#    `model_id` et `revision` sortent quand même — ils viennent de `vec_meta`,
+#    donc de la base, et ils disent quel espace d'embedding est en jeu.
+> {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"fouine_similar_pages","arguments":{"doc_id":2,"page":3}}}
+< {"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"neighbours":[],"vector_count":2,"coverage_pct":33.33,"model_id":"multilingual-e5-small","revision":1,"source_has_vector":false,"source_vector":null,"note":"page 3 of document 2 has no vector — it has not been embedded yet, or it is too short to carry one; pass encode_if_missing: true to encode it now (this loads the model)","truncated":false,"elapsed_ms":"<any>"}}}
+
+# 2. Page 1 du document 1 : elle a un vecteur, mais son seul voisin est dans le
+#    MÊME document, et `exclude_same_document` vaut `true` par défaut. La liste
+#    est donc vide alors que `source_has_vector` est vrai — deux faits
+#    différents, deux champs différents.
+> {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"fouine_similar_pages","arguments":{"doc_id":1,"page":1}}}
+< {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"neighbours":[],"vector_count":2,"coverage_pct":33.33,"model_id":"multilingual-e5-small","revision":1,"source_has_vector":true,"source_vector":"stored","note":"only 33.3 % of pages are vectorised — neighbours are drawn from that subset","truncated":false,"elapsed_ms":"<any>"}}}
+
+# 3. Le même appel sans l'exclusion : le voisin sort, avec UN cosinus PAR PAGE
+#    et un extrait. 0,857 parce que les vecteurs du fixture sont identiques et
+#    quantifiés comme le sont ceux du produit (voir `TempIndex`).
+> {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"fouine_similar_pages","arguments":{"doc_id":1,"page":1,"exclude_same_document":false,"preview_chars":80}}}
+< {"jsonrpc":"2.0","id":4,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"neighbours":[{"doc_id":1,"page":2,"path":"Users/essai/Livres/document-1.pdf","abs_path":null,"link":"fouine://open?doc=1&page=2","folder":"Livres","ext":"pdf","cosine":0.857,"preview":"electrolyse enthalpie page 2 du document 1","time_seconds":null}],"vector_count":2,"coverage_pct":33.33,"model_id":"multilingual-e5-small","revision":1,"source_has_vector":true,"source_vector":"stored","note":"only 33.3 % of pages are vectorised — neighbours are drawn from that subset","truncated":false,"elapsed_ms":"<any>"}}}
+
+# 4. Une page que le document n'a pas : isError, comme pour `fouine_read_page`.
+#    Les deux outils prennent la même clé, ils doivent refuser de la même façon.
+> {"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"fouine_similar_pages","arguments":{"doc_id":1,"page":99}}}
+< {"jsonrpc":"2.0","id":5,"result":{"content":[{"type":"text","text":"no page 99 in document 1 (it has 3 pages)"}],"isError":true}}
+
+# 5. LE CONTRAT DE L'OUTIL : après trois voisinages, l'index vectoriel est
+#    résident (2 lignes, chargé) et le modèle CoreML ne l'est TOUJOURS PAS.
+#    C'est ce qui garde `fouine_similar_pages` à ~10 ms et à ~16 Mio.
+> {"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"fouine_status","arguments":{"include_roots":false,"include_agent":false}}}
+< {"jsonrpc":"2.0","id":6,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"database":{"path":"<any>","bytes":"<any>","schema_version":9},"documents":2,"scope":null,"pages_indexed":6,"ocr_queue":0,"vectors":2,"vector_coverage_pct":33.33,"semantic":{"model_installed":false,"model_loaded":false,"model_id":null,"revision":null,"dimension":null},"disk_budget":{"bytes":"<any>","budget_bytes":2500000000,"bytes_at_full_vectors":"<any>","ratio_now":0,"ratio_at_full_vectors":0,"pages_at_budget":"<any>","level":"ok"},"meaning_background":{"enabled":true,"budget_minutes":10,"last_batch":null,"pages_left":4},"write_lock":{"held":false,"role":null,"pid":null,"since":null},"agent":{"queried":false},"read_only":true,"index_freshness":{"vector_index_loaded_at":"<any>","vector_index_count":2}}}}

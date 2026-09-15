@@ -1,0 +1,57 @@
+# search-lexical.jsonl — `fouine_search` sans modèle sémantique, contre la base
+# jetable de deux documents et six pages.
+#
+# `elapsed_ms` porte `"<any>"` : c'est une durée. TOUT LE RESTE est figé, et en
+# particulier les champs sémantiques à `null` — un modèle qui lit
+# `semantic_stats: null` sait que le canal vectoriel n'a pas répondu, là où un
+# champ ABSENT ne lui apprend rien.
+
+> {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{}}}
+< {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"fouine","title":"Fouine","version":"1.0.0-test"},"instructions":"<any>"}}
+
+# 1. La première page de résultats. `bm25` vaut 0 ici et ce n'est pas un bogue :
+#    le terme est sur les six pages de l'index jetable, donc son IDF est nul.
+#    `abs_path` est NUL parce que le volume "TEST-VOL" n'est pas monté — c'est
+#    exactement l'état d'un disque externe débranché, et les hits sortent quand
+#    même.
+> {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"fouine_search","arguments":{"query":"electrolyse","limit":2}}}
+< {"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"hits":[{"doc_id":1,"page":1,"path":"Users/essai/Livres/document-1.pdf","abs_path":null,"link":"fouine://open?doc=1&page=1","folder":"Livres","ext":"pdf","snippet":"«electrolyse» enthalpie page 1 du document 1","bm25":0,"source":"native","engine":"none","fuzzy_distance":0,"semantic_only":false,"why":{"kind":"exact","terms_found":["electrolyse"]},"embedded_image":null,"relevance_pct":100,"slide":null,"time_seconds":null},{"doc_id":1,"page":2,"path":"Users/essai/Livres/document-1.pdf","abs_path":null,"link":"fouine://open?doc=1&page=2","folder":"Livres","ext":"pdf","snippet":"«electrolyse» enthalpie page 2 du document 1","bm25":0,"source":"native","engine":"none","fuzzy_distance":0,"semantic_only":false,"why":{"kind":"exact","terms_found":["electrolyse"]},"embedded_image":null,"relevance_pct":100,"slide":null,"time_seconds":null}],"total_pages":6,"total_docs":2,"totals_approximate":false,"mode_used":"lexical","semantic_available":false,"semantic_coverage_pct":0,"semantic_stats":null,"semantic_rank_scale":null,"note":"semantic model not installed — lexical only (`fouine model download` installs it)","name_matches":[],"fuzzy_fallback":false,"quorum":false,"hybrid_disarmed":null,"has_more":true,"next_cursor":"eyJmIjoiYjBhYmIyNWIxOTU5NGZiYWI2YzI5ZWVkIiwibyI6MiwidiI6MX0","elapsed_ms":"<any>","documents":{},"facets":null,"fuzzy_expanded":false,"semantic_scope":{"filtered":false,"pages":6,"vectorised":0}}}}
+
+# 2. La page suivante, par le curseur rendu ci-dessus. Le décalage est DANS le
+#    jeton ; les autres arguments doivent être identiques, et l'empreinte le
+#    vérifie.
+> {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"fouine_search","arguments":{"query":"electrolyse","limit":2,"cursor":"eyJmIjoiYjBhYmIyNWIxOTU5NGZiYWI2YzI5ZWVkIiwibyI6MiwidiI6MX0"}}}
+< {"jsonrpc":"2.0","id":3,"result":{"content":[{"text":"<any>","type":"text"}],"structuredContent":{"documents":{},"elapsed_ms":"<any>","facets":null,"fuzzy_expanded":false,"fuzzy_fallback":false,"has_more":true,"hits":[{"abs_path":null,"bm25":0,"doc_id":1,"embedded_image":null,"engine":"none","ext":"pdf","folder":"Livres","fuzzy_distance":0,"link":"fouine://open?doc=1&page=3","page":3,"path":"Users/essai/Livres/document-1.pdf","relevance_pct":100,"semantic_only":false,"slide":null,"snippet":"«electrolyse» enthalpie page 3 du document 1","source":"native","time_seconds":null,"why":{"kind":"exact","terms_found":["electrolyse"]}},{"abs_path":null,"bm25":0,"doc_id":2,"embedded_image":null,"engine":"none","ext":"pdf","folder":"Livres","fuzzy_distance":0,"link":"fouine://open?doc=2&page=1","page":1,"path":"Users/essai/Livres/document-2.pdf","relevance_pct":100,"semantic_only":false,"slide":null,"snippet":"«electrolyse» enthalpie page 1 du document 2","source":"native","time_seconds":null,"why":{"kind":"exact","terms_found":["electrolyse"]}}],"hybrid_disarmed":null,"mode_used":"lexical","name_matches":[],"next_cursor":"eyJmIjoiYjBhYmIyNWIxOTU5NGZiYWI2YzI5ZWVkIiwibyI6NCwidiI6MX0","note":"semantic model not installed — lexical only (`fouine model download` installs it)","quorum":false,"semantic_available":false,"semantic_coverage_pct":0,"semantic_rank_scale":null,"semantic_scope":{"filtered":false,"pages":6,"vectorised":0},"semantic_stats":null,"total_docs":2,"total_pages":6,"totals_approximate":false}}}
+
+# 3. `mode: "lexical"` DEMANDÉ : pas de `note`. Il n'y a rien à expliquer — le
+#    client a eu ce qu'il voulait. Un filtre qui ne correspond à aucune racine
+#    rend zéro hit, pas une erreur.
+> {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"fouine_search","arguments":{"query":"electrolyse","mode":"lexical","folder":"Cours"}}}
+< {"jsonrpc":"2.0","id":4,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"hits":[],"total_pages":0,"total_docs":0,"totals_approximate":false,"mode_used":"lexical","semantic_available":false,"semantic_coverage_pct":0,"semantic_stats":null,"semantic_rank_scale":null,"note":null,"name_matches":[],"fuzzy_fallback":false,"quorum":false,"hybrid_disarmed":null,"has_more":false,"next_cursor":null,"elapsed_ms":"<any>","documents":{},"facets":null,"fuzzy_expanded":false,"semantic_scope":{"filtered":false,"pages":6,"vectorised":0}}}}
+
+# 4. `doc_ids` — « rechercher dans les résultats ». Les totaux suivent le
+#    filtre : 3 pages dans 1 document, pas 6 dans 2.
+> {"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"fouine_search","arguments":{"query":"electrolyse","doc_ids":[2],"limit":1}}}
+< {"jsonrpc":"2.0","id":5,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"hits":[{"doc_id":2,"page":1,"path":"Users/essai/Livres/document-2.pdf","abs_path":null,"link":"fouine://open?doc=2&page=1","folder":"Livres","ext":"pdf","snippet":"«electrolyse» enthalpie page 1 du document 2","bm25":0,"source":"native","engine":"none","fuzzy_distance":0,"semantic_only":false,"why":{"kind":"exact","terms_found":["electrolyse"]},"embedded_image":null,"relevance_pct":100,"slide":null,"time_seconds":null}],"total_pages":3,"total_docs":1,"totals_approximate":false,"mode_used":"lexical","semantic_available":false,"semantic_coverage_pct":0,"semantic_stats":null,"semantic_rank_scale":null,"note":"semantic model not installed — lexical only (`fouine model download` installs it)","name_matches":[],"fuzzy_fallback":false,"quorum":false,"hybrid_disarmed":null,"has_more":true,"next_cursor":"eyJmIjoiOTk4ZmE5ZTcxOWQ1MDVlNWUxZGNmZGFjIiwibyI6MSwidiI6MX0","elapsed_ms":"<any>","documents":{},"facets":null,"fuzzy_expanded":false,"semantic_scope":{"filtered":false,"pages":6,"vectorised":0}}}}
+
+# 5. Une requête que l'analyseur refuse est une erreur d'OUTIL (`isError`), avec
+#    le message ANGLAIS de `QueryError` — le même que la CLI, qui sort en 64.
+#    L'argument est une chaîne valide : c'est son CONTENU que le modèle doit
+#    réécrire, et un `isError` porte la phrase là où il la lit (audit A1m-07).
+> {"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"fouine_search","arguments":{"query":"-electrolyse"}}}
+< {"jsonrpc":"2.0","id":6,"result":{"content":[{"type":"text","text":"<any>"}],"isError":true}}
+
+# 5 bis. `AND`, `OR`, `NOT` en majuscules : les mots-clés de FTS5. Ils vidaient
+#    le SQL de la requête interne et sortaient en 3 côté CLI (A1m-07).
+> {"jsonrpc":"2.0","id":16,"method":"tools/call","params":{"name":"fouine_search","arguments":{"query":"electrolyse OR enthalpie"}}}
+< {"jsonrpc":"2.0","id":16,"result":{"content":[{"type":"text","text":"<any>"}],"isError":true}}
+
+# 6. Un jeton qui n'est pas un curseur de ce serveur.
+> {"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"fouine_search","arguments":{"query":"electrolyse","cursor":"pas-un-curseur"}}}
+< {"jsonrpc":"2.0","id":7,"error":{"code":-32602,"message":"Invalid params: cursor is not a cursor produced by this server","data":{"reason":"cursor is not a cursor produced by this server"}}}
+
+# 7. LE CAS QUI COMPTE : un curseur VALIDE, mais produit par une AUTRE requête.
+#    Sans ce refus, le client obtiendrait la page 2 d'une recherche appliquée
+#    aux résultats d'une autre — des trous et des doublons, sans un mot.
+> {"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"fouine_search","arguments":{"query":"enthalpie","limit":2,"cursor":"eyJmIjoiMGExZjEzY2Q5NTc1YmFlNWQ2YzliZjcwIiwibyI6MiwidiI6MX0"}}}
+< {"jsonrpc":"2.0","id":8,"error":{"code":-32602,"message":"Invalid params: cursor does not match these arguments","data":{"reason":"cursor does not match these arguments"}}}

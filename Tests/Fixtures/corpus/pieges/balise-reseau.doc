@@ -1,0 +1,10 @@
+<html><head><title>Compte rendu</title>
+<link rel="stylesheet" href="http://127.0.0.1:9/BALISE_CSS">
+<link rel="stylesheet" href="https://127.0.0.1:9/BALISE_CSS_TLS">
+</head><body>
+<p>Compte rendu de reunion. Ce fichier porte l'extension .doc mais son
+contenu est du HTML : c'est exactement le piege de l'audit A1-01.</p>
+<img src="http://127.0.0.1:9/BALISE_IMG">
+<img src="https://127.0.0.1:9/BALISE_IMG_TLS">
+<img src="http://10.255.255.1/BALISE_TROU_NOIR">
+</body></html>

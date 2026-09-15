@@ -1,0 +1,31 @@
+# read-page-offset.jsonl — lire une page longue en tranches.
+#
+# Base jetable dont chaque page fait 606 caractères (voir `TempIndex(pageChars:)`).
+# C'est le mécanisme que D2 § 5.5 n° 2 résume par « dix lignes de SQL » :
+# `substr(body, 1 + offset, max_chars)`, plus `length(body)` pour `total_chars`.
+#
+# LE CONTRAT EST ICI : `next_offset` est le décalage à repasser tel quel, et
+# `truncated` dit s'il en reste. Un client qui boucle sur `next_offset` jusqu'à
+# `null` lit la page entière, sans jamais avoir à compter lui-même.
+
+> {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{}}}
+< {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"fouine","title":"Fouine","version":"1.0.0-test"},"instructions":"<any>"}}
+
+# 1. Première tranche : 200 caractères sur 606.
+> {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"fouine_read_page","arguments":{"doc_id":1,"page":2,"max_chars":200}}}
+< {"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"doc_id":1,"page":2,"page_label":null,"slide":null,"embedded_image":null,"time_seconds":null,"path":"Users/essai/Livres/document-1.pdf","abs_path":null,"link":"fouine://open?doc=1&page=2","folder":"Livres","ext":"pdf","page_count":3,"text":"<any>","chars":200,"total_chars":606,"truncated":true,"next_offset":200,"source":"native","engine":"none","ocr_confidence":null,"note":null}}}
+
+# 2. La suite, par le `next_offset` rendu.
+> {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"fouine_read_page","arguments":{"doc_id":1,"page":2,"max_chars":200,"offset":200}}}
+< {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"doc_id":1,"page":2,"page_label":null,"slide":null,"embedded_image":null,"time_seconds":null,"path":"Users/essai/Livres/document-1.pdf","abs_path":null,"link":"fouine://open?doc=1&page=2","folder":"Livres","ext":"pdf","page_count":3,"text":"<any>","chars":200,"total_chars":606,"truncated":true,"next_offset":400,"source":"native","engine":"none","ocr_confidence":null,"note":null}}}
+
+# 3. La DERNIÈRE tranche : elle est plus courte que `max_chars`, et c'est ainsi
+#    que la boucle s'arrête — `truncated: false`, `next_offset: null`.
+> {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"fouine_read_page","arguments":{"doc_id":1,"page":2,"max_chars":400,"offset":600}}}
+< {"jsonrpc":"2.0","id":4,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"doc_id":1,"page":2,"page_label":null,"slide":null,"embedded_image":null,"time_seconds":null,"path":"Users/essai/Livres/document-1.pdf","abs_path":null,"link":"fouine://open?doc=1&page=2","folder":"Livres","ext":"pdf","page_count":3,"text":"age 2.","chars":6,"total_chars":606,"truncated":false,"next_offset":null,"source":"native","engine":"none","ocr_confidence":null,"note":null}}}
+
+# 4. Un décalage AU-DELÀ de la fin ne casse rien : `substr` rend une chaîne
+#    vide, et la réponse le dit sans prétendre à une page absente. Un modèle qui
+#    a mal compté ne perd pas sa session.
+> {"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"fouine_read_page","arguments":{"doc_id":1,"page":2,"max_chars":200,"offset":100000}}}
+< {"jsonrpc":"2.0","id":5,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"doc_id":1,"page":2,"page_label":null,"slide":null,"embedded_image":null,"time_seconds":null,"path":"Users/essai/Livres/document-1.pdf","abs_path":null,"link":"fouine://open?doc=1&page=2","folder":"Livres","ext":"pdf","page_count":3,"text":"","chars":0,"total_chars":606,"truncated":false,"next_offset":null,"source":"native","engine":"none","ocr_confidence":null,"note":null}}}

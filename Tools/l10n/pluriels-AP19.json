@@ -1,0 +1,21 @@
+{
+  "%lld skipped": {
+    "en": ["%lld skipped", "%lld skipped"],
+    "fr": ["%lld ignoré", "%lld ignorés"]
+  },
+  "about %lld h left": {
+    "en": ["about %lld h left", "about %lld h left"],
+    "fr": ["environ %lld h restante", "environ %lld h restantes"]
+  },
+  "about %lld min left": {
+    "en": ["about %lld min left", "about %lld min left"],
+    "fr": ["environ %lld min restante", "environ %lld min restantes"]
+  },
+  "in the %lld document(s) found": {
+    "en": ["in the %lld document found", "in the %lld documents found"],
+    "fr": ["dans %lld document trouvé", "dans les %lld documents trouvés"]
+  },
+  "%@ p. loaded": "%@ p. pour l'instant",
+  "%@ of %@ pages are ready": "Pages prêtes : %1$@ sur %2$@",
+  "Not supported here, therefore ignored: %@": "Non pris en charge ici, donc ignorés : %@"
+}

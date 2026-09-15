@@ -1,0 +1,86 @@
+# Jeu de requêtes du banc de classement (Tools/ranking/README.md).
+# Une requête par ligne. Une ligne « # nom » ouvre une CATÉGORIE : elle vaut
+# pour toutes les requêtes qui suivent, jusqu'à la catégorie suivante.
+# La catégorie « absurde » est lue par evaluate.py : c'est elle qui mesure le
+# bruit du canal sémantique.
+
+# terme simple
+chimie
+spinodale
+polymere
+enthalpie
+
+# expression exacte
+"energie libre"
+"gaz parfait"
+"transition de phase"
+
+# exclusion
+energie -chimie
+enthalpie -biologie
+
+# coquille OCR
+thermodynamlque
+conversron
+chromatograpbie
+
+# terme rare
+azeotrope
+regioselectivite
+diastereoisomere
+
+# anglais
+phase transition
+nucleophilic substitution
+free energy
+
+# mixte
+entropy entropie
+spectroscopy spectroscopie infrarouge
+
+# prefixe
+thermodyn*
+spectro*
+catalys*
+chromato*
+polymer*
+calorim*
+
+# proximite
+pres:5 energie libre
+pres:10 energie libre gibbs
+
+# filtre
+ext:pdf energie
+dossier:M2SU energie
+ext:pdf "loi de Hess"
+
+# multi-terme
+energie libre
+reaction exothermique
+chromatographie liquide haute performance
+mecanisme de substitution nucleophile bimoleculaire
+spectroscopie infrarouge des groupes carbonyles
+
+# paraphrase semantique
+comment mesurer la chaleur degagee par une reaction
+pourquoi une reaction se produit-elle spontanement
+la vitesse a laquelle une transformation se produit
+comment separer deux liquides qui bouillent presque a la meme temperature
+comment purifier un solide obtenu apres une synthese
+pourquoi certains solides se dissolvent dans l eau et pas dans l huile
+comment determiner la structure d une molecule inconnue
+quel est le lien entre la temperature et la vitesse d une reaction
+
+# absurde
+# Une requête absurde ne doit toucher AUCUN document du corpus, ni par les mots
+# ni par le sens (RK-13) : « recette de tarte aux pommes » et « des tomates sur
+# un balcon » touchaient la notice d'un four à micro-ondes et ses recettes
+# (doc_id 1), et la catégorie mesurait alors autre chose que du bruit. Les deux
+# requêtes ci-dessous ont été vérifiées à zéro page exacte sur la base de
+# production le 10/09/2026 ; toute nouvelle requête absurde doit l'être aussi.
+les horaires des marees a Saint-Malo
+xyzzy plugh frotz quux
+le championnat de football de troisieme division
+les regles du jeu de petanque
+les horaires du train de nuit pour venise

@@ -1,0 +1,10 @@
+Note de laboratoire du 14 mars.
+
+L'isotherme d'adsorption de Langmuir decrit le recouvrement d'une
+surface a temperature constante. Le terme temoin de ce fichier est
+« isotherme », et il n'apparait nulle part ailleurs dans le corpus.
+
+Suivent quelques lignes de remplissage pour que la page depasse
+largement le seuil de cent caracteres natifs du §6.1 et ne soit donc
+jamais mise en file d'OCR : masse, volume molaire, pression partielle,
+tension superficielle, angle de contact.

@@ -1,0 +1,32 @@
+# list-documents.jsonl — le listage ordinaire et sa pagination.
+#
+# `state` vaut `"indexed"` par DÉFAUT, et c'est ce qui rend l'outil utile sans
+# argument : « qu'est-ce que Fouine sait ? » est la question qu'un agent pose en
+# premier, et elle ne porte pas sur les échecs.
+
+> {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{}}}
+< {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"fouine","title":"Fouine","version":"1.0.0-test"},"instructions":"<any>"}}
+
+# 1. Sans argument : les documents indexés, par chemin.
+> {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"fouine_list_documents","arguments":{}}}
+< {"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"documents":[{"doc_id":1,"path":"Users/essai/Livres/document-1.pdf","abs_path":null,"link":"fouine://open?doc=1","folder":"Livres","ext":"pdf","pages":3,"modified":"2023-11-14T22:13:20Z","state":"indexed","error":null,"doc_date":null,"ocr_pages":0,"vectorised_pages":0},{"doc_id":2,"path":"Users/essai/Livres/document-2.pdf","abs_path":null,"link":"fouine://open?doc=2","folder":"Livres","ext":"pdf","pages":3,"modified":"2023-11-14T22:13:20Z","state":"indexed","error":null,"doc_date":null,"ocr_pages":0,"vectorised_pages":0}],"total":2,"has_more":false,"next_cursor":null,"elapsed_ms":"<any>"}}}
+
+# 2. `limit: 1` : `total` reste le nombre RÉEL de documents filtrés, et
+#    `has_more` est OBSERVÉ (une ligne de plus demandée à SQLite), pas déduit de
+#    `offset + limit < total` — les deux requêtes peuvent être séparées par une
+#    écriture concurrente.
+> {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"fouine_list_documents","arguments":{"limit":1}}}
+< {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"documents":[{"doc_id":1,"path":"Users/essai/Livres/document-1.pdf","abs_path":null,"link":"fouine://open?doc=1","folder":"Livres","ext":"pdf","pages":3,"modified":"2023-11-14T22:13:20Z","state":"indexed","error":null,"doc_date":null,"ocr_pages":0,"vectorised_pages":0}],"total":2,"has_more":true,"next_cursor":"eyJmIjoiZThiYzdjOGJmZWViOTc0NDFmM2M0MzFlIiwibyI6MSwidiI6MX0","elapsed_ms":"<any>"}}}
+
+# 3. La page suivante par le curseur : le second document, et plus rien après.
+> {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"fouine_list_documents","arguments":{"limit":1,"cursor":"eyJmIjoiZThiYzdjOGJmZWViOTc0NDFmM2M0MzFlIiwibyI6MSwidiI6MX0"}}}
+< {"jsonrpc":"2.0","id":4,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"documents":[{"doc_id":2,"path":"Users/essai/Livres/document-2.pdf","abs_path":null,"link":"fouine://open?doc=2","folder":"Livres","ext":"pdf","pages":3,"modified":"2023-11-14T22:13:20Z","state":"indexed","error":null,"doc_date":null,"ocr_pages":0,"vectorised_pages":0}],"total":2,"has_more":false,"next_cursor":null,"elapsed_ms":"<any>"}}}
+
+# 4. `path_contains` cherche un fragment LITTÉRAL : les jokers `%` et `_` de
+#    LIKE sont échappés, sans quoi `path_contains: "%"` rendrait tout l'index.
+> {"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"fouine_list_documents","arguments":{"path_contains":"document-2"}}}
+< {"jsonrpc":"2.0","id":5,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"documents":[{"doc_id":2,"path":"Users/essai/Livres/document-2.pdf","abs_path":null,"link":"fouine://open?doc=2","folder":"Livres","ext":"pdf","pages":3,"modified":"2023-11-14T22:13:20Z","state":"indexed","error":null,"doc_date":null,"ocr_pages":0,"vectorised_pages":0}],"total":1,"has_more":false,"next_cursor":null,"elapsed_ms":"<any>"}}}
+
+# 5. Un `%` seul ne rend donc RIEN : aucun chemin ne contient ce caractère.
+> {"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"fouine_list_documents","arguments":{"path_contains":"%"}}}
+< {"jsonrpc":"2.0","id":6,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"documents":[],"total":0,"has_more":false,"next_cursor":null,"elapsed_ms":"<any>"}}}

@@ -1,0 +1,42 @@
+# bad-json.jsonl — ce qui arrive quand la ligne n'est pas ce qu'on croit.
+#
+# Le point commun de tous ces cas : le serveur RÉPOND et RESTE DEBOUT. Un
+# serveur stdio qui meurt sur une ligne mal formée oblige le client à le
+# relancer, et l'utilisateur ne lit qu'un « le serveur s'est déconnecté ».
+
+# 1. Pas du JSON du tout. Le message est FIXE et anglais : le
+#    `localizedDescription` de Foundation est traduit, et une transcription
+#    cesserait d'être reproductible d'une machine à l'autre.
+> ceci n'est pas du JSON
+< {"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"Parse error","data":{"reason":"line is not valid JSON"}}}
+
+# 2. Du JSON valide, mais pas un objet.
+> "une chaîne toute seule"
+< {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid Request","data":{"reason":"a JSON-RPC message must be an object"}}}
+
+# 3. Un tableau au premier niveau : le « batch » de JSON-RPC 2.0. MCP ne l'a
+#    jamais employé et la révision 2026-07-28 est sans état : on refuse au lieu
+#    d'en implémenter la moitié.
+> [{"jsonrpc":"2.0","id":1,"method":"ping"}]
+< {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid Request","data":{"reason":"JSON-RPC batches are not supported — send one request per line"}}}
+
+# 4. Pas de méthode. L'`id` est récupéré AVANT toute autre validation, pour que
+#    la réponse d'erreur reste corrélable côté client.
+> {"jsonrpc":"2.0","id":7}
+< {"jsonrpc":"2.0","id":7,"error":{"code":-32600,"message":"Invalid Request","data":{"reason":"missing method"}}}
+
+# 5. Une autre version de JSON-RPC.
+> {"jsonrpc":"1.0","id":8,"method":"ping"}
+< {"jsonrpc":"2.0","id":8,"error":{"code":-32600,"message":"Invalid Request","data":{"reason":"jsonrpc must be \"2.0\", got \"1.0\""}}}
+
+# 6. `params` qui n'est pas un objet.
+> {"jsonrpc":"2.0","id":9,"method":"ping","params":42}
+< {"jsonrpc":"2.0","id":9,"error":{"code":-32602,"message":"Invalid params: params must be an object","data":{"reason":"params must be an object"}}}
+
+# 7. Un `id` booléen n'est pas un identifiant JSON-RPC.
+> {"jsonrpc":"2.0","id":true,"method":"ping"}
+< {"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid Request","data":{"reason":"id must be a string, an integer or null"}}}
+
+# 8. Après tout cela, la session répond encore. C'est le vrai contrôle.
+> {"jsonrpc":"2.0","id":10,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{}}}
+< {"jsonrpc":"2.0","id":10,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"fouine","title":"Fouine","version":"1.0.0-test"},"instructions":"<any>"}}

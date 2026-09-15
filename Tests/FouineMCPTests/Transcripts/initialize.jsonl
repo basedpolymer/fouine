@@ -1,0 +1,45 @@
+# initialize.jsonl — la poignée de main LEGACY, celle que Claude Code et Claude
+# Desktop parlent aujourd'hui à un serveur stdio local.
+#
+# `> ` = envoyé · `< ` = attendu · une requête sans `< ` derrière elle est une
+# notification, à laquelle le serveur ne doit RIEN répondre. `"<any>"` accepte
+# n'importe quelle valeur à cette place (voir JSONMatch).
+
+# 1. La révision demandée est connue : elle est RENVOYÉE telle quelle.
+> {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"transcript","version":"1"}}}
+< {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"fouine","title":"Fouine","version":"1.0.0-test"},"instructions":"<any>"}}
+
+# 2. La notification de fin de poignée de main : ignorée, en silence.
+> {"jsonrpc":"2.0","method":"notifications/initialized"}
+
+# 3. Une révision qu'on ne connaît pas retombe sur 2025-06-18 — jamais une
+#    erreur : refuser la poignée de main rendrait le serveur invisible.
+> {"jsonrpc":"2.0","id":2,"method":"initialize","params":{"protocolVersion":"1999-01-01","capabilities":{}}}
+< {"jsonrpc":"2.0","id":2,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"fouine","title":"Fouine","version":"1.0.0-test"},"instructions":"<any>"}}
+
+# 4. Les trois autres révisions legacy sont servies telles quelles.
+> {"jsonrpc":"2.0","id":3,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{}}}
+< {"jsonrpc":"2.0","id":3,"result":{"protocolVersion":"2025-11-25","capabilities":{"tools":{}},"serverInfo":{"name":"fouine","title":"Fouine","version":"1.0.0-test"},"instructions":"<any>"}}
+
+# 5. `ping` existe en legacy (certains clients s'en servent de battement).
+> {"jsonrpc":"2.0","id":"quatre","method":"ping"}
+< {"jsonrpc":"2.0","id":"quatre","result":{}}
+
+# 6. L'`id` est rendu TEL QU'IL EST ARRIVÉ : une chaîne reste une chaîne.
+> {"jsonrpc":"2.0","id":"5","method":"ping"}
+< {"jsonrpc":"2.0","id":"5","result":{}}
+
+# 7. `resources/list` et `prompts/list` répondent par des listes vides.
+> {"jsonrpc":"2.0","id":6,"method":"resources/list"}
+< {"jsonrpc":"2.0","id":6,"result":{"resources":[]}}
+
+> {"jsonrpc":"2.0","id":"6bis","method":"prompts/list"}
+< {"jsonrpc":"2.0","id":"6bis","result":{"prompts":[]}}
+
+# 8. Une méthode inconnue : -32601, et la session continue.
+> {"jsonrpc":"2.0","id":7,"method":"unknown/method"}
+< {"jsonrpc":"2.0","id":7,"error":{"code":-32601,"message":"Method not found","data":{"method":"unknown/method"}}}
+
+# 9. `notifications/cancelled` : ignorée. Ce serveur traite une requête à la
+#    fois et n'a rien à annuler.
+> {"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":7}}

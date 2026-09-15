@@ -1,0 +1,432 @@
+# CI Fouine — tout ce qui peut tourner sans le corpus personnel du mainteneur.
+#
+# Comptes réels, MESURÉS LOCALEMENT LE 03/09/2026 sur `i2/vitesse-tests`
+# (lot I2) — Xcode 26 / Swift 6.2.3, modèle e5 présent, `FOUINE_TEST_DB` et
+# `Tests/Fixtures/paths.json` absents (worktree neuf) :
+#
+#     FouineCoreTests    170 (1 sauté)   FouineOCRTests      53 (3 sautés)
+#     FouineCrawlTests    55             FouineIndexTests    33
+#     FouineExtractTests 130 (2 sautés)  FouineAppTests     123
+#     FouineEmbedTests    76             FouineAgentTests    41
+#                                        FouineMCPTests      67
+#
+#     Les six sauts : CINQ exigent le corpus PERSONNEL du mainteneur
+#     (`FOUINE_P8_DB`, la fixture T6 par `Tests/Fixtures/paths.json`, le livre
+#     T1 par `paths.json` ET l'opt-in `FOUINE_TEST_DB` — tous gitignorés) ; le
+#     sixième n'existe QUE pour djvulibre absent, et se saute donc quand il
+#     est là.
+#                                                          ─────
+#     make ci-unit       1 769 exécutés, 3 sautés (6 sans paths.json), 0 échec, ~1 min (--parallel)
+#     make ci-integration 118 exécutés, 31 sautés (le régime « corpus complet », FOUINE_TEST_DB), 0 échec, 115 s
+#                                                            952
+#
+# `make ci-unit` tourne en `swift test --parallel` depuis le lot I2 : un
+# processus xctest par test, 53 s contre 129 s en série le même matin. Son
+# journal ne porte ni durée par test ni ligne « Executed N tests, with M
+# skipped » ; les comptes ci-dessus viennent d'une passe en série
+# (`swift test --filter <Suite>`), la seule qui les imprime. Trois passes de
+# suite avant adoption, détail dans docs/tests.md § « Aller vite ».
+#
+# « Exécutés » compte un test sauté : XCTSkip est un test qui a tourné et s'est
+# retiré. Les deux cibles partitionnent la même population.
+#
+# SUR LE RUNNER, il y a DES SAUTS EN PLUS, et rien d'autre ne change : il n'a
+# NI le modèle e5 (asset 404 tant que le dépôt est privé, audit B1-21) NI
+# `FOUINE_TEST_DB`. Le delta, relevé sur le run de référence 33684209828 (vert,
+# `main` en `e9abc28`, 02/09/2026, macos-15, Xcode 26.3, djvulibre installé) :
+#
+#     make ci-unit         + 10 sautés   (les tests qui exigent le modèle e5,
+#                                        dont les 3 de SemanticModelTests)
+#     make ci-integration   + 5 sautés   (HybridCorpusTests, même cause)
+#
+# Un run ANTÉRIEUR, le 33648319798 (494 / 11 en unitaire, 49 / 27 en
+# intégration), est celui qui a montré que djvulibre manquait à l'image : les
+# compteurs étaient IDENTIQUES avant et après la « réparation » djvu, parce que
+# les témoins se contournaient en silence. D'où `brew install djvulibre`
+# ci-dessous, et le `XCTSkipIf` compté de `VersionedCorpusTests`.
+#
+# Le contrôle : `swift test` n'imprime qu'une ligne agrégée par cible, jamais un
+# compte par suite — `make ci-unit` est un SEUL `swift test` à dix `--filter`.
+# Pour un compte par suite, lancez la suite seule :
+# `swift test --filter FouineCoreTests`.
+#
+# Le palier 3.3 en a ajouté 61 (corpus versionné, recette portable, migration
+# de schéma, agent, hybride) et — c'est le vrai correctif de l'audit D12/M23 —
+# a mis en CI trois suites qui n'y tournaient PAS : FouineAppTests (elle
+# existait pourtant depuis le palier 2), FouineIndexTests et la toute nouvelle
+# FouineAgentTests. « Zéro test sur FouineApp/, FouineAgent/, fouine/ » était
+# donc vrai deux fois : les tests manquaient, et ceux qui existaient ne
+# tournaient nulle part.
+#
+# Ce qui tourne ici, et pourquoi c'est sûr :
+#   · les NEUF suites unitaires (`make ci-unit`), FouineMCPTests comprise
+#     (palier 4 : transcriptions « golden » du serveur MCP, hygiène de stdout,
+#     lecture seule prouvée sur base jetable), y compris FouineEmbedTests —
+#     jamais lancée nulle part avant le palier 0. Ses trois tests qui exigent le
+#     modèle e5 se sautent d'eux-mêmes par XCTSkip quand il est absent. Tout ce
+#     qui tire au sort dans cette suite le fait désormais sur SEMENCE FIXE : un
+#     test rouge une fois sur dix n'est pas un test.
+#   · IntegrationTests (`make ci-integration`), redevenue sûre au palier 0
+#     (audit S3). Elle ne désigne plus la base de PRODUCTION : par défaut chaque
+#     test fabrique sa propre base et sa propre racine jetables. Depuis le
+#     palier 3.3, la recette essentielle tourne sur le CORPUS VERSIONNÉ
+#     (Tests/Fixtures/corpus/, 216 Kio dans le dépôt) : indexation, six formes
+#     de requête, OCR, statut, diagnostic, fichiers déplacés, piège S1. Il ne
+#     reste sur `FOUINE_TEST_DB` que ce qui n'a de sens que sur le corpus réel —
+#     performance et bancs OCR.
+#   · le MODÈLE SÉMANTIQUE, en meilleur effort (voir plus bas).
+#   · un job d'empaquetage : `make ci-bundle` bâtit le bundle de contrôle sous
+#     .build/bundle/Fouine.app (jamais à la racine), passe les plists
+#     au linter, affiche les tranches (`lipo`) et signe le tout AD HOC pour
+#     prouver que la structure du bundle est signable ; `make ci-bundle-i18n`
+#     contrôle les .strings quand ils existent. Aucun secret, aucune identité —
+#     la vraie signature est le travail de release.yml.
+#
+# Ce qui ne tourne toujours PAS :
+#   · la performance (§8.2) et les bancs OCR : ils exigent `FOUINE_TEST_DB`
+#     pointant sur une copie de la base du mainteneur, absente d'un runner et
+#     gitignorée. Les tests concernés se sautent proprement par XCTSkip. Ils ne
+#     tourneront jamais ici, et c'est délibéré : un seuil de performance mesuré
+#     sur un runner partagé ne voudrait rien dire.
+#   · rien n'écrit jamais dans une base de production : les suites lancées ici
+#     fabriquent chacune leur base temporaire (TempStore, InMemoryStore,
+#     makeIndexedScratch, makeIndexedCorpus).
+#
+# LES COMMANDES VIVENT DANS LE MAKEFILE, pas ici. `make ci-unit`,
+# `make ci-integration`, `make ci-bundle`, `make ci-bundle-i18n` : un
+# contributeur qui veut savoir pourquoi la CI est rouge lance les mêmes cibles
+# chez lui, et la liste des suites n'existe pas en double.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Le jeton de ce workflow ne sert qu'à cloner (audit B1-20a) : sans ce bloc il
+# hérite du réglage du dépôt, historiquement « Read and write ».
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # TOOLCHAIN FIGÉE (audit B1-20c). `ls -d /Applications/Xcode*.app | tail -1`
+  # prenait « le plus récent de l'image » : pour un projet Swift 6 à concurrence
+  # stricte, c'est du rouge non reproductible le jour où GitHub ajoute une
+  # version. 26.3 est ce que le dernier run vert (33648319798) a réellement
+  # employé — Apple Swift 6.2.4 (swiftlang-6.2.4.1.4), soit Xcode 26.3 (17C529)
+  # sur l'image macos-15. Bouger cette valeur est un geste délibéré ; l'étape de
+  # sélection ÉCHOUE si la version manque, au lieu de retomber en silence.
+  XCODE_VERSION: "26.3"
+
+  # Empreinte de l'archive du modèle e5 (Sources/FouineEmbed/ModelDownload.swift).
+  # Elle sert de CLÉ DE CACHE : changer de modèle change la clé, donc le cache,
+  # sans qu'on ait à penser à l'invalider.
+  MODEL_SHA256: fa8ead627aa5cab20575e049d082bc4492cfc839414a3dba808fed549afa1484
+
+jobs:
+  test:
+    name: build + tests autonomes (macOS)
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      # Version FIGÉE (env XCODE_VERSION en tête de fichier), et non « la plus
+      # récente de l'image » : un binaire de test doit être bâti par un
+      # compilateur choisi.
+      - name: Sélectionner Xcode ${{ env.XCODE_VERSION }}
+        run: |
+          set -eu
+          app="/Applications/Xcode_${XCODE_VERSION}.app"
+          if [ ! -d "$app" ]; then
+            echo "::error::$app absent de l'image du runner — voir XCODE_VERSION en tête de ce fichier"
+            ls -d /Applications/Xcode*.app 2>/dev/null || true
+            exit 1
+          fi
+          sudo xcode-select -s "$app"
+          swift --version
+
+      # djvulibre (`djvused`, `djvutxt`) est la SEULE dépendance externe non
+      # fournie par macOS, et elle est facultative pour le produit — mais pas
+      # pour les tests : sans elle, `DjvuExtractor.tool()` rend nil, les témoins
+      # de contenu de `Tests/Fixtures/corpus/notice.djvu` se retirent et la
+      # couverture djvu disparaît sans que le compteur bouge (audit B1-08).
+      # Le job `bundle` ne l'installe PAS : il n'exécute aucun test, il bâtit et
+      # signe ad hoc un .app — 40 s de Homebrew pour rien.
+      - name: Installer djvulibre
+        run: brew install djvulibre
+
+      - name: Cache SwiftPM
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            .build
+            ~/Library/Caches/org.swift.swiftpm
+          key: swiftpm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: swiftpm-${{ runner.os }}-
+
+      # Le garde-fou de version tourne AVANT le build : il coûte une seconde et
+      # attrape l'oubli le plus courant (VERSION bougé, Version.swift non).
+      - name: make check-version
+        run: make check-version
+
+      # Une seconde, et elle a de la valeur : neuf documents publics ont porté
+      # des balises d'appel d'outil (`</content>`, `</invoke>`) jusqu'au
+      # 02/09/2026, README compris — la dernière chose que voyait un visiteur de
+      # la page GitHub (audit B1-30).
+      - name: make check-docs
+        run: make check-docs
+
+      # Une seconde encore, et le constat qu'elle attrape est bloquant : les
+      # notes que Sparkle affiche à chaque utilisateur sont extraites de la
+      # SEULE section `## [VERSION]` du CHANGELOG, et une section « Non
+      # publié » concurrente les amputerait sans que rien n'échoue
+      # (audit B1-04, D2-06). Ici, sans exiger la date — la version en
+      # préparation porte « — à venir » ; c'est `release.yml` qui l'exige.
+      - name: make check-changelog
+        run: make check-changelog
+
+      # Une seconde : les scripts du banc de classement (Tools/ranking) n'ont
+      # pas de cible Swift, et leurs conventions de calcul se prouvent sur un
+      # pool fabriqué.
+      - name: make check-ranking
+        run: make check-ranking
+
+      - name: swift build
+        run: swift build
+
+      # La release est bâtie ICI, avant les tests, et non plus juste avant
+      # l'intégration : `fouine model download` en a besoin, et les deux étapes
+      # suivantes s'appuient dessus.
+      - name: make release-cli
+        run: make release-cli
+
+      # ═══ LE MODÈLE SÉMANTIQUE, EN MEILLEUR EFFORT ════════════════════════
+      #
+      # 220 Mo, hors du dépôt, installés par `fouine model download` depuis un
+      # asset de release. Trois règles :
+      #
+      #   1. LE CACHE D'ABORD. La clé est l'empreinte SHA-256 attendue : un
+      #      nouveau modèle = une nouvelle clé, aucune invalidation manuelle.
+      #   2. FOUINE_MODEL_DIR SOUS LE WORKSPACE, toujours. Rien n'est jamais
+      #      écrit dans ~/Library/Application Support du runner.
+      #   3. UN ASSET ABSENT N'EST PAS UN ÉCHEC. L'asset n'est pas encore publié
+      #      au moment où ce fichier est écrit : le téléchargement rend 404,
+      #      l'étape AVERTIT (::warning:: + résumé de job) et la suite se saute
+      #      d'elle-même — les tests concernés portent déjà leur XCTSkip. Un job
+      #      rouge pour un asset que le mainteneur n'a pas encore publié
+      #      apprendrait aux relecteurs à ignorer le rouge.
+      - name: Restaurer le modèle sémantique (cache)
+        id: model-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .fouine-model
+          key: e5-model-${{ env.MODEL_SHA256 }}
+
+      - name: Installer le modèle sémantique (facultatif)
+        env:
+          FOUINE_MODEL_DIR: ${{ github.workspace }}/.fouine-model
+        run: |
+          set -u
+          echo "FOUINE_MODEL_DIR=$FOUINE_MODEL_DIR" >> "$GITHUB_ENV"
+
+          if [ "${{ steps.model-cache.outputs.cache-hit }}" = "true" ]; then
+            echo "modèle restauré du cache"
+          else
+            # `set +e` : l'échec est un cas NORMAL tant que l'asset n'est pas
+            # publié. On veut le journal complet, pas un job interrompu.
+            set +e
+            .build/release/fouine model download
+            status=$?
+            set -e
+            if [ "$status" -ne 0 ]; then
+              echo "::warning title=Modèle sémantique indisponible::\
+          \`fouine model download\` a échoué (code $status) — l'asset \
+          e5-small-v1 n'est probablement pas encore publié. FouineEmbedTests \
+          et HybridCorpusTests se sautent proprement ; ce n'est PAS un échec."
+              {
+                echo "### Modèle sémantique : absent"
+                echo ""
+                echo "\`fouine model download\` a rendu **$status**."
+                echo "L'asset \`e5-small-v1\` n'est probablement pas publié."
+                echo ""
+                echo "Conséquence : 3 tests de \`FouineEmbedTests\` et les 5 de"
+                echo "\`HybridCorpusTests\` se **sautent** (XCTSkip). Tout le"
+                echo "reste tourne."
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+
+          # Dans tous les cas, on DIT ce qu'on a : `model status --json` est le
+          # portier des tests, autant le lire ici aussi. Une base jetable est
+          # imposée — `fouine` ne doit jamais retomber sur celle par défaut.
+          FOUINE_DB="$RUNNER_TEMP/model-probe.db" \
+            .build/release/fouine model status --json || true
+
+      - name: make ci-unit
+        run: make ci-unit
+
+      - name: make ci-integration
+        run: make ci-integration
+
+  bundle:
+    name: empaquetage + signature ad hoc (macOS)
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0     # `git rev-list --count HEAD` = CFBundleVersion
+
+      - name: Sélectionner Xcode ${{ env.XCODE_VERSION }}
+        run: |
+          set -eu
+          app="/Applications/Xcode_${XCODE_VERSION}.app"
+          if [ ! -d "$app" ]; then
+            echo "::error::$app absent de l'image du runner — voir XCODE_VERSION en tête de ce fichier"
+            ls -d /Applications/Xcode*.app 2>/dev/null || true
+            exit 1
+          fi
+          sudo xcode-select -s "$app"
+          swift --version
+
+      - name: Cache SwiftPM
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            .build
+            ~/Library/Caches/org.swift.swiftpm
+          key: swiftpm-bundle-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: swiftpm-bundle-${{ runner.os }}-
+
+      # Une seule tranche, celle du runner : le but de ce job est de valider la
+      # STRUCTURE du bundle et l'estampillage des versions, pas de refaire le
+      # binaire universel — que release.yml, lui, bâtit et contrôle au `lipo`.
+      # Sur un runner Apple Silicon, `ARCHS=arm64` évite 6 minutes de
+      # cross-compilation x86_64 à chaque pull request.
+      - name: Déterminer l'architecture du runner
+        run: echo "ARCHS=$(uname -m)" >> "$GITHUB_ENV"
+
+      - name: make ci-bundle
+        run: |
+          make release-cli
+          make ci-bundle ARCHS="$ARCHS"
+
+      # Contrôle des .strings de Contents/Resources/{en,fr}.lproj. DEUX
+      # diagnostics, UN SEUL verdict : `plutil -lint` échoue immédiatement (un
+      # .strings cassé est ignoré en silence par macOS et l'interface repart en
+      # anglais) ; une divergence de clés entre en.lproj et fr.lproj s'affiche
+      # comme un avertissement lisible, puis fait échouer la cible en fin de
+      # parcours — de sorte qu'un run rouge liste TOUTES les divergences, pas la
+      # première. Contre-expertise D2 du 02/09/2026, mesurée sur un bundle
+      # divergent : `make ci-bundle-i18n` rend `Error 1`. C'est le commentaire
+      # « à durcir » du Makefile qui mentait, pas la cible (audit B1-27,
+      # INFIRMÉ). Le linter de catalogues (Tools/l10n/lint.py) reste l'autorité
+      # sur la complétude des traductions.
+      - name: make ci-bundle-i18n
+        run: make ci-bundle-i18n
+
+      # Le bundle de CONTRÔLE sort sous .build/bundle/ depuis le lot J2 : il ne
+      # doit JAMAIS s'appeler Fouine.app à la racine, où LaunchServices le
+      # verrait comme une deuxième installation (voir le Makefile, CI_APP).
+      - name: Contrôles d'empaquetage
+        run: |
+          set -eu
+          echo "== Info.plist du bundle"
+          plutil -p .build/bundle/Fouine.app/Contents/Info.plist
+          echo "== l'app se signe et se vérifie (ad hoc)"
+          codesign --verify --deep --strict --verbose=2 .build/bundle/Fouine.app
+          echo "== aucune Fouine.app à la racine du dépôt"
+          test ! -e Fouine.app
+
+  # ═══ TESTS EN RELEASE, SUR `main` SEULEMENT ═══════════════════════════════
+  #
+  # POURQUOI CE JOB EXISTE. Les tests unitaires tournent en DEBUG ; la recette
+  # d'intégration pilote un binaire RELEASE mais ne recompile pas les suites
+  # elles-mêmes. Or la différence entre les deux modes n'est pas cosmétique :
+  # `-O` active l'élimination de code mort et l'inline agressif, et surtout
+  # `assert`/`precondition` ne se comportent pas pareil — un `assert` disparaît
+  # en release, un `precondition` reste. `Schema.ftsRowID` s'appuie précisément
+  # sur un `precondition` (audit S2) pour refuser un rowid qui appartiendrait au
+  # document suivant : il doit rester actif là où le produit tourne vraiment.
+  #
+  # POURQUOI SUR `main` SEULEMENT, ET CE QUE ÇA A ATTRAPÉ. Mesuré le 02/09/2026
+  # sur la machine du mainteneur (Xcode 26.2, x86_64) :
+  #
+  #     make ci-unit                       61 s  (dont 53 s d'exécution, .build chaud)
+  #     make ci-unit CONFIG="-c release"  250 s  (dont 50 s d'exécution)
+  #
+  # Soit ~190 s de compilation supplémentaire pour 3 s d'exécution gagnées : le
+  # solde est franchement négatif, et il serait payé À CHAQUE pull request.
+  # HONNÊTETÉ : cette passe n'a attrapé AUCUNE régression le jour où elle a été
+  # ajoutée — les mêmes comptes qu'en debug, à zéro échec. Le « 465 tests »
+  # qui figurait ici était périmé de deux paliers (audit B1-38) : la cible
+  # exécute EXACTEMENT la population de `make ci-unit`, dont l'en-tête de ce
+  # fichier donne le compte du jour, et non un nombre recopié ici. Elle
+  # n'est donc pas là pour ce qu'elle a trouvé mais pour ce qu'elle SEULE peut
+  # trouver : `assert` disparaît en release, `precondition` reste, et
+  # `Schema.ftsRowID` s'appuie précisément sur un `precondition` (audit S2) pour
+  # refuser un rowid qui appartiendrait au document suivant. Le jour où
+  # quelqu'un le dégradera en `assert`, seule cette passe le dira. Sur `main`,
+  # ce filet coûte quatre minutes que personne n'attend ; sur une PR, il
+  # coûterait quatre minutes que tout le monde attend.
+  #
+  # Si ce job reste muet six mois de plus, le supprimer est un choix défendable.
+  release-tests:
+    name: suites unitaires en release (main)
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Sélectionner Xcode ${{ env.XCODE_VERSION }}
+        run: |
+          set -eu
+          app="/Applications/Xcode_${XCODE_VERSION}.app"
+          if [ ! -d "$app" ]; then
+            echo "::error::$app absent de l'image du runner — voir XCODE_VERSION en tête de ce fichier"
+            ls -d /Applications/Xcode*.app 2>/dev/null || true
+            exit 1
+          fi
+          sudo xcode-select -s "$app"
+          swift --version
+
+      # djvulibre (`djvused`, `djvutxt`) est la SEULE dépendance externe non
+      # fournie par macOS, et elle est facultative pour le produit — mais pas
+      # pour les tests : sans elle, `DjvuExtractor.tool()` rend nil, les témoins
+      # de contenu de `Tests/Fixtures/corpus/notice.djvu` se retirent et la
+      # couverture djvu disparaît sans que le compteur bouge (audit B1-08).
+      # Le job `bundle` ne l'installe PAS : il n'exécute aucun test, il bâtit et
+      # signe ad hoc un .app — 40 s de Homebrew pour rien.
+      - name: Installer djvulibre
+        run: brew install djvulibre
+
+      - name: Cache SwiftPM
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            .build
+            ~/Library/Caches/org.swift.swiftpm
+          key: swiftpm-release-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: swiftpm-release-${{ runner.os }}-
+
+      # PAS de `swift build -c release` ici : ce serait une redite. `swift test
+      # -c release` bâtit déjà FouineApp et FouineAgent (dépendances de leurs
+      # cibles de test), et le seul produit qui manquerait — l'exécutable
+      # `fouine` — est bâti en release par `make release-cli` dans le job
+      # `test`, et de nouveau par `make ci-bundle` dans le job `bundle`. Trois
+      # fois la même compilation ne prouve rien de plus que deux.
+
+      # Les MÊMES dix suites, la même liste, une seule variable de différence.
+      - name: make ci-unit CONFIG="-c release"
+        run: make ci-unit CONFIG="-c release"

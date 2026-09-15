@@ -1,0 +1,491 @@
+# Release Fouine — DMG universel signé Developer ID, notarisé et agrafé
+# (audit D13, D20 ; palier 1.5).
+#
+# Déclenchement : un tag `vX.Y.Z`. Le tag est la SOURCE du numéro publié et il
+# doit être égal, au « v » près, au fichier VERSION — sinon le job s'arrête
+# avant de bâtir quoi que ce soit (voir RELEASING.md, point 1).
+#
+# ─── DEUX MODES, SELON LES SECRETS DISPONIBLES ──────────────────────────────
+#
+#   · SECRETS PRÉSENTS (le dépôt d'origine) : trousseau temporaire, signature
+#     Developer ID, notarisation par clé App Store Connect, agrafage, DMG signé
+#     et notarisé, publication en BROUILLON de release GitHub.
+#   · SECRETS ABSENTS (un fork, une pull request) : tout se bâtit en signature
+#     AD HOC, la notarisation et la publication sont SAUTÉES, et le résumé du
+#     job le dit en toutes lettres. On préfère un artefact ad hoc annoncé comme
+#     tel à un job rouge que personne ne peut faire passer.
+#
+# Les secrets ne sont pas lisibles depuis un fork : `secrets.X != ''` suffit à
+# distinguer les deux cas. Ils sont copiés une fois dans `env` du job pour que
+# les conditions `if:` puissent les tester (les conditions n'accèdent pas à
+# `secrets` de façon fiable dans tous les contextes).
+#
+# ─── SECRETS À CRÉER (Settings ▸ Secrets and variables ▸ Actions) ───────────
+#
+#   MACOS_CERTIFICATE_P12        certificat « Developer ID Application »
+#                                exporté du trousseau en .p12, encodé base64
+#                                (`base64 -i cert.p12 | pbcopy`)
+#   MACOS_CERTIFICATE_PASSWORD   mot de passe donné à l'export du .p12
+#   APPSTORE_KEY_ID              identifiant de la clé API App Store Connect
+#   APPSTORE_ISSUER_ID           UUID de l'émetteur (appstoreconnect.com)
+#   APPSTORE_PRIVATE_KEY         fichier AuthKey_<KEYID>.p8, encodé base64
+#   SPARKLE_PRIVATE_KEY          clé privée EdDSA de Sparkle, telle que
+#                                `generate_keys -x cle.txt` l'écrit (une ligne
+#                                base64). Palier 2.9, audit D13. Facultative :
+#                                sans elle l'appcast n'est pas fabriqué et le
+#                                job le dit, la release part sans mise à jour
+#                                automatique.
+#
+# Aucun de ces éléments ne doit exister dans le dépôt : .gitignore rejette
+# déjà *.p12 et *.p8.
+#
+# La clé Sparkle est le secret le PLUS durable des cinq : un certificat expire
+# et se remplace, mais changer de clé EdDSA coupe la mise à jour de toutes les
+# copies déjà installées, qui portent l'ancienne clé publique dans leur
+# Info.plist. Elle se sauvegarde comme un mot de passe maître (RELEASING.md).
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write        # nécessaire pour créer la release (brouillon)
+  checks: read           # lire les check-runs du SHA tagué (garde-fou ci-dessous)
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # La MÊME version que ci.yml : ce qui a été testé et ce qui est notarisé
+  # doivent sortir du même compilateur. Voir l'en-tête de ci.yml.
+  XCODE_VERSION: "26.3"
+
+jobs:
+  # ═══ GARDE-FOU : un run CI VERT sur le SHA publié ══════════════════════════
+  #
+  # Jusqu'au 02/09/2026 ce workflow enchaînait checkout, `make release`,
+  # notarisation, DMG et publication SANS LANCER UN SEUL TEST (audit B1-09) :
+  # poser un tag sur un `main` rouge suffisait à signer, notariser et publier.
+  # On ne rejoue pas la CI ici — neuf minutes de tests dans le job qui détient
+  # le certificat Developer ID sont neuf minutes de trop, et la contre-expertise
+  # D2 tranche pour cette variante : on EXIGE que la CI soit déjà passée au vert
+  # sur ce commit précis.
+  #
+  # POURQUOI UN JOB À PART, et non une étape du job de release : l'attente peut
+  # durer une demi-heure quand le tag est poussé dans la foulée du commit, et
+  # cette demi-heure ne doit pas être prise sur les 90 minutes du job qui bâtit,
+  # signe et notarise. Ce job-ci a son propre budget, sur un runner Linux.
+  #
+  # `workflow_dispatch` suit la même règle : GITHUB_SHA est alors la tête de la
+  # branche choisie, et c'est bien elle qu'on veut voir verte.
+  #
+  # NOTE : `ci.yml` ne se déclenche PAS sur un tag (`push: branches: [main]` et
+  # `pull_request`). Les check-runs lus ici sont donc ceux du push sur `main`
+  # qui a produit ce commit — exactement ce qu'on veut vérifier. Un tag posé sur
+  # un commit qui n'est jamais passé par `main` n'a aucun check-run : le job
+  # attend, puis échoue en le disant.
+  ci-green:
+    name: run CI vert exigé sur le SHA publié
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Exiger « CI » verte sur ${{ github.sha }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          # Les deux jobs de ci.yml qui doivent être verts. `release-tests` n'en
+          # fait pas partie : il ne tourne que sur `main` et son absence ne dit
+          # rien de la qualité du commit.
+          # Un nom par ligne. Le tableau est construit par `printf` et non écrit
+          # sur plusieurs lignes entre apostrophes : dans un bloc YAML `run: |`,
+          # une ligne ramenée à la colonne 0 refermerait le bloc.
+          NAMES=$(printf '%s\n' \
+            'build + tests autonomes (macOS)' \
+            'empaquetage + signature ad hoc (macOS)')
+          NL=$(printf '\nx'); NL=${NL%x}   # un saut de ligne, pour l'IFS
+          deadline=$(( $(date +%s) + 1800 ))   # 30 min, borne dure
+          while :; do
+            gh api \
+              "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?filter=latest&per_page=100" \
+              --jq '.check_runs[] | [.name, .status, (.conclusion // "none")] | join("|")' \
+              > check-runs.txt || {
+                echo "::error title=Check-runs illisibles::l'API GitHub n'a pas rendu les check-runs de $GITHUB_SHA. Commit inconnu du dépôt, ou permission checks:read absente du workflow."
+                exit 1
+              }
+            echo "— check-runs de $GITHUB_SHA :"
+            sed 's/^/    /' check-runs.txt || true
+            verdict=ok
+            IFS="$NL"
+            for name in $NAMES; do
+              line=$(grep -F -- "$name|" check-runs.txt | head -1 || true)
+              if [ -z "$line" ]; then
+                echo "  ABSENT   : $name"
+                if [ "$verdict" = ok ]; then verdict=attente; fi
+              else
+                status=$(printf '%s' "$line" | cut -d'|' -f2)
+                concl=$(printf '%s' "$line" | cut -d'|' -f3)
+                if [ "$status" != completed ]; then
+                  echo "  EN COURS : $name ($status)"
+                  if [ "$verdict" = ok ]; then verdict=attente; fi
+                elif [ "$concl" != success ]; then
+                  echo "  ROUGE    : $name ($concl)"
+                  verdict=rouge
+                else
+                  echo "  VERT     : $name"
+                fi
+              fi
+            done
+            unset IFS
+            if [ "$verdict" = ok ]; then
+              echo "CI verte sur $GITHUB_SHA — la release peut être bâtie."
+              exit 0
+            fi
+            if [ "$verdict" = rouge ]; then
+              echo "::error title=CI rouge sur le commit publié::un job de « CI » a échoué sur $GITHUB_SHA. Corrigez, poussez, attendez le vert, PUIS déplacez le tag : aucun DMG ne sera signé ni notarisé sur ce commit."
+              exit 1
+            fi
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "::error title=CI absente ou trop lente::les deux jobs de « CI » ne sont pas verts sur $GITHUB_SHA après 30 minutes d'attente. Soit la CI tourne encore (relancez ce workflow), soit ce commit n'est jamais passé par main et n'a donc aucun check-run."
+              exit 1
+            fi
+            echo "  … pas encore concluant, nouvelle lecture dans 30 s"
+            sleep 30
+          done
+
+  release:
+    name: DMG universel signé et notarisé (macOS)
+    # Rien n'est bâti tant que la CI n'est pas verte sur ce commit (B1-09).
+    needs: ci-green
+    runs-on: macos-15
+    timeout-minutes: 90
+
+    env:
+      # Recopiés ici pour être testables dans les `if:`. Une chaîne vide
+      # signifie « secret absent » — donc fork, donc mode ad hoc.
+      HAS_SIGNING: ${{ secrets.MACOS_CERTIFICATE_P12 != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' }}
+      HAS_NOTARY: ${{ secrets.APPSTORE_KEY_ID != '' && secrets.APPSTORE_ISSUER_ID != '' && secrets.APPSTORE_PRIVATE_KEY != '' }}
+      HAS_SPARKLE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY != '' }}
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0     # `git rev-list --count HEAD` = CFBundleVersion
+
+      # Version FIGÉE, la même que ci.yml (audit B1-20c). Un binaire NOTARISÉ
+      # bâti par « le Xcode le plus récent de l'image » est un binaire bâti par
+      # un compilateur que personne n'a choisi. L'étape échoue si la version
+      # manque de l'image, au lieu de retomber en silence sur une autre.
+      - name: Sélectionner Xcode ${{ env.XCODE_VERSION }}
+        run: |
+          set -eu
+          app="/Applications/Xcode_${XCODE_VERSION}.app"
+          if [ ! -d "$app" ]; then
+            echo "::error::$app absent de l'image du runner — voir XCODE_VERSION en tête de ce fichier"
+            ls -d /Applications/Xcode*.app 2>/dev/null || true
+            exit 1
+          fi
+          sudo xcode-select -s "$app"
+          swift --version
+
+      # Le tag fait foi pour le public, VERSION fait foi pour le build : les
+      # deux doivent coïncider, sinon le DMG publié s'appellerait autrement que
+      # la release. On échoue AVANT les 10 minutes de compilation.
+      - name: Vérifier version et tag
+        run: |
+          set -eu
+          make check-version
+          version=$(tr -d '[:space:]' < VERSION)
+          if [ "${GITHUB_REF_TYPE:-}" = tag ]; then
+            tag="${GITHUB_REF_NAME}"
+            if [ "$tag" != "v$version" ]; then
+              echo "::error::le tag $tag ne correspond pas à VERSION ($version) — attendu v$version"
+              exit 1
+            fi
+            echo "tag $tag = VERSION $version"
+          else
+            echo "déclenchement manuel : pas de tag à comparer (VERSION $version)"
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      # Le journal, avant les 10 minutes de compilation lui aussi. Les notes que
+      # Sparkle affiche à chaque utilisateur, et que la release porte, sont
+      # extraites de la SEULE section `## [VERSION]` du CHANGELOG : une section
+      # « Non publié » concurrente les amputerait, et `Packaging/appcast.sh` ne
+      # s'en apercevrait qu'à l'étape 4 bis, DMG notarisé (audit B1-04, D2-06).
+      # Version `-release` : elle exige EN PLUS que le titre soit daté — au tag,
+      # « — à venir » n'est plus une réponse (RELEASING.md § 1).
+      - name: Vérifier le journal des modifications
+        run: make check-changelog-release
+
+      # ATTENTION — ce cache ne porte QUE les checkouts SwiftPM, jamais `.build`
+      # (audit A1-13). Restaurer des objets déjà compilés dans le job qui SIGNE
+      # Developer ID et fait NOTARISER ferait reposer l'intégrité du binaire
+      # publié sur l'isolation des caches GitHub ; l'intégrité des checkouts,
+      # elle, tient à `Package.resolved`. Le surcoût est de quelques minutes de
+      # compilation, sur un budget de 90.
+      # Pas de `restore-keys` non plus : cette clé ne doit jamais retomber sur
+      # une entrée écrite par un autre job (`release-tests` partageait la
+      # sienne).
+      - name: Cache des checkouts SwiftPM
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/Library/Caches/org.swift.swiftpm
+          key: swiftpm-checkouts-release-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+
+      # ─── Signature ────────────────────────────────────────────────────────
+      # Un trousseau TEMPORAIRE, dédié au job : on ne touche jamais au
+      # trousseau de connexion du runner, et l'étape de nettoyage en
+      # `always()` le supprime même si le job échoue au milieu.
+      - name: Trousseau temporaire et certificat Developer ID
+        if: env.HAS_SIGNING == 'true'
+        env:
+          CERT_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          set -eu
+          keychain="$RUNNER_TEMP/fouine-build.keychain-db"
+          # Mot de passe jetable, jamais réutilisé, jamais journalisé.
+          kcpass=$(uuidgen)
+          echo "KEYCHAIN_PATH=$keychain" >> "$GITHUB_ENV"
+
+          security create-keychain -p "$kcpass" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$kcpass" "$keychain"
+
+          cert="$RUNNER_TEMP/certificate.p12"
+          printf '%s' "$CERT_P12" | base64 --decode > "$cert"
+          security import "$cert" -k "$keychain" -P "$CERT_PASSWORD" \
+                  -T /usr/bin/codesign -T /usr/bin/security
+          rm -f "$cert"
+
+          # Sans cette ligne, codesign ouvre une invite graphique et le job
+          # reste bloqué jusqu'au timeout.
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+                  -s -k "$kcpass" "$keychain" >/dev/null
+
+          # Le trousseau doit être dans la LISTE de recherche, sinon codesign
+          # ne trouve pas l'identité.
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+
+          identity=$(security find-identity -v -p codesigning "$keychain" \
+                     | sed -n 's/.*"\(Developer ID Application:.*\)"/\1/p' | head -1)
+          if [ -z "$identity" ]; then
+            echo "::error::aucune identité « Developer ID Application » dans le .p12"
+            exit 1
+          fi
+          # On ne journalise que le type d'identité, pas son libellé complet.
+          echo "identité Developer ID chargée"
+          echo "IDENTITY=$identity" >> "$GITHUB_ENV"
+
+      - name: Avertir du mode ad hoc
+        if: env.HAS_SIGNING != 'true'
+        run: |
+          {
+            echo "### ⚠ Build AD HOC"
+            echo
+            echo "Les secrets de signature sont absents (fork, ou dépôt non configuré)."
+            echo "L'app et le DMG sont bâtis en signature ad hoc :"
+            echo "ils ne s'ouvriront que sur la machine qui les a produits,"
+            echo "la notarisation et la publication de la release sont **sautées**."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ─── Build ────────────────────────────────────────────────────────────
+      # `make release` lit IDENTITY dans l'environnement (`?=`) : vide en mode
+      # fork, l'identité chargée plus haut sinon. `ARCHS` reste au défaut :
+      # x86_64 + arm64, le binaire universel exigé par le §11.2.
+      - name: make release (build universel, bundle, signature)
+        run: make release
+
+      - name: Vérifier le binaire universel
+        run: |
+          set -eu
+          for exe in Fouine FouineAgent; do
+            archs=$(lipo -archs "Fouine.app/Contents/MacOS/$exe")
+            echo "$exe : $archs"
+            case "$archs" in
+              *x86_64*arm64*|*arm64*x86_64*) ;;
+              *) echo "::error::$exe n'est pas universel ($archs)"; exit 1 ;;
+            esac
+          done
+
+      # ─── Notarisation ─────────────────────────────────────────────────────
+      # En CI on n'utilise PAS le profil de trousseau de Packaging/notarize.sh
+      # (il suppose un `store-credentials` interactif) : on écrit la clé dans un
+      # fichier temporaire et on passe --key/--key-id/--issuer.
+      #
+      # L'APP est notarisée et agrafée AVANT la fabrication du DMG : c'est le
+      # seul ordre qui laisse l'app agrafée une fois glissée dans
+      # /Applications. Le DMG, lui, est notarisé et agrafé ensuite, pour que
+      # Gatekeeper accepte aussi l'image téléchargée.
+      - name: Notariser et agrafer Fouine.app
+        if: env.HAS_SIGNING == 'true' && env.HAS_NOTARY == 'true'
+        env:
+          ASC_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          ASC_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          set -eu
+          key="$RUNNER_TEMP/AuthKey.p8"
+          printf '%s' "$ASC_KEY" | base64 --decode > "$key"
+          chmod 600 "$key"
+          echo "ASC_KEY_FILE=$key" >> "$GITHUB_ENV"
+
+          ditto -c -k --keepParent Fouine.app "$RUNNER_TEMP/Fouine.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/Fouine.zip" \
+                --key "$key" --key-id "$ASC_KEY_ID" --issuer "$ASC_ISSUER_ID" \
+                --wait
+          xcrun stapler staple Fouine.app
+          xcrun stapler validate Fouine.app
+          spctl -a -vv Fouine.app
+
+      # Fabrication du .mcpb pour Claude Desktop (audit a4-02).
+      # Le binaire fouine embarqué dans Fouine.app est déjà notarisé et agrafé.
+      # En mode ad hoc (fork sans secrets), MCPB_ALLOW_ADHOC=1 évite l'échec.
+      - name: Fabriquer l'extension Claude Desktop (.mcpb)
+        run: |
+          set -eu
+          MCPB_ALLOW_ADHOC=$([ "${HAS_SIGNING:-}" = "true" ] && echo 0 || echo 1) \
+            Packaging/mcpb.sh Fouine.app "dist/Fouine-$VERSION.mcpb"
+
+      # dmg.sh, pas `make dmg` : la cible `make` bâtirait l'app si elle
+      # manquait, et on tient à utiliser EXACTEMENT le bundle qui vient d'être
+      # agrafé.
+      - name: Fabriquer le DMG
+        run: |
+          set -eu
+          IDENTITY="${IDENTITY:-}" VERSION="$VERSION" \
+            Packaging/dmg.sh Fouine.app "dist/Fouine-$VERSION.dmg"
+
+      - name: Notariser et agrafer le DMG
+        if: env.HAS_SIGNING == 'true' && env.HAS_NOTARY == 'true'
+        env:
+          ASC_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          set -eu
+          xcrun notarytool submit "dist/Fouine-$VERSION.dmg" \
+                --key "$ASC_KEY_FILE" --key-id "$ASC_KEY_ID" \
+                --issuer "$ASC_ISSUER_ID" --wait
+          xcrun stapler staple "dist/Fouine-$VERSION.dmg"
+          xcrun stapler validate "dist/Fouine-$VERSION.dmg"
+
+      # ─── Appcast Sparkle (palier 2.9, audit D13) ──────────────────────────
+      # APRÈS l'agrafage, et ce n'est pas négociable : l'appcast publie la
+      # TAILLE et la SIGNATURE EdDSA du fichier, et agrafer modifie le fichier.
+      # Un appcast fabriqué avant l'agrafage annonce une signature que Sparkle
+      # rejettera chez chaque utilisateur, sans que rien n'ait échoué ici.
+      #
+      # `swift package resolve` a déjà téléchargé l'artefact Sparkle, qui
+      # contient generate_appcast : appcast.sh l'y trouve seul.
+      - name: Fabriquer l'appcast signé
+        if: env.HAS_SPARKLE_KEY == 'true'
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+          FOUINE_REPO: ${{ github.repository }}
+        run: Packaging/appcast.sh dist "$VERSION"
+
+      - name: Avertir de l'absence d'appcast
+        if: env.HAS_SPARKLE_KEY != 'true'
+        run: |
+          {
+            echo "### ⚠ Pas d'appcast"
+            echo
+            echo "Le secret \`SPARKLE_PRIVATE_KEY\` est absent : l'étape appcast"
+            echo "a été **sautée**. La release est publiable, mais les copies"
+            echo "déjà installées ne verront pas cette version dans"
+            echo "« Rechercher les mises à jour… » — le flux"
+            echo "\`releases/latest/download/appcast.xml\` n'aura pas d'asset"
+            echo "pour ce tag."
+            echo
+            echo "Voir RELEASING.md, section « Mises à jour Sparkle »."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Les sommes se calculent APRÈS l'agrafage : agrafer modifie le fichier.
+      - name: SHA256SUMS
+        run: |
+          set -eu
+          cd dist
+          shasum -a 256 *.dmg *.mcpb > SHA256SUMS
+          cat SHA256SUMS
+
+      # APRÈS `SHA256SUMS`, et jamais avant : `cask.sh` LIT ce fichier pour y
+      # prendre l'empreinte du DMG publié, plutôt que de la recalculer sur un
+      # DMG local qui ne serait pas forcément celui-là. Jusqu'ici personne ne
+      # produisait le cask (audit B1-18) : `Packaging/homebrew/fouine.rb`
+      # portait toujours son gabarit de 64 zéros, alors que le README annonçait
+      # déjà `brew install --cask`. Le fichier rendu ici voyage avec la version ;
+      # le DÉPÔT dans le tap reste un geste humain (RELEASING.md § 7).
+      - name: Rendre le cask Homebrew
+        run: Packaging/cask.sh "$VERSION" dist dist/fouine.rb
+
+      - name: Artefact du job
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: Fouine-${{ env.VERSION }}
+          path: |
+            dist/*.dmg
+            dist/*.mcpb
+            dist/SHA256SUMS
+            dist/appcast.xml
+            dist/fouine.rb
+          if-no-files-found: error
+
+      # Brouillon, jamais publié automatiquement : le texte de la release et
+      # l'extrait du CHANGELOG restent un geste humain (RELEASING.md, point 5).
+      # `appcast.xml` est un ASSET de la release, et c'est ce qui fait marcher
+      # SUFeedURL : GitHub sert
+      # releases/latest/download/appcast.xml en redirigeant vers l'asset de ce
+      # nom dans la DERNIÈRE release publiée. Tant que la release reste en
+      # brouillon, cette URL rend 404 — la mise à jour ne s'active donc qu'au
+      # moment où le propriétaire publie, ce qui est la bonne façon.
+      - name: Release GitHub (brouillon)
+        if: env.HAS_SIGNING == 'true' && env.HAS_NOTARY == 'true' && github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          assets="dist/Fouine-$VERSION.dmg dist/Fouine-$VERSION.mcpb dist/SHA256SUMS"
+          if [ -f dist/appcast.xml ]; then
+            assets="$assets dist/appcast.xml"
+          else
+            echo "::warning::pas d'appcast.xml — la release ne portera pas de flux de mise à jour"
+          fi
+          # Le cask prêt à copier dans le tap, joint à la version qu'il décrit.
+          if [ -f dist/fouine.rb ]; then
+            assets="$assets dist/fouine.rb"
+          fi
+          # shellcheck disable=SC2086
+          gh release create "${GITHUB_REF_NAME}" \
+             --draft \
+             --title "Fouine ${GITHUB_REF_NAME}" \
+             --notes "Brouillon produit par release.yml. Reprendre la section ${VERSION} du CHANGELOG.md avant publication." \
+             $assets
+
+      - name: Résumé
+        if: always()
+        run: |
+          {
+            echo "### Fouine ${VERSION:-?}"
+            echo
+            echo "- signature : ${HAS_SIGNING}"
+            echo "- notarisation : ${HAS_NOTARY}"
+            echo "- extension MCP (.mcpb) : $([ -f "dist/Fouine-${VERSION:-unknown}.mcpb" ] && echo 'oui' || echo 'non')"
+            echo "- appcast Sparkle : ${HAS_SPARKLE_KEY}"
+            echo "- publication : ${{ github.ref_type == 'tag' }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Le nettoyage est en `always()` et non en fin de `run` : un job annulé
+      # ou échoué ne doit pas laisser une identité de signature dans un
+      # trousseau, ni la clé App Store Connect sur le disque du runner.
+      - name: Nettoyage du trousseau et de la clé
+        if: always()
+        run: |
+          if [ -n "${KEYCHAIN_PATH:-}" ] && [ -f "${KEYCHAIN_PATH}" ]; then
+            security delete-keychain "$KEYCHAIN_PATH" || true
+          fi
+          rm -f "${ASC_KEY_FILE:-/dev/null}" "$RUNNER_TEMP/certificate.p12" || true

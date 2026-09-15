@@ -1,0 +1,37 @@
+.build/
+.swiftpm/
+.DS_Store
+xcuserdata/
+*.xcworkspace
+DerivedData/
+# Généré depuis SPEC.md par build_spec_html.py
+spec.html
+# Chemins personnels réels — regénéré localement, jamais versé (SPEC §9.3)
+Tests/Fixtures/paths.json
+# Sorties de build/packaging
+Fouine.app/
+Fouine.zip
+# Réglages de signature PERSONNELS (identité Developer ID, profil notarytool).
+# Inclus par le Makefile avec `-include` : son absence n'est pas une erreur.
+Makefile.local
+# Artefacts de distribution (make dmg)
+dist/
+*.dmg
+# Matériel de signature : ne doit JAMAIS entrer dans le dépôt.
+#   *.p12  certificat Developer ID exporté du trousseau
+#   *.p8   clé App Store Connect pour notarytool
+*.p12
+*.p8
+# Worktrees des sous-agents Claude Code
+.claude/worktrees/
+
+# Caches Python (Tools/l10n)
+__pycache__/
+*.pyc
+# Rapports internes, hors dépôt (RELEASING.md § 0 bis)
+verif/
+# Réglages Claude Code personnels (permissions « ne plus demander », essais)
+# et consignes locales : le partagé est .claude/settings.json et CLAUDE.md.
+.claude/settings.local.json
+CLAUDE.local.md
+.vscode/

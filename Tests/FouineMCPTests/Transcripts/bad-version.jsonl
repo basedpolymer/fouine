@@ -1,0 +1,30 @@
+# bad-version.jsonl — une révision de protocole qu'on ne sert pas.
+#
+# `-32022` (UNSUPPORTED_PROTOCOL_VERSION dans schema.ts) n'est pas une erreur
+# JSON-RPC ordinaire : c'est celle qui dit au client QUOI FAIRE, par
+# `data.supported`. Sans elle, un client d'une révision future verrait un
+# « Method not found » et conclurait que le serveur est cassé.
+
+# 1. L'époque moderne s'ouvre normalement.
+> {"jsonrpc":"2.0","id":1,"method":"server/discover","params":{}}
+< {"jsonrpc":"2.0","id":1,"result":{"supportedVersions":["2026-07-28"],"capabilities":{"tools":{}},"resultType":"complete","ttlMs":300000,"cacheScope":"private","instructions":"<any>","_meta":{"io.modelcontextprotocol/serverInfo":{"name":"fouine","title":"Fouine","version":"1.0.0-test"}}}}
+
+# 2. Une révision inconnue annoncée dans `_meta` : -32022, et `data.supported`
+#    porte ce qu'on sait parler — la moderne ET le repli legacy.
+> {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2030-01-01","io.modelcontextprotocol/clientCapabilities":{}}}}
+< {"jsonrpc":"2.0","id":2,"error":{"code":-32022,"message":"Unsupported protocol version","data":{"requested":"2030-01-01","supported":["2026-07-28","2025-06-18"]}}}
+
+# 3. Idem sur `tools/call` : le refus arrive AVANT l'outil, qui n'est jamais
+#    appelé — donc jamais une lecture de base sur une requête qu'on refuse.
+> {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"fouine_status","arguments":{},"_meta":{"io.modelcontextprotocol/protocolVersion":"2025-06-18","io.modelcontextprotocol/clientCapabilities":{}}}}
+< {"jsonrpc":"2.0","id":3,"error":{"code":-32022,"message":"Unsupported protocol version","data":{"requested":"2025-06-18","supported":["2026-07-28","2025-06-18"]}}}
+
+# 4. `initialize` avec un `_meta` moderne : la poignée de main a été RETIRÉE en
+#    2026-07-28, et le message donne le remplaçant.
+> {"jsonrpc":"2.0","id":4,"method":"initialize","params":{"protocolVersion":"2026-07-28","_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}
+< {"jsonrpc":"2.0","id":4,"error":{"code":-32601,"message":"Method not found","data":{"method":"initialize","reason":"initialize was removed in 2026-07-28 — use server/discover"}}}
+
+# 5. `server/discover` reste servi quoi qu'annonce le `_meta` : c'est
+#    précisément l'appel par lequel un client apprend ce qu'on sert.
+> {"jsonrpc":"2.0","id":5,"method":"server/discover","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2030-01-01","io.modelcontextprotocol/clientCapabilities":{}}}}
+< {"jsonrpc":"2.0","id":5,"result":{"supportedVersions":["2026-07-28"],"capabilities":{"tools":{}},"resultType":"complete","ttlMs":300000,"cacheScope":"private","instructions":"<any>","_meta":{"io.modelcontextprotocol/serverInfo":{"name":"fouine","title":"Fouine","version":"1.0.0-test"}}}}

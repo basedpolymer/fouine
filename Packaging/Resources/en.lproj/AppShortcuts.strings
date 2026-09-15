@@ -1,0 +1,16 @@
+/* AppShortcuts.strings (en) — les phrases dictées à Siri (lot L2, audit BU-35).
+
+   Ce fichier n'est PAS produit par un catalogue : AppIntents cherche les
+   phrases parlées dans `<langue>.lproj/AppShortcuts.strings` du bundle, avec
+   pour CLÉ la phrase source telle qu'elle est écrite dans le code — le
+   `\(.applicationName)` de `AppShortcut.phrases` s'y écrit `${applicationName}`.
+   `Packaging/bundle.sh` copie les deux fichiers à côté des .strings compilés,
+   avant la signature.
+
+   La langue de BASE n'a rien à traduire : les valeurs répètent les clés. Le
+   fichier existe quand même, parce que `make ci-bundle-i18n` compare les clés
+   de `en.lproj` et de `fr.lproj` — sans lui, la traduction française pourrait
+   partir seule à la dérive sans que rien ne le dise. */
+
+"Search ${applicationName}" = "Search ${applicationName}";
+"Search my documents with ${applicationName}" = "Search my documents with ${applicationName}";

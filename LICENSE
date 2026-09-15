@@ -1,0 +1,346 @@
+FOUINE SOURCE-AVAILABLE LICENCE — version 1.0, 13 September 2026
+LICENCE FOUINE SOURCE-AVAILABLE — version 1.0 du 13 septembre 2026
+
+Fouine — document search engine for macOS.
+Copyright © 2026 Mathis Demory. All rights reserved.
+
+SPDX identifier: LicenseRef-Fouine-Source-Available
+
+This file contains the licence in English, then its French translation. The
+ENGLISH text is authoritative: in case of any discrepancy between the two
+versions, the English version prevails.
+
+Ce fichier contient le texte de la licence en anglais, puis sa traduction
+française. Le texte ANGLAIS fait foi : en cas de divergence entre les deux
+versions, la version anglaise prévaut.
+
+Third-party components redistributed with Fouine (GRDB.swift, Sparkle,
+swift-argument-parser): see THIRD_PARTY_LICENSES.md. Which licence covers which
+part of the project: see LICENSING.md.
+
+===============================================================================
+                   FOUINE SOURCE-AVAILABLE LICENCE (English)
+===============================================================================
+
+0. PREAMBLE
+
+This licence (the "Licence") is an agreement between you — an individual or a
+single legal entity — and Mathis Demory (the "Licensor").
+
+It covers Fouine (the "Software"): the application, the command line, the
+background agent, the MCP server, the source code, the documentation, and
+anything delivered with them or provided as support.
+
+The Software is licensed, not sold. By installing, copying, compiling or
+otherwise using it, you accept the Licence. If you do not accept it, do not
+install or use the Software.
+
+The Licence is the entire agreement between you and the Licensor concerning
+the Software; it supersedes any prior proposal or understanding. The Software
+is protected by copyright law and by international treaties.
+
+1. GRANT OF LICENCE
+
+(a) Installation and use. The Licensor grants you the right to install and
+    use copies of the Software obtained from the Licensor — the disk image
+    published by the Licensor, the official Homebrew cask, the built-in
+    update — under the terms of your purchase.
+
+(b) One licence per person, up to three Macs. The licence is granted to one
+    person, who may install and activate the Software on up to three Macs of
+    the same household. It is not shared between several people. You may
+    release one of those activations at any time to use another Mac.
+
+(c) Trial. The Software may be used without a licence key for a trial period
+    of thirty days. When that period ends, updating the index stops and a
+    licence key is required to resume it; searching, reading and exporting
+    what is already indexed continue to work.
+
+(d) Backup copies. You may make the copies of the Software necessary for
+    backup and archival purposes.
+
+2. OTHER RIGHTS AND LIMITATIONS
+
+(a) Notices. You must not remove or alter any copyright, licence or
+    attribution notice on any copy of the Software.
+
+(b) No distribution. You must not distribute the Software to a third party:
+    neither the source code, modified or not, nor a binary, nor a copy of the
+    application, by any means, free of charge or for a fee.
+
+(c) No rental or lending. You must not rent, lease or lend the Software, make
+    it available to a third party, or offer it as a service.
+
+(d) Licence verification. You must not circumvent, disable or alter the means
+    by which the Software verifies your licence, nor help a third party do so.
+
+(e) Support. The Licensor may provide support services for the Software. Any
+    code supplied as part of them is part of the Software and is governed by
+    the Licence.
+
+(f) Compliance with applicable laws. You must comply with applicable law in
+    your use of the Software.
+
+3. SOURCE CODE
+
+(a) The source code of the Software is available. You may read it, compile it
+    and modify it for your own personal purpose, or to propose a contribution
+    to the Software.
+
+(b) A binary you compile yourself is governed by the Licence. You must not
+    distribute it, sell it, or make it available to a third party, modified
+    or not.
+
+(c) The availability of the source code grants no other permission. In
+    particular, it does not allow publishing a derived version, a
+    redistribution, or a service based on the Software.
+
+4. CONTRIBUTIONS
+
+(a) By proposing a contribution to the Software — code, documentation,
+    translation, fix, in any form — you grant the Licensor a perpetual,
+    worldwide, non-exclusive, royalty-free, irrevocable and transferable
+    licence, with the right to sublicense, to use, reproduce, modify, adapt,
+    publish, translate and redistribute that contribution under any licence,
+    including a commercial one.
+
+(b) You warrant that you are the author of your contribution, or that you
+    hold the rights needed to propose it on these terms, and that supplying
+    it infringes no third-party right.
+
+(c) You keep your rights in your contribution. There is no assignment to
+    sign, and no separate contributor agreement.
+
+5. THIRD-PARTY COMPONENTS
+
+(a) The Software redistributes third-party components, which remain governed
+    by their own licences. Their full notices are in
+    THIRD_PARTY_LICENSES.md, delivered with the Software.
+
+(b) The directory Sources/FouineMCPKit — and it alone — is under the MIT
+    licence (Sources/FouineMCPKit/LICENSE). Those files may be reused under
+    the MIT terms, including in another project. The shipped `fouine`
+    executable, which links the rest of the Software, is governed by this
+    Licence.
+
+(c) Which licence covers which part of the project is set out in
+    LICENSING.md.
+
+6. TERMINATION
+
+Without prejudice to its other rights, the Licensor may terminate the Licence
+if you fail to comply with its terms. You must then stop using the Software
+and destroy the copies in your possession. Articles 4, 7, 8, 9 and 10 survive
+termination.
+
+7. OWNERSHIP
+
+The Software and all copies of it remain the property of the Licensor and, as
+the case may be, of its suppliers. All rights not expressly granted by the
+Licence are reserved.
+
+The Software reads and indexes your documents: those remain yours. The
+Licence grants the Licensor no right over them and no access to them.
+
+8. NO WARRANTY
+
+To the extent permitted by law, the Software is provided "as is", without
+warranty of any kind, express or implied, including merchantability, fitness
+for a particular purpose and non-infringement. The Licensor does not warrant
+the accuracy or completeness of search results and of extracted or recognised
+text, nor uninterrupted or error-free operation.
+
+This article does not apply to the statutory warranties owed to consumers,
+which are reserved by article 9.
+
+9. LIMITATION OF LIABILITY
+
+To the extent permitted by law, the Licensor is not liable for indirect,
+special or incidental damages — loss of data, loss of use, loss of profit,
+business interruption — arising out of the use of or the inability to use the
+Software, even if advised of the possibility of such damages.
+
+Nothing in the Licence excludes or limits the statutory warranty of
+conformity (articles L. 217-3 et seq. of the French Consumer Code), the
+warranty against hidden defects (articles 1641 et seq. of the French Civil
+Code), or the Licensor's liability for wilful misconduct, gross negligence or
+personal injury.
+
+The Software is not a backup: keep your original documents.
+
+10. GOVERNING LAW
+
+The Licence is governed by French law. Failing an amicable settlement, the
+French courts have jurisdiction. If you contract as a consumer, the mandatory
+protective and jurisdictional rules of your country of residence continue to
+apply.
+
+Source code repository: https://github.com/basedpolymer/fouine
+
+===============================================================================
+                   LICENCE FOUINE SOURCE-AVAILABLE (français)
+===============================================================================
+
+Traduction. Le texte anglais ci-dessus fait foi ; en cas de divergence, la
+version anglaise prévaut.
+
+0. PRÉAMBULE
+
+La présente licence (« la Licence ») est un accord entre vous — personne
+physique ou personne morale unique — et Mathis Demory (« le Titulaire »).
+
+Elle porte sur Fouine (« le Logiciel ») : l'application, la ligne de commande,
+l'agent d'arrière-plan, le serveur MCP, le code source, la documentation, et
+tout élément livré avec eux ou fourni au titre de l'assistance.
+
+Le Logiciel est concédé sous licence, il n'est pas vendu. En l'installant, en
+le copiant, en le compilant ou en l'utilisant de quelque manière que ce soit,
+vous acceptez la Licence. Si vous ne l'acceptez pas, n'installez pas le
+Logiciel et ne l'utilisez pas.
+
+La Licence constitue l'accord entier entre vous et le Titulaire au sujet du
+Logiciel ; elle remplace toute proposition ou tout accord antérieur. Le
+Logiciel est protégé par le droit d'auteur et par les traités internationaux.
+
+1. CONCESSION
+
+(a) Installation et usage. Le Titulaire vous concède le droit d'installer et
+    d'utiliser les copies du Logiciel obtenues du Titulaire — image disque
+    publiée par le Titulaire, formule Homebrew officielle, mise à jour
+    intégrée au Logiciel — selon les conditions de votre achat.
+
+(b) Une licence par personne, jusqu'à trois Mac. La licence est accordée à une
+    personne, qui peut installer et activer le Logiciel sur trois Mac au plus
+    d'un même foyer. Elle n'est pas partagée entre plusieurs personnes. Vous
+    pouvez libérer l'une de ces activations à tout moment afin d'employer un
+    autre Mac.
+
+(c) Essai. Le Logiciel peut être utilisé sans clé de licence pendant une
+    période d'essai de trente jours. À la fin de cette période, la mise à jour
+    de l'index s'arrête et une clé de licence est nécessaire pour la
+    reprendre ; la recherche, la lecture et l'export de ce qui est déjà indexé
+    continuent de fonctionner.
+
+(d) Copies de sauvegarde. Vous pouvez faire les copies du Logiciel
+    nécessaires à la sauvegarde et à l'archivage.
+
+2. DROITS ET LIMITES
+
+(a) Mentions. Vous ne devez ni retirer ni modifier les mentions de copyright,
+    de licence ou d'attribution portées par une copie du Logiciel, quelle
+    qu'elle soit.
+
+(b) Pas de distribution. Vous ne devez pas distribuer le Logiciel à un
+    tiers : ni le code source, modifié ou non, ni un binaire, ni une copie de
+    l'application, par quelque moyen que ce soit, gratuitement ou contre
+    rémunération.
+
+(c) Pas de location ni de prêt. Vous ne devez ni louer, ni prêter, ni mettre
+    le Logiciel à la disposition d'un tiers, ni le proposer comme service.
+
+(d) Vérification de la licence. Vous ne devez pas contourner, désactiver ni
+    altérer les moyens par lesquels le Logiciel vérifie votre licence, ni
+    aider un tiers à le faire.
+
+(e) Assistance. Le Titulaire peut fournir une assistance relative au
+    Logiciel. Tout code fourni à ce titre fait partie du Logiciel et relève
+    de la Licence.
+
+(f) Respect de la loi. Vous devez respecter la loi applicable dans votre
+    usage du Logiciel.
+
+3. CODE SOURCE
+
+(a) Le code source du Logiciel est disponible. Vous pouvez le lire, le
+    compiler et le modifier pour votre propre usage personnel, ou pour
+    proposer une contribution au Logiciel.
+
+(b) Un binaire que vous compilez vous-même relève de la Licence. Vous ne
+    devez ni le distribuer, ni le vendre, ni le mettre à la disposition d'un
+    tiers, modifié ou non.
+
+(c) La disponibilité du code source n'emporte aucune autre autorisation.
+    Elle n'autorise notamment pas la publication d'une version dérivée, une
+    redistribution, ni un service fondé sur le Logiciel.
+
+4. CONTRIBUTIONS
+
+(a) En proposant une contribution au Logiciel — code, documentation,
+    traduction, correctif, sous quelque forme que ce soit —, vous accordez au
+    Titulaire une licence perpétuelle, mondiale, non exclusive, gratuite,
+    irrévocable et transférable, avec droit de sous-licence, d'utiliser,
+    reproduire, modifier, adapter, publier, traduire et redistribuer cette
+    contribution sous toute licence, y compris commerciale.
+
+(b) Vous garantissez être l'auteur de votre contribution, ou disposer des
+    droits nécessaires pour la proposer dans ces conditions, et que sa remise
+    ne porte atteinte aux droits d'aucun tiers.
+
+(c) Vous conservez vos droits sur votre contribution. Il n'y a pas de cession
+    de droits à signer, ni d'accord de contribution distinct.
+
+5. COMPOSANTS TIERS
+
+(a) Le Logiciel redistribue des composants tiers, qui restent régis par leurs
+    propres licences. Leurs notices intégrales sont dans
+    THIRD_PARTY_LICENSES.md, livré avec le Logiciel.
+
+(b) Le répertoire Sources/FouineMCPKit — et lui seul — est sous licence MIT
+    (Sources/FouineMCPKit/LICENSE). Ces fichiers sont réutilisables aux
+    conditions du MIT, y compris dans un autre projet. L'exécutable `fouine`
+    livré, qui lie le reste du Logiciel, relève de la présente Licence.
+
+(c) La répartition des licences dans le projet est décrite dans LICENSING.md.
+
+6. RÉSILIATION
+
+Sans préjudice de ses autres droits, le Titulaire peut résilier la Licence si
+vous ne respectez pas ses conditions. Vous devez alors cesser d'utiliser le
+Logiciel et détruire les copies en votre possession. Les articles 4, 7, 8, 9
+et 10 survivent à la résiliation.
+
+7. PROPRIÉTÉ
+
+Le Logiciel et toutes ses copies restent la propriété du Titulaire et, le cas
+échéant, de ses fournisseurs. Tous les droits qui ne sont pas expressément
+concédés par la Licence sont réservés.
+
+Le Logiciel lit et indexe vos documents : ceux-ci restent les vôtres. La
+Licence ne confère au Titulaire aucun droit sur eux, ni aucun accès à eux.
+
+8. ABSENCE DE GARANTIE
+
+Dans la mesure permise par la loi, le Logiciel est fourni « en l'état », sans
+garantie d'aucune sorte, expresse ou implicite, notamment de qualité
+marchande, d'adéquation à un usage particulier et d'absence de contrefaçon.
+Le Titulaire ne garantit ni l'exactitude ni l'exhaustivité des résultats de
+recherche et des textes extraits ou reconnus, ni un fonctionnement
+ininterrompu ou exempt d'erreur.
+
+Le présent article ne s'applique pas aux garanties légales dues au
+consommateur, réservées à l'article 9.
+
+9. LIMITATION DE RESPONSABILITÉ
+
+Dans la mesure permise par la loi, le Titulaire n'est pas responsable des
+dommages indirects, spéciaux ou accessoires — perte de données, perte
+d'exploitation, perte de profit, interruption d'activité — résultant de
+l'usage du Logiciel ou de l'impossibilité de l'utiliser, même s'il a été
+averti de leur possibilité.
+
+Rien dans la Licence n'exclut ni ne limite la garantie légale de conformité
+(articles L. 217-3 et suivants du code de la consommation), la garantie des
+vices cachés (articles 1641 et suivants du code civil), ni la responsabilité
+du Titulaire en cas de dol, de faute lourde ou de dommage corporel.
+
+Le Logiciel ne remplace pas une sauvegarde : conservez vos documents
+originaux.
+
+10. DROIT APPLICABLE
+
+La Licence est régie par le droit français. À défaut de règlement amiable,
+les tribunaux français sont compétents. Si vous contractez en qualité de
+consommateur, les règles impératives de protection et de compétence de votre
+pays de résidence restent applicables.
+
+Dépôt du code source : https://github.com/basedpolymer/fouine

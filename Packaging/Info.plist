@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Info.plist de Fouine.app (SPEC §11.2). Propriété : A-Pack.
+
+  NSDocumentsFolderUsageDescription est OBLIGATOIRE, pas optionnel : sans lui, la
+  lecture de ~/Documents/Cours échoue en EPERM SILENCIEUX et la moitié du corpus
+  n'entre jamais dans l'index (§7.1, piège n°1). Les trois textes d'origine sont
+  ceux du §11.2 ; ils vivent maintenant en FRANÇAIS dans
+  Packaging/InfoPlist.xcstrings, ce fichier-ci portant la version ANGLAISE.
+
+  Complété au palier 1.3 (audit D19) par deux clés qui manquaient et dont
+  l'absence produit exactement le même échec muet :
+    · NSDownloadsFolderUsageDescription — c'est le MODE D'ÉCHEC N° 1 du produit.
+      Un premier utilisateur dépose ses PDF dans ~/Téléchargements, l'ajoute
+      comme racine, et le crawl rend zéro entrée sans un mot d'erreur.
+    · NSNetworkVolumesUsageDescription — même histoire sur un partage SMB/AFP,
+      cas courant des corpus de labo et de cabinet.
+  Ces textes sont écrits dans le style des trois autres : ce que Fouine lit, à
+  quelle fin, et le rappel qu'elle n'écrit jamais dans la racine indexée.
+
+  NSHumanReadableCopyright : le Finder l'affiche dans « Lire les informations »
+  et la fenêtre « À propos ». Sans licence affichée, une app diffusée est
+  réputée tous droits réservés (audit D5).
+
+  LANGUE (palier 3.2, audit U1). CFBundleDevelopmentRegion vaut « en » et les
+  valeurs de ce fichier sont en ANGLAIS : c'est la langue de BASE de l'app,
+  celle que voit un système réglé sur n'importe quelle langue que Fouine ne
+  traduit pas. Le français est une TRADUCTION, rangée avec les autres dans
+  Packaging/InfoPlist.xcstrings, que bundle.sh compile en
+  Contents/Resources/{en,fr}.lproj/InfoPlist.strings AVANT la signature (ce
+  sont des ressources scellées). Ce qui se joue ici est très concret : la boîte
+  de dialogue que macOS ouvre pour demander l'accès à ~/Documents affiche le
+  texte de ces clés, et un anglophone la recevait en français — un système
+  inconnu qui réclame l'accès à ses documents dans une langue qu'il ne lit pas
+  se refuse. N'ÉCRIVEZ PLUS de français ici : ajoutez-le au catalogue.
+
+  CFBundleShortVersionString / CFBundleVersion sont des valeurs de REPLI. Le
+  numéro qui fait foi vit dans le fichier VERSION et dans
+  Sources/FouineCore/Version.swift ; `make bundle` réécrit les deux clés dans la
+  COPIE du bundle (`plutil -replace`, cible `stamp`), avec la version du fichier
+  VERSION et, pour CFBundleVersion, le nombre de commits — un entier monotone,
+  parce que c'est ce champ que Sparkle compare.
+
+  LSMinimumSystemVersion 13.0 : exigence de SMAppService (§5.7) et de
+  VNRecognizeTextRequestRevision3 (§6.2).
+
+  Les clés SU… (palier 2.9, audit D13) configurent Sparkle 2. Elles sont lues
+  UNE FOIS au démarrage de l'updater et déterminent tout son comportement ; les
+  commenter individuellement plus bas serait illisible, alors voici l'ensemble :
+
+    · SUFeedURL — l'unique adresse que Fouine peut contacter. Pointer sur
+      « releases/latest/download/appcast.xml » et non sur une URL versionnée :
+      GitHub redirige cette forme vers l'asset de la DERNIÈRE release publiée,
+      ce qui évite d'avoir à réécrire l'Info.plist à chaque version.
+    · SUPublicEDKey — clé publique EdDSA (Ed25519), en base64, générée une
+      fois pour toutes par `generate_keys` (section « Mises à jour Sparkle »
+      de RELEASING.md), qui range la clé PRIVÉE dans le trousseau et n'écrit
+      jamais rien ici. Vide, l'updater refuserait de démarrer — mieux vaut un
+      élément de menu désactivé qu'une mise à jour non vérifiée ;
+      Sources/FouineApp/App/Updates.swift traite ce cas sans faire échouer
+      l'app.
+    · SUEnableAutomaticChecks false — le cœur de la promesse de vie privée.
+      Cette clé ne se contente pas d'éteindre l'interrupteur : elle empêche
+      Sparkle de POSER LA QUESTION au deuxième lancement. Sans elle, une app
+      qui annonce « rien ne sort de votre Mac » ouvre au bout de deux
+      démarrages une boîte proposant d'envoyer des données à un serveur.
+    · SUAllowsAutomaticUpdates false — même si l'utilisateur arme la
+      vérification, aucun paquet n'est installé sans qu'il l'ait accepté. Une
+      app de recherche documentaire ne se remplace pas dans le dos de qui
+      travaille.
+    · SUEnableSystemProfiling false — c'est déjà le défaut de Sparkle ; on
+      l'écrit parce que docs/privacy.md affirme qu'aucun profil de machine
+      n'est envoyé, et qu'une affirmation vérifiable vaut mieux qu'un défaut.
+    · SUScheduledCheckInterval 86400 — une fois par jour, valeur de départ du
+      sélecteur des réglages. Sans effet tant que la vérification est éteinte.
+
+  CFBundleVersion est le champ que Sparkle COMPARE pour décider si une version
+  est plus récente : d'où l'entier monotone (nombre de commits) écrit par
+  `make stamp`, et l'obligation que l'appcast publie le MÊME entier dans son
+  attribut sparkle:version (Packaging/appcast.sh s'en charge).
+-->
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>io.github.basedpolymer.fouine</string>
+	<!--
+	  Langue de base du bundle : les valeurs textuelles ci-dessous sont en
+	  anglais, et fr.lproj/InfoPlist.strings les traduit (voir le commentaire
+	  de tête, « LANGUE »).
+	-->
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleName</key>
+	<string>Fouine</string>
+	<key>CFBundleDisplayName</key>
+	<string>Fouine</string>
+	<key>CFBundleExecutable</key>
+	<string>Fouine</string>
+	<!--
+	  CFBundleIconFile désigne Contents/Resources/Fouine.icns, copié par
+	  bundle.sh. On ne met PAS CFBundleIconName : cette clé nomme une entrée
+	  d'asset catalog (Assets.car), que ce bundle n'a pas — Launch Services la
+	  chercherait en vain.
+	-->
+	<key>CFBundleIconFile</key>
+	<string>Fouine</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<!--
+	  Schéma d'URL `fouine://` (lot INT-L1). C'est cette clé, et elle seule, qui
+	  fait qu'un lien collé dans un courriel, un mémoire ou une réponse
+	  d'assistant ROUVRE Fouine sur la page citée : sans CFBundleURLTypes,
+	  Launch Services ne sait à quelle application remettre `fouine://open?…` et
+	  le lien ne fait rien du tout — en silence, ce qui est le pire des cas pour
+	  quelqu'un qui vient de cliquer.
+
+	  Le rôle est `Viewer` et non `Editor` : Fouine MONTRE une page, elle ne
+	  modifie jamais le document. CFBundleURLName reprend l'identifiant du
+	  bundle, comme le veut la convention d'Apple — c'est un identifiant, pas un
+	  texte affiché, et il n'a donc rien à faire dans le catalogue de
+	  traductions.
+
+	  Hors bundle (`swift run FouineApp`), rien de tout ceci n'existe : macOS
+	  n'associe pas un schéma à un exécutable nu, et le lien doit être essayé
+	  sur l'application installée.
+	-->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>io.github.basedpolymer.fouine</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fouine</string>
+			</array>
+		</dict>
+	</array>
+	<!--
+	  Un DOSSIER déposé sur l'icône du Dock (lot DD2). Sans
+	  CFBundleDocumentTypes, Launch Services considère que Fouine n'ouvre
+	  aucun document : l'icône du Dock refuse le dépôt, le curseur porte le
+	  panneau d'interdiction et rien ne se passe — alors que le geste est
+	  celui qu'on essaie d'abord quand on veut chercher dans un dossier.
+
+	  `LSHandlerRank` vaut `None`, et c'est LE point de la déclaration. La
+	  référence d'Apple (Core Foundation Keys, CFBundleDocumentTypes) le dit
+	  mot pour mot : « None — this app is never selected to open files of this
+	  type, but it accepts drops of files of this type ». Autrement dit,
+	  Fouine n'apparaît jamais dans « Ouvrir avec » d'un dossier, n'en devient
+	  jamais l'application par défaut (le double-clic reste au Finder, comme il
+	  se doit), et reçoit quand même le dépôt. `Default` ou `Alternate`
+	  feraient d'elle une candidate à l'ouverture des dossiers, ce qu'elle
+	  n'est pas.
+
+	  Le rôle est `Viewer`, comme pour `fouine://` : Fouine lit, ne modifie
+	  rien. Aucun `CFBundleTypeName` ni icône : ce type n'est pas un document
+	  de Fouine, c'est une porte d'entrée.
+	-->
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>None</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.folder</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 Mathis Demory — source-available</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>Fouine reads the documents in your Documents folder to index them and make them searchable. It never writes there.</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>Fouine reads the documents you point it to on your Desktop in order to index them.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>Fouine reads the documents in your Downloads folder to index them and make them searchable. It never writes there.</string>
+	<key>NSRemovableVolumesUsageDescription</key>
+	<string>Fouine reads the documents on the volume you point it to in order to index them. It never writes there.</string>
+	<key>NSNetworkVolumesUsageDescription</key>
+	<string>Fouine reads the documents on the network volume you point it to in order to index them. It never writes there.</string>
+	<!--
+	  Reconnaissance vocale (lot INT-F3). Sans cette clé, macOS TUE le processus
+	  qui appelle SFSpeechRecognizer.requestAuthorization — ce n'est pas un
+	  refus, c'est un plantage. Elle n'est lue que si l'utilisateur allume
+	  « Mettre par écrit ce qui est dit » (extract.transcribe), éteint par
+	  défaut ; la transcription se fait alors SUR L'APPAREIL
+	  (requiresOnDeviceRecognition), et le texte le dit, parce que c'est la
+	  question que se pose quiconque voit cette boîte de dialogue.
+	-->
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Fouine writes down what is said in your audio and video files so you can search them. Everything happens on this Mac: no recording is ever sent anywhere.</string>
+	<!-- Sparkle 2 — voir le commentaire de tête. -->
+	<key>SUFeedURL</key>
+	<string>https://github.com/basedpolymer/fouine/releases/latest/download/appcast.xml</string>
+	<!-- Clé PUBLIQUE EdDSA générée le 02/09/2026 par `generate_keys` (la clé
+	     privée vit dans le trousseau de connexion du propriétaire, compte
+	     `ed25519`, et dans le secret GitHub SPARKLE_PRIVATE_KEY). Ne JAMAIS
+	     mettre la clé privée ici, ni nulle part dans le dépôt. La changer
+	     couperait la mise à jour de toutes les copies distribuées
+	     (RELEASING.md, « Mises à jour Sparkle »). -->
+	<key>SUPublicEDKey</key>
+	<string>WZEkElpU1uvr2pWzNfMKZhZ7phLcd9kzZnJT1eXDPMc=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<false/>
+	<key>SUAllowsAutomaticUpdates</key>
+	<false/>
+	<key>SUEnableSystemProfiling</key>
+	<false/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
+</dict>
+</plist>

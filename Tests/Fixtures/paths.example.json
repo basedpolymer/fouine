@@ -1,0 +1,41 @@
+{
+  "comment": "MODÈLE VERSIONNÉ de Tests/Fixtures/paths.json (SPEC §8.1, §9.3). Copier ce fichier en paths.json À CÔTÉ de lui et remplacer les chemins par ceux de la machine : le vrai fichier est gitignoré, il ne contient que des chemins personnels. Sans paths.json, les tests qui dépendent du corpus se sautent proprement (XCTSkip) ; avec un paths.json MALFORMÉ, ils se sautent aussi, avec le motif de décodage. JSON ne connaît pas les commentaires : cette clé « comment » en tient lieu, elle est ignorée au décodage (FixtureFile ne lit que « roots » et « fixtures »).",
+
+  "comment_ce_fichier_n_est_plus_indispensable": "PALIER 3.3 (audit E5, D12/M23) — ce fichier ne conditionne PLUS la recette de base. Un CORPUS DE FIXTURES VERSIONNÉ vit désormais dans Tests/Fixtures/corpus/ : 26 fichiers, 248 Kio, dans le dépôt, qui couvrent les formats du registre d'extraction, l'OCR d'un PDF scanné, les six formes de requête et trois pièges. `git clone && make test` exerce donc le produit sur de vrais documents sans que personne ait à écrire un paths.json. Voir Tests/Fixtures/corpus/README.md et docs/tests.md. Ce qui reste conditionné à paths.json ET à FOUINE_TEST_DB : ce qui n'a de sens que sur le corpus RÉEL du mainteneur — seuils de performance (§8.2) et bancs OCR (P2, P3). Ces tests-là ne tourneront jamais en intégration continue, et c'est délibéré.",
+
+  "comment_base_de_test": "AUDIT S3 (01/09/2026) — paths.json ne suffit PAS à faire tourner la recette sur le corpus complet, et c'est délibéré. La base n'est plus jamais celle de production : par défaut, chaque test d'intégration fabrique sa PROPRE racine et sa PROPRE base dans un répertoire temporaire (Recette.makeIndexedScratch). Les tests qui n'ont de sens que sur le vrai corpus — performance P4, recette OCR T6/T7/T11/T13, bancs P2/P3, recherches T1-T5/T12/T14/T15 — exigent la variable d'environnement FOUINE_TEST_DB, qui doit désigner une COPIE de la base faite par vous. Sans elle, ils se sautent ; si elle désigne ~/Library/Application Support/Fouine/fouine.db, la recette REFUSE de tourner (T10 y réindexerait le corpus et T11 y consommerait la file OCR, pendant que l'agent écrit dedans).",
+
+  "comment_preparer_la_copie": "sqlite3 \"file:$HOME/Library/Application Support/Fouine/fouine.db?mode=ro\" \".backup /tmp/fouine-recette.db\"   puis   FOUINE_TEST_DB=/tmp/fouine-recette.db make test   — la copie porte ses propres racines, il n'y a pas de seconde variable à poser. `.backup` sait copier une base WAL en cours d'utilisation ; la copie est à jeter après la recette, T11 y consomme de la file OCR.",
+
+  "roots": {
+    "Livres": "/Users/<vous>/Documents/Livres",
+    "Cours": "/Users/<vous>/Documents/Cours"
+  },
+
+  "fixtures": {
+    "T1": {
+      "path": "/Users/<vous>/Documents/Livres/Chimie organique.pdf",
+      "query": "\"règle de Markovnikov\"",
+      "expected_pages": [247, 265],
+      "expected_source": "native"
+    },
+    "T2": {
+      "path": "/Users/<vous>/Documents/Livres/Thermodynamique.pdf",
+      "query": "pres:10 energie libre gibbs",
+      "expected_pages": [93]
+    },
+    "T6": {
+      "path": "/Users/<vous>/Documents/Cours/CamScanner 15-09-2024 17.51.pdf",
+      "query": "RCPA",
+      "expected_pages": [1],
+      "expected_source": "ocr_accurate",
+      "secondary_terms": ["taux", "conversion", "volume", "passage"]
+    },
+    "T7": {
+      "path": "/Users/<vous>/Documents/Livres/Chimie inorganique.pdf",
+      "query": "tellurium",
+      "expected_pages": [120],
+      "expected_source": "ocr_accurate"
+    }
+  }
+}

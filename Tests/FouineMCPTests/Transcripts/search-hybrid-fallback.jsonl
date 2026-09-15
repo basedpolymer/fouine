@@ -1,0 +1,30 @@
+# search-hybrid-fallback.jsonl — LE REPLI SÉMANTIQUE, figé.
+#
+# La base porte DEUX VECTEURS (couverture 33,33 %) mais le modèle n'est pas
+# installé : `mode: "hybrid"` est demandé, `mode_used: "lexical"` est rendu, et
+# c'est un SUCCÈS.
+#
+# C'est le pire mode de panne d'un serveur d'agent qu'on fige ici. Une erreur
+# ferait croire au modèle que l'index est cassé ; un repli SILENCIEUX lui ferait
+# croire que le corpus ne contient rien. Ni l'un ni l'autre n'est réparable par
+# le modèle, alors qu'un `note` l'est : il nomme la commande qui manque.
+
+> {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{}}}
+< {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"fouine","title":"Fouine","version":"1.0.0-test"},"instructions":"<any>"}}
+
+# 1. `mode: "hybrid"` sans modèle : succès, lexical, et le pourquoi.
+#    `semantic_coverage_pct` reste rendu — il dit que des vecteurs EXISTENT,
+#    donc que seul le modèle manque.
+> {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"fouine_search","arguments":{"query":"electrolyse","mode":"hybrid","limit":1}}}
+< {"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"hits":[{"doc_id":1,"page":1,"path":"Users/essai/Livres/document-1.pdf","abs_path":null,"link":"fouine://open?doc=1&page=1","folder":"Livres","ext":"pdf","snippet":"«electrolyse» enthalpie page 1 du document 1","bm25":0,"source":"native","engine":"none","fuzzy_distance":0,"semantic_only":false,"why":{"kind":"exact","terms_found":["electrolyse"]},"embedded_image":null,"relevance_pct":100,"slide":null,"time_seconds":null}],"total_pages":6,"total_docs":2,"totals_approximate":false,"mode_used":"lexical","semantic_available":false,"semantic_coverage_pct":33.33,"semantic_stats":null,"semantic_rank_scale":null,"note":"semantic model not installed — lexical only (`fouine model download` installs it)","name_matches":[],"fuzzy_fallback":false,"quorum":false,"hybrid_disarmed":null,"has_more":true,"next_cursor":"eyJmIjoiZGQ0YjAyOTZkMTU3NjBkZDUxZmUwMWJlIiwibyI6MSwidiI6MX0","elapsed_ms":"<any>","documents":{},"facets":null,"fuzzy_expanded":false,"semantic_scope":{"filtered":false,"pages":6,"vectorised":2}}}}
+
+# 2. `mode: "auto"` — le DÉFAUT — prend la même décision, et la dit de la même
+#    façon. Un agent qui ne précise rien n'est jamais laissé dans le doute.
+> {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"fouine_search","arguments":{"query":"electrolyse","mode":"auto","limit":1}}}
+< {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"hits":[{"doc_id":1,"page":1,"path":"Users/essai/Livres/document-1.pdf","abs_path":null,"link":"fouine://open?doc=1&page=1","folder":"Livres","ext":"pdf","snippet":"«electrolyse» enthalpie page 1 du document 1","bm25":0,"source":"native","engine":"none","fuzzy_distance":0,"semantic_only":false,"why":{"kind":"exact","terms_found":["electrolyse"]},"embedded_image":null,"relevance_pct":100,"slide":null,"time_seconds":null}],"total_pages":6,"total_docs":2,"totals_approximate":false,"mode_used":"lexical","semantic_available":false,"semantic_coverage_pct":33.33,"semantic_stats":null,"semantic_rank_scale":null,"note":"semantic model not installed — lexical only (`fouine model download` installs it)","name_matches":[],"fuzzy_fallback":false,"quorum":false,"hybrid_disarmed":null,"has_more":true,"next_cursor":"eyJmIjoiZTg1NjdkNzc0NDI3MjFjYTAwNzY2MWIzIiwibyI6MSwidiI6MX0","elapsed_ms":"<any>","documents":{},"facets":null,"fuzzy_expanded":false,"semantic_scope":{"filtered":false,"pages":6,"vectorised":2}}}}
+
+# 3. Et `fouine_status` continue de dire que RIEN n'est chargé : aucun de ces
+#    appels n'a touché CoreML. C'est le contrat de la charge paresseuse, et
+#    c'est ce qui garde le serveur à ~16 Mio pour qui ne fait que du lexical.
+> {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"fouine_status","arguments":{"include_roots":false,"include_agent":false}}}
+< {"jsonrpc":"2.0","id":4,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"database":{"path":"<any>","bytes":"<any>","schema_version":9},"documents":2,"scope":null,"pages_indexed":6,"ocr_queue":0,"vectors":2,"vector_coverage_pct":33.33,"semantic":{"model_installed":false,"model_loaded":false,"model_id":null,"revision":null,"dimension":null},"disk_budget":{"bytes":"<any>","budget_bytes":2500000000,"bytes_at_full_vectors":"<any>","ratio_now":0,"ratio_at_full_vectors":0,"pages_at_budget":"<any>","level":"ok"},"meaning_background":{"enabled":true,"budget_minutes":10,"last_batch":null,"pages_left":4},"write_lock":{"held":false,"role":null,"pid":null,"since":null},"agent":{"queried":false},"read_only":true,"index_freshness":{"vector_index_loaded_at":null,"vector_index_count":null}}}}

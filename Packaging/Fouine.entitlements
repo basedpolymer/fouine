@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Droits de Fouine.app (SPEC §11.2). Propriété : A-Pack.
+
+  RUNTIME DURCI, PAS DE BAC À SABLE — c'est le modèle de FoxTrot, vérifié sur la
+  machine : flags=0x10000(runtime), aucun com.apple.security.app-sandbox.
+  Sandboxer imposerait des signets à portée de sécurité pour retrouver chaque
+  racine à chaque lancement, sans aucun bénéfice ici.
+
+  Ce dictionnaire est VIDE, et c'est délibéré. Inventaire de ce que Fouine fait
+  et de ce que cela exige :
+
+    · lecture des racines            -> TCC (Info.plist), aucun droit
+    · Vision, PDFKit, GRDB/SQLite    -> aucun droit (inférence locale, §11.2)
+    · SMAppService.agent(...)        -> aucun droit ; exige une app SIGNÉE et le
+                                        plist dans Contents/Library/LaunchAgents
+    · raccourci global ⌥⌘F           -> Carbon RegisterEventHotKey : ni droit ni
+                                        autorisation (voir GlobalHotKey.swift)
+    · ouverture des Réglages Système -> NSWorkspace, aucun droit
+
+  com.apple.security.automation.apple-events n'est donc PAS demandé : Fouine ne
+  pilote aucune autre application. com.apple.security.cs.allow-jit non plus :
+  aucun composant ne génère de code à l'exécution. Le §11.2 les cite en décrivant
+  FoxTrot, pas en les imposant ; demander un droit inutile dans un runtime durci
+  est une régression de sécurité, pas une précaution.
+-->
+<plist version="1.0">
+<dict/>
+</plist>

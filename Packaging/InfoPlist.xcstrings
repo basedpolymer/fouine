@@ -1,0 +1,132 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "NSDesktopFolderUsageDescription" : {
+      "comment" : "Boîte TCC — accès au Bureau. Texte français d'origine (SPEC §11.2), au mot près.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fouine reads the documents you choose on your Desktop, to index them."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fouine lit les documents que vous lui indiquez sur le Bureau pour les indexer."
+          }
+        }
+      }
+    },
+    "NSDocumentsFolderUsageDescription" : {
+      "comment" : "Boîte TCC — accès à ~/Documents. Texte français d'origine (SPEC §11.2), au mot près.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fouine reads the documents in your Documents folder to index them and make them searchable. It never writes there."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fouine lit les documents de votre dossier Documents pour les indexer et les rendre cherchables. Elle n’y écrit jamais."
+          }
+        }
+      }
+    },
+    "NSDownloadsFolderUsageDescription" : {
+      "comment" : "Boîte TCC — accès à ~/Téléchargements (mode d'échec n° 1, audit D19).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fouine reads the documents in your Downloads folder to index them and make them searchable. It never writes there."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fouine lit les documents de votre dossier Téléchargements pour les indexer et les rendre cherchables. Elle n’y écrit jamais."
+          }
+        }
+      }
+    },
+    "NSHumanReadableCopyright" : {
+      "comment" : "Finder « Lire les informations » et fenêtre « À propos ». Identique dans les deux langues.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "© 2026 Mathis Demory — source-available"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "© 2026 Mathis Demory — source-available"
+          }
+        }
+      }
+    },
+    "NSNetworkVolumesUsageDescription" : {
+      "comment" : "Boîte TCC — accès à un partage SMB/AFP (audit D19).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fouine reads the documents on the network volume you choose, to index them. It never writes there."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fouine lit les documents du volume réseau que vous lui indiquez pour les indexer. Elle n’y écrit jamais."
+          }
+        }
+      }
+    },
+    "NSRemovableVolumesUsageDescription" : {
+      "comment" : "Boîte TCC — accès à un volume amovible. Texte français d'origine (SPEC §11.2).",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fouine reads the documents on the volume you choose, to index them. It never writes there."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fouine lit les documents du volume que vous lui indiquez pour les indexer. Elle n’y écrit jamais."
+          }
+        }
+      }
+    },
+    "NSSpeechRecognitionUsageDescription" : {
+      "comment" : "Boîte TCC — reconnaissance vocale (lot INT-F3). Dit que tout se passe sur la machine : c'est la question que pose cette boîte.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fouine writes down what is said in your audio and video files so you can search them. Everything happens on this Mac: no recording is ever sent anywhere."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fouine met par écrit ce qui est dit dans vos fichiers son et vidéo pour que vous puissiez les chercher. Tout se passe sur ce Mac : aucun enregistrement n’est envoyé nulle part."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

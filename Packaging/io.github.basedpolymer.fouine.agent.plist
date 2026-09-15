@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchAgent de Fouine (SPEC §5.7, §11.2). Propriété : A-Pack.
+
+  Ce fichier est INSTALLÉ DANS LE BUNDLE, à
+  Fouine.app/Contents/Library/LaunchAgents/io.github.basedpolymer.fouine.agent.plist,
+  et enregistré par l'app via
+  SMAppService.agent(plistName: "io.github.basedpolymer.fouine.agent.plist").
+  Il n'est JAMAIS déposé à la main dans ~/Library/LaunchAgents (§10) : c'est
+  SMAppService qui le charge, et lui seul.
+
+  Ne jamais l'enregistrer avant que l'app ait obtenu l'autorisation TCC
+  (§11.2, étape 1) : un agent sans interface ne peut pas afficher l'invite,
+  il serait refusé en silence.
+
+  · BundleProgram est RELATIF au bundle — exigence de SMAppService ; « Program »
+    avec un chemin absolu ne conviendrait pas à une app déplaçable.
+  · KeepAlive/SuccessfulExit=false : redémarrage seulement si l'agent sort en
+    ERREUR. L'arrêt propre sur SIGTERM sort en 0, donc launchd le laisse arrêté.
+  · ThrottleInterval : plancher de 60 s entre deux relances. Sans lui, un échec
+    persistant tournerait en boucle serrée — exactement ce que le §5.7 interdit.
+  · ProcessType Background : l'agent est du travail d'arrière-plan, le
+    répartiteur de macOS doit le traiter comme tel (QoS .utility côté code).
+  · AssociatedBundleIdentifiers : fait apparaître « Fouine », et non un label
+    technique, dans Réglages Système ▸ Général ▸ Ouverture.
+-->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>io.github.basedpolymer.fouine.agent</string>
+	<key>BundleProgram</key>
+	<string>Contents/MacOS/FouineAgent</string>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
+	<key>ThrottleInterval</key>
+	<integer>60</integer>
+	<key>ProcessType</key>
+	<string>Background</string>
+	<key>LowPriorityIO</key>
+	<true/>
+	<key>AssociatedBundleIdentifiers</key>
+	<array>
+		<string>io.github.basedpolymer.fouine</string>
+	</array>
+</dict>
+</plist>

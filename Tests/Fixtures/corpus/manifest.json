@@ -1,0 +1,883 @@
+{
+  "files" : [
+    {
+      "ext" : "pdf",
+      "kind" : "text",
+      "name" : "chimie-organique.pdf",
+      "note" : "PDF vectoriel a couche texte, 4 pages. Porte a lui seul les six formes de requete de la recette : terme exact, expression, prefixe, proximite, exclusion, flou.",
+      "pages" : 4,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "note" : "terme exact ; deux pages, dont une SANS l'expression",
+          "pages" : [
+            2,
+            4
+          ],
+          "source" : "native",
+          "term" : "markovnikov"
+        },
+        {
+          "note" : "expression exacte : la page 4 porte les deux mots mais pas cote a cote",
+          "pages" : [
+            2
+          ],
+          "query" : "\"regle de markovnikov\"",
+          "source" : "native",
+          "term" : "regle de markovnikov"
+        },
+        {
+          "note" : "prefixe (>= 4 caracteres, contrainte du §4.1)",
+          "pages" : [
+            1,
+            3
+          ],
+          "query" : "chromatograph*",
+          "source" : "native",
+          "term" : "chromatograph"
+        },
+        {
+          "note" : "proximite : la page 1 porte les deux mots, a plus de dix mots l'un de l'autre",
+          "pages" : [
+            3
+          ],
+          "query" : "pres:5 enthalpie gibbs",
+          "source" : "native",
+          "term" : "enthalpie gibbs"
+        },
+        {
+          "note" : "le mot est AUSSI dans memo.rtf : trois pages, deux documents",
+          "pages" : [
+            1,
+            4
+          ],
+          "source" : "native",
+          "term" : "polymere"
+        },
+        {
+          "note" : "cible de l'exclusion : n'existe que sur cette page, donc que dans ce document",
+          "pages" : [
+            4
+          ],
+          "source" : "native",
+          "term" : "reticulation"
+        },
+        {
+          "note" : "mot rare ; la requete est une FAUTE de frappe a distance 1, a chercher avec --fuzzy on --fuzzy-scope all",
+          "pages" : [
+            3
+          ],
+          "query" : "sublimatlon",
+          "source" : "native",
+          "term" : "sublimation"
+        }
+      ]
+    },
+    {
+      "ext" : "pdf",
+      "kind" : "scanned",
+      "name" : "notes-scannees.pdf",
+      "note" : "PDF SCANNE : deux pages purement bitmap, zero caractere natif. Les deux pages entrent en file d'OCR (seuil de 100 caracteres du §6.1) et les termes temoins ne sortent QUE par Vision.",
+      "pages" : 2,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "ocr_accurate",
+          "term" : "tellurium"
+        },
+        {
+          "pages" : [
+            2
+          ],
+          "source" : "ocr_accurate",
+          "term" : "spectrometre"
+        }
+      ]
+    },
+    {
+      "ext" : "txt",
+      "kind" : "text",
+      "name" : "note-de-laboratoire.txt",
+      "note" : "texte brut UTF-8, une page.",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "isotherme"
+        }
+      ]
+    },
+    {
+      "ext" : "md",
+      "kind" : "text",
+      "name" : "lisezmoi.md",
+      "note" : "Markdown : indexe comme du texte brut (PlainTextExtractor).",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "note" : "ecrit « cinétique » dans le fichier : le repli d'accents du tokenizer doit rendre les deux formes equivalentes",
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "cinetique"
+        }
+      ]
+    },
+    {
+      "ext" : "csv",
+      "kind" : "text",
+      "name" : "donnees.csv",
+      "note" : "CSV : traite comme du texte brut, aucun analyseur de colonnes.",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "refractometrie"
+        }
+      ]
+    },
+    {
+      "ext" : "log",
+      "kind" : "text",
+      "name" : "journal.log",
+      "note" : "journal : extension .log du registre, texte brut.",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "stoechiometrie"
+        }
+      ]
+    },
+    {
+      "ext" : "tex",
+      "kind" : "text",
+      "name" : "article.tex",
+      "note" : "source LaTeX : texte brut, les commandes ne sont pas interpretees.",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "piezoelectrique"
+        }
+      ]
+    },
+    {
+      "ext" : "json",
+      "kind" : "text",
+      "name" : "configuration.json",
+      "note" : "JSON : texte brut, aucune analyse de structure.",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "hygrometrie"
+        }
+      ]
+    },
+    {
+      "ext" : "html",
+      "kind" : "text",
+      "name" : "fiche.html",
+      "note" : "HTML : balises retirees, <script> et <style> ecartes.",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "mesomerie"
+        },
+        {
+          "note" : "CONTRE-EPREUVE : zero page. Le contenu de <script> et <style> est retire par HTMLText.",
+          "pages" : [
+
+          ],
+          "query" : "\"ce script ne doit pas\"",
+          "source" : "native",
+          "term" : "ce script ne doit pas entrer"
+        }
+      ]
+    },
+    {
+      "ext" : "htm",
+      "kind" : "text",
+      "name" : "vieille-page.htm",
+      "note" : "variante .htm du registre : meme extracteur que .html.",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "tautomerie"
+        }
+      ]
+    },
+    {
+      "ext" : "rtf",
+      "kind" : "text",
+      "name" : "memo.rtf",
+      "note" : "RTF : lu par NSAttributedString (RichTextExtractor). Porte aussi le mot « polymere », pour que l'exclusion PAR DOCUMENT ait quelque chose a laisser passer.",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "azeotrope"
+        },
+        {
+          "note" : "second porteur du mot, exprès : voir l'exclusion decrite dans chimie-organique.pdf",
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "polymere"
+        }
+      ]
+    },
+    {
+      "ext" : "doc",
+      "kind" : "text",
+      "name" : "vrai-word97.doc",
+      "note" : "VRAI Word 97 (OLE Compound File, en-tete D0 CF 11 E0), produit par `textutil -convert doc`. C'est la fixture .doc qui manquait au registre (audit B1-34), et la contre-epreuve du tri par octets de tete : le format doit rester indexe.",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "spectrophotometrie"
+        }
+      ]
+    },
+    {
+      "ext" : "doc",
+      "kind" : "text",
+      "name" : "faux-nom.doc",
+      "note" : "un vrai .docx RENOMME .doc — piece jointe renommee, export d'application metier, scanner reseau. Le tri par EXTENSION le perdait (mesure D2-01) ; le tri par octets de tete le delegue a OOXMLExtractor, qui tranche a son tour sur les entrees de l'archive. Porte des accents, exprès.",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "note" : "temoin de D2-01 : ce document s'indexait avant le durcissement et doit continuer",
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "quinquennat"
+        }
+      ]
+    },
+    {
+      "ext" : "doc",
+      "kind" : "text",
+      "name" : "rtf-nomme-doc.doc",
+      "note" : "un vrai RTF RENOMME .doc : second cas perdu par le tri par extension (D2-01). Les octets de tete (« {\\rtf ») imposent l'analyseur RTF, et le document reste indexe.",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "coulometrie"
+        }
+      ]
+    },
+    {
+      "err" : "unrecognised format",
+      "ext" : "doc",
+      "kind" : "trap",
+      "name" : "pieges/balise-reseau.doc",
+      "note" : "PIEGE A1-01 / D2-01 / D2-02 : du HTML dans un .doc. AppKit choisissait l'importateur WebKit, qui telechargeait <img> et <link> — en http: ET en https: — et attendait 62 s sur l'adresse noire 10.255.255.1. Attendu desormais : REFUS sur les octets de tete (ni OLE, ni RTF, ni OOXML), docs.state = failed, aucune connexion, immediat. Les deux ports 9 (discard) sont fermes : meme une regression ne ferait fuir que du bruit vers la boucle locale.",
+      "pages" : 0,
+      "state" : "failed",
+      "witnesses" : [
+
+      ]
+    },
+    {
+      "ext" : "docx",
+      "kind" : "text",
+      "name" : "rapport.docx",
+      "note" : "docx sans media : word/document.xml seul, une page.",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "solvatation"
+        }
+      ]
+    },
+    {
+      "ext" : "xlsx",
+      "kind" : "text",
+      "name" : "classeur.xlsx",
+      "note" : "xlsx a deux feuilles, sans media : une page par feuille.",
+      "pages" : 2,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "note" : "resolu depuis xl/sharedStrings.xml",
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "viscosite"
+        },
+        {
+          "note" : "seconde feuille = seconde page (§5.3)",
+          "pages" : [
+            2
+          ],
+          "source" : "native",
+          "term" : "densite"
+        }
+      ]
+    },
+    {
+      "ext" : "pptx",
+      "kind" : "text",
+      "name" : "diapositives.pptx",
+      "note" : "pptx a trois diapositives (1, 2, 10) : une page par diapositive, triees numeriquement.",
+      "pages" : 3,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "diffraction"
+        },
+        {
+          "note" : "l'ordre des pages suit le NUMERO de diapositive, pas l'ordre alphabetique des entrees : slide10 est la troisieme page, pas la deuxieme",
+          "pages" : [
+            2
+          ],
+          "source" : "native",
+          "term" : "bragg"
+        }
+      ]
+    },
+    {
+      "ext" : "odt",
+      "kind" : "text",
+      "name" : "memoire.odt",
+      "note" : "odt : content.xml, aucun gisement de media.",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "nucleophile"
+        }
+      ]
+    },
+    {
+      "ext" : "epub",
+      "kind" : "text",
+      "name" : "proprietes-colligatives.epub",
+      "note" : "epub a deux fichiers de spine : une page chacun (chaque fichier tient sous pageSplitChars).",
+      "pages" : 2,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "cryoscopie"
+        },
+        {
+          "note" : "l'ordre des pages est celui du SPINE de l'OPF",
+          "pages" : [
+            2
+          ],
+          "source" : "native",
+          "term" : "ebullioscopie"
+        }
+      ]
+    },
+    {
+      "ext" : "cbz",
+      "kind" : "scanned",
+      "name" : "planches.cbz",
+      "note" : "cbz de deux images PNG : aucune couche texte, les deux pages entrent en file d'OCR et les termes temoins ne sortent que par Vision.",
+      "pages" : 2,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "ocr_accurate",
+          "term" : "magnetron"
+        },
+        {
+          "pages" : [
+            2
+          ],
+          "source" : "ocr_accurate",
+          "term" : "bolometre"
+        }
+      ]
+    },
+    {
+      "ext" : "djvu",
+      "kind" : "text",
+      "name" : "notice.djvu",
+      "note" : "DjVu a deux pages, couche texte TXTz posee par djvused.",
+      "pages" : 2,
+      "requires" : "djvulibre",
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "electrolyse"
+        },
+        {
+          "pages" : [
+            2
+          ],
+          "source" : "native",
+          "term" : "faradique"
+        }
+      ]
+    },
+    {
+      "ext" : "pages",
+      "kind" : "text",
+      "name" : "rapport.pages",
+      "note" : "Document Pages (archive ZIP) avec QuickLook/Preview.pdf sur deux pages.",
+      "pages" : 2,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "turbidite"
+        },
+        {
+          "pages" : [
+            2
+          ],
+          "source" : "native",
+          "term" : "barometrique"
+        }
+      ]
+    },
+    {
+      "ext" : "numbers",
+      "kind" : "text",
+      "name" : "budget.numbers",
+      "note" : "Document Numbers (paquet repertoire) avec QuickLook/Preview.pdf sur une page.",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "pyrometrie"
+        }
+      ]
+    },
+    {
+      "ext" : "xls",
+      "kind" : "text",
+      "name" : "feuille-ancienne.xls",
+      "note" : "classeur Excel 97-2003 (conteneur OLE, flux Workbook, BIFF8) : une page par feuille, cellules en ordre ligne puis colonne. Refuse d'office jusqu'au lot INT-F1.",
+      "pages" : 2,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "note" : "chaine partagee COMPRESSEE : un octet par caractere, accent compris",
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "ebulliometrie"
+        },
+        {
+          "note" : "chaine partagee UTF-16 (le « μm » l'impose) ; seconde feuille = seconde page (§5.3)",
+          "pages" : [
+            2
+          ],
+          "source" : "native",
+          "term" : "granulometrie"
+        }
+      ]
+    },
+    {
+      "ext" : "ppt",
+      "kind" : "text",
+      "name" : "expose-ancien.ppt",
+      "note" : "presentation PowerPoint 97-2003 (flux « PowerPoint Document », SlideListWithText) : une page par diapositive, la note du presentateur rejoint SA diapositive. Refusee d'office jusqu'au lot INT-F1.",
+      "pages" : 3,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "note" : "TextCharsAtom (UTF-16)",
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "thermoluminescence"
+        },
+        {
+          "note" : "TextBytesAtom : un octet par caractere, Windows-1252",
+          "pages" : [
+            2
+          ],
+          "source" : "native",
+          "term" : "anemometrie"
+        },
+        {
+          "pages" : [
+            3
+          ],
+          "source" : "native",
+          "term" : "tribologie"
+        }
+      ]
+    },
+    {
+      "ext" : "emlx",
+      "kind" : "text",
+      "name" : "message.emlx",
+      "note" : "courriel Apple Mail : la premiere ligne donne la longueur du message, la liste de proprietes de fin porte les drapeaux de Mail et n'est PAS indexee.",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "actinometrie"
+        }
+      ]
+    },
+    {
+      "ext" : "olk15msgsource",
+      "kind" : "text",
+      "name" : "courriel.olk15MsgSource",
+      "note" : "source RFC 822 brute d'Outlook 15/2016. L'extension porte des MAJUSCULES : le registre et le crawler comparent en minuscules.",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "ellipsometrie"
+        }
+      ]
+    },
+    {
+      "ext" : "mbox",
+      "kind" : "text",
+      "name" : "archive.mbox",
+      "note" : "archive mbox de trois messages : une page par message (§5.3).",
+      "pages" : 3,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "colorimetrie"
+        },
+        {
+          "note" : "le corps porte une ligne « >From » : l'echappement mboxrd ne doit PAS couper le message",
+          "pages" : [
+            2
+          ],
+          "source" : "native",
+          "term" : "conductimetrie"
+        },
+        {
+          "pages" : [
+            3
+          ],
+          "source" : "native",
+          "term" : "gravimetrie"
+        }
+      ]
+    },
+    {
+      "ext" : "py",
+      "kind" : "text",
+      "name" : "script.py",
+      "note" : "code source Python : lu comme du texte brut, commentaires compris (lot INT-F1).",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "polarimetrie"
+        }
+      ]
+    },
+    {
+      "ext" : "tsx",
+      "kind" : "text",
+      "name" : "composant.tsx",
+      "note" : "source TypeScript/JSX : texte brut (lot INT-F1).",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "tensiometrie"
+        }
+      ]
+    },
+    {
+      "ext" : "xml",
+      "kind" : "text",
+      "name" : "configuration.xml",
+      "note" : "XML quelconque : texte des NŒUDS par SAX, attributs ignores (« ne-doit-pas-entrer » ne doit pas ressortir).",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "nephelometrie"
+        }
+      ]
+    },
+    {
+      "ext" : "plist",
+      "kind" : "text",
+      "name" : "reglages.plist",
+      "note" : "liste de proprietes : rendue en « cle : valeur » par ligne.",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "sonometrie"
+        }
+      ]
+    },
+    {
+      "ext" : "ai",
+      "kind" : "text",
+      "name" : "dessin.ai",
+      "note" : "Illustrator : en-tete PostScript puis couche PDF. L'extraction delegue a PDFExtractor apres avoir retrouve « %PDF- ».",
+      "pages" : 1,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "serigraphie"
+        }
+      ]
+    },
+    {
+      "ext" : "sketch",
+      "kind" : "text",
+      "name" : "maquette.sketch",
+      "note" : "Sketch : une page par page du document, texte = nom de la page, noms des planches, puis les calques texte.",
+      "pages" : 2,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "pages" : [
+            1
+          ],
+          "source" : "native",
+          "term" : "anemometrie"
+        },
+        {
+          "note" : "l'ordre des pages est celui de document.json",
+          "pages" : [
+            2
+          ],
+          "source" : "native",
+          "term" : "piezoelectricite"
+        }
+      ]
+    },
+    {
+      "err" : "fig: no text layer readable — export the frames as PDF or SVG",
+      "ext" : "fig",
+      "kind" : "trap",
+      "name" : "maquette.fig",
+      "note" : "Figma : le canevas est un binaire « kiwi » non documente, jamais analyse. Sans `extract.images`, refus NOMME et classe skipped ; le nom du fichier reste cherchable.",
+      "pages" : 0,
+      "state" : "skipped",
+      "witnesses" : [
+
+      ]
+    },
+    {
+      "err" : "indd: no readable text — export as PDF or IDML",
+      "ext" : "indd",
+      "kind" : "trap",
+      "name" : "mise-en-page.indd",
+      "note" : "InDesign : le texte est dans un conteneur proprietaire, jamais lu. Un apercu integre existe, mais il ne devient une page qu'avec `extract.images` ; sinon refus NOMME et classe skipped.",
+      "pages" : 0,
+      "state" : "skipped",
+      "witnesses" : [
+
+      ]
+    },
+    {
+      "ext" : "cbz",
+      "kind" : "trap",
+      "name" : "pieges/archive-piegee.cbz",
+      "note" : "PIEGE S1 : deux entrees dont le NOM ressemble a une option de bsdtar. Attendu : deux pages image (« --exclude=001.png » ne doit PAS retirer 001.png), extraction reussie, et rien d'execute. L'entree « --use-compress-program » designe /usr/bin/false, inerte : le test de non-execution avec marqueur est dans Tests/FouineExtractTests/GuardTests.swift.",
+      "pages" : 2,
+      "state" : "extracted",
+      "witnesses" : [
+        {
+          "note" : "entree « --exclude=001.png ». Elle est PREMIERE : les entrees image sont triees naturellement et « - » precede « 0 »",
+          "pages" : [
+            1
+          ],
+          "source" : "ocr_accurate",
+          "term" : "calorimetre"
+        },
+        {
+          "note" : "entree « 001.png ». Sans le `--` de Bsdtar, « --exclude=001.png » l'aurait RETIREE de la sortie et cette page n'existerait pas",
+          "pages" : [
+            2
+          ],
+          "source" : "ocr_accurate",
+          "term" : "permeabilite"
+        }
+      ]
+    },
+    {
+      "err" : "password-protected workbook",
+      "ext" : "xls",
+      "kind" : "trap",
+      "name" : "pieges/tableur-ancien.xls",
+      "note" : "classeur BIFF CHIFFRE (enregistrement FILEPASS) : refuse proprement (docs.state = skipped, docs.err nomme le motif), et non ignore en silence. C'est le seul refus qui reste sur .xls depuis le lot INT-F1.",
+      "pages" : 0,
+      "state" : "skipped",
+      "witnesses" : [
+
+      ]
+    },
+    {
+      "err" : "password-protected presentation",
+      "ext" : "ppt",
+      "kind" : "trap",
+      "name" : "pieges/presentation-ancienne.ppt",
+      "note" : "presentation CHIFFREE (CryptSession10Container) : meme cas que le classeur ci-dessus, docs.state = skipped.",
+      "pages" : 0,
+      "state" : "skipped",
+      "witnesses" : [
+
+      ]
+    },
+    {
+      "err" : "minified source",
+      "ext" : "js",
+      "kind" : "trap",
+      "name" : "pieges/page.min.js",
+      "note" : "source minifiee : refusee sur son NOM (.min.js) avant meme la forme du texte, docs.state = skipped.",
+      "pages" : 0,
+      "state" : "skipped",
+      "witnesses" : [
+
+      ]
+    },
+    {
+      "err" : "iWork document without a QuickLook preview — open it once in Pages to generate one",
+      "ext" : "key",
+      "kind" : "trap",
+      "name" : "pieges/presentation-sans-preview.key",
+      "note" : "iWork sans QuickLook/Preview.pdf : echec explicite dans docs.err.",
+      "pages" : 0,
+      "state" : "failed",
+      "witnesses" : [
+
+      ]
+    },
+    {
+      "ext" : "png",
+      "kind" : "ignored",
+      "name" : "pieges/photo.png",
+      "note" : "extension HORS du registre d'extraction : ce fichier ne doit PAS apparaitre dans `docs` du tout — ni extrait, ni saute.",
+      "state" : "absent",
+      "witnesses" : [
+
+      ]
+    }
+  ],
+  "generator" : "Tools/make_fixtures.swift",
+  "indexed_files" : 42,
+  "note" : "Corpus de fixtures VERSIONNE (audit E5). Regenere par `make fixtures`. Les fichiers decrits ici sont dans le depot : les tests les lisent tels quels et n'appellent JAMAIS le generateur. Le manifeste decrit le CONTENU attendu (termes temoins, pages, provenance) et jamais une empreinte : une regeneration donne des fichiers equivalents, pas identiques.",
+  "schema" : 1
+}

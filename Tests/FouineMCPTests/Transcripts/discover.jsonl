@@ -1,0 +1,33 @@
+# discover.jsonl — l'époque MODERNE (2026-07-28) : sans état, sans poignée de
+# main, chaque requête portant sa version dans `params._meta`.
+#
+# La première requête décide : `server/discover` ouvre l'époque moderne pour
+# cette connexion.
+
+# 1. `server/discover` est OBLIGATOIRE côté serveur en 2026-07-28 : il annonce
+#    les révisions servies, les capacités et l'identité. Noter que `serverInfo`
+#    n'est PAS un champ de premier niveau — il vit dans
+#    `_meta["io.modelcontextprotocol/serverInfo"]` (schema.ts, ResultMetaObject).
+#    `ttlMs` et `cacheScope` sont REQUIS (CacheableResult), et `cacheScope` vaut
+#    "private" : ce que ce serveur rend dérive de documents personnels.
+> {"jsonrpc":"2.0","id":1,"method":"server/discover","params":{}}
+< {"jsonrpc":"2.0","id":1,"result":{"supportedVersions":["2026-07-28"],"capabilities":{"tools":{}},"resultType":"complete","ttlMs":300000,"cacheScope":"private","instructions":"<any>","_meta":{"io.modelcontextprotocol/serverInfo":{"name":"fouine","title":"Fouine","version":"1.0.0-test"}}}}
+
+# 2. `tools/list` en moderne : les trois champs de CacheableResult s'ajoutent.
+> {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}
+< {"jsonrpc":"2.0","id":2,"result":{"tools":"<any>","resultType":"complete","ttlMs":300000,"cacheScope":"private","_meta":{"io.modelcontextprotocol/serverInfo":{"name":"fouine","title":"Fouine","version":"1.0.0-test"}}}}
+
+# 3. `tools/call` en moderne : `resultType` s'ajoute, `ttlMs`/`cacheScope` NON —
+#    un CallToolResult n'est pas un CacheableResult.
+> {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"fouine_status","arguments":{"include_roots":false,"include_agent":false},"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}
+< {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":"<any>","resultType":"complete","_meta":{"io.modelcontextprotocol/serverInfo":{"name":"fouine","title":"Fouine","version":"1.0.0-test"}}}}
+
+# 4. LE POINT DE LA MATRICE DE COMPATIBILITÉ : une requête moderne SANS `_meta`
+#    est malformée. En 2026-07-28, `_meta` remplace la poignée de main retirée ;
+#    on refuse plutôt que de choisir une version à la place du client.
+> {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"fouine_status","arguments":{}}}
+< {"jsonrpc":"2.0","id":4,"error":{"code":-32602,"message":"Invalid params: this connection is in the 2026-07-28 era (it opened with server/discover): every request must carry params._meta[\"io.modelcontextprotocol/protocolVersion\"]","data":{"reason":"<any>"}}}
+
+# 5. `ping` a été RETIRÉ par 2026-07-28 : -32601, et le message le dit.
+> {"jsonrpc":"2.0","id":5,"method":"ping","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{}}}}
+< {"jsonrpc":"2.0","id":5,"error":{"code":-32601,"message":"Method not found","data":{"method":"ping","reason":"ping was removed in 2026-07-28"}}}

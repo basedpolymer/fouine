@@ -1,0 +1,64 @@
+{
+  "manifest_version": "0.3",
+  "name": "fouine",
+  "display_name": "Fouine",
+  "version": "1.0.0",
+  "description": "Search your own indexed documents, locally. No network.",
+  "long_description": "Fouine indexes the documents on your Mac — text, PDF, OCR — and searches them in full text and, when the optional semantic model is installed, by meaning. This extension gives an assistant read-only access to that index: it never writes to it, never starts an indexing pass, never returns your original files, and never goes out on the network. Five tools: fouine_status, fouine_search, fouine_read_page, fouine_similar_pages, fouine_list_documents.",
+  "author": {
+    "name": "Mathis Demory",
+    "url": "https://github.com/basedpolymer"
+  },
+  "homepage": "https://github.com/basedpolymer/fouine",
+  "documentation": "https://github.com/basedpolymer/fouine/blob/main/docs/mcp.md",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/basedpolymer/fouine"
+  },
+  "license": "LicenseRef-Fouine-Source-Available",
+  "keywords": ["search", "documents", "pdf", "ocr", "local", "offline"],
+  "server": {
+    "type": "binary",
+    "entry_point": "bin/fouine",
+    "mcp_config": {
+      "command": "${__dirname}/bin/fouine",
+      "args": ["mcp", "--stdio"],
+      "env": {
+        "FOUINE_DB": "${user_config.database}"
+      }
+    }
+  },
+  "user_config": {
+    "database": {
+      "type": "file",
+      "title": "Fouine index",
+      "description": "Leave empty to use the standard location.",
+      "required": false
+    }
+  },
+  "tools": [
+    {
+      "name": "fouine_status",
+      "description": "Health and coverage of the Fouine index: how many documents and pages, OCR backlog, semantic coverage per root, disk budget, roots, and whether another process is writing. Call this first: it tells you whether semantic search is available and whether a folder is missing because its volume is not mounted. Read disk_budget.level and meaning_background.pages_left before advising `fouine embed`, and roots[].coverage_pct before concluding that a folder has nothing to say."
+    },
+    {
+      "name": "fouine_search",
+      "description": "Full-text (and optionally semantic) search over the user's indexed documents. Returns PAGES, not documents. Query syntax: bare words = AND, \"phrase\" = exact, term* = prefix (4 letters minimum), -term = exclude the whole document, pres:5 (or near:5) = within 5 words. Filters: dossier:X (or folder:X), ext:pdf, nom:X (or name:X) searches file names only and on its own lists documents, texte:X (or body:X) searches page text only, chemin:X (or path:X) matches the whole path, folders included. Four of them also work in the negative, dropping whole documents: -dossier:, -ext:, -nom:, -chemin: (quoted values allowed: -dossier:\"My courses\"). Accents may be typed or pasted. Never write AND, OR or NOT: words are already combined with AND, and -term excludes. Use fouine_read_page to read a hit in full. Cite a page as \"<file name>, page N\" followed by its `link`, with one reservation: for a slideshow cite `slide`, for a recording cite `time_seconds`, and page N otherwise."
+    },
+    {
+      "name": "fouine_read_page",
+      "description": "Read the indexed TEXT of one page — the text Fouine extracted or OCRed, not the original file. Use it after fouine_search to read a hit in context. Long pages come back in slices: pass next_offset back as offset. Before citing, read page_label (the number printed on the page), slide, embedded_image and time_seconds: they say what \"page N\" really means."
+    },
+    {
+      "name": "fouine_similar_pages",
+      "description": "Find pages semantically close to a given page, using the vectors already in the index. By default it never loads the model, so it costs milliseconds. When the source page has no vector — a whole folder can be at 0 %, see fouine_status.roots[].coverage_pct — encode_if_missing: true encodes it on the spot, which does load the model (~2 s the first time)."
+    },
+    {
+      "name": "fouine_list_documents",
+      "description": "List the documents Fouine knows about, with filters. Use it to see what is indexed before searching, or with state: \"failed\" to find out why a document is missing (the error field says what went wrong)."
+    }
+  ],
+  "compatibility": {
+    "platforms": ["darwin"]
+  }
+}

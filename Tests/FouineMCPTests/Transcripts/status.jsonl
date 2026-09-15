@@ -1,0 +1,48 @@
+# status.jsonl — `fouine_status` contre une base jetable de deux documents et
+# six pages (voir TempIndex).
+#
+# Les valeurs qui dépendent de la machine portent `"<any>"` : chemin de la base
+# temporaire, taille en octets. Tout le reste est FIGÉ, y compris les nuls :
+# `semantic.model_id: null` n'est pas la même chose qu'un champ absent, et un
+# modèle qui lit la sortie fait la différence.
+#
+# `index_freshness` est NUL ici, et ce n'est plus un reste de la PR 1 : aucun
+# appel de cette séance ne demande de sémantique, donc le serveur n'a chargé
+# aucun index — c'est exactement ce que ces deux clés doivent dire.
+# `SemanticFreshnessTests` éprouve la bascule.
+
+> {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{}}}
+< {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"fouine","title":"Fouine","version":"1.0.0-test"},"instructions":"<any>"}}
+
+# 1. L'appel complet. `content` porte le MÊME JSON que `structuredContent`,
+#    sérialisé : c'est ce que la spec recommande pour la rétrocompatibilité.
+> {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"fouine_status","arguments":{}}}
+< {"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"database":{"path":"<any>","bytes":"<any>","schema_version":9},"documents":2,"scope":null,"pages_indexed":6,"ocr_queue":0,"vectors":0,"vector_coverage_pct":0,"semantic":{"model_installed":false,"model_loaded":false,"model_id":null,"revision":null,"dimension":null},"roots":[],"disk_budget":{"bytes":"<any>","budget_bytes":2500000000,"bytes_at_full_vectors":"<any>","ratio_now":0,"ratio_at_full_vectors":0,"pages_at_budget":"<any>","level":"ok"},"meaning_background":{"enabled":true,"budget_minutes":10,"last_batch":null,"pages_left":6},"write_lock":{"held":false,"role":null,"pid":null,"since":null},"agent":{"registered":false,"status":"not_registered","healthy":true,"summary":"not registered"},"read_only":true,"index_freshness":{"vector_index_loaded_at":null,"vector_index_count":null}}}}
+
+# 2. `include_roots: false` retire la clé `roots`, et rien d'autre.
+> {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"fouine_status","arguments":{"include_roots":false}}}
+< {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"database":{"path":"<any>","bytes":"<any>","schema_version":9},"documents":2,"scope":null,"pages_indexed":6,"ocr_queue":0,"vectors":0,"vector_coverage_pct":0,"semantic":{"model_installed":false,"model_loaded":false,"model_id":null,"revision":null,"dimension":null},"disk_budget":{"bytes":"<any>","budget_bytes":2500000000,"bytes_at_full_vectors":"<any>","ratio_now":0,"ratio_at_full_vectors":0,"pages_at_budget":"<any>","level":"ok"},"meaning_background":{"enabled":true,"budget_minutes":10,"last_batch":null,"pages_left":6},"write_lock":{"held":false,"role":null,"pid":null,"since":null},"agent":{"registered":false,"status":"not_registered","healthy":true,"summary":"not registered"},"read_only":true,"index_freshness":{"vector_index_loaded_at":null,"vector_index_count":null}}}}
+
+# 3. `include_agent: false` évite les 5 s de `launchctl print` et le DIT — un
+#    `agent: {}` laisserait croire à un agent sans état.
+> {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"fouine_status","arguments":{"include_roots":false,"include_agent":false}}}
+< {"jsonrpc":"2.0","id":4,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"database":{"path":"<any>","bytes":"<any>","schema_version":9},"documents":2,"scope":null,"pages_indexed":6,"ocr_queue":0,"vectors":0,"vector_coverage_pct":0,"semantic":{"model_installed":false,"model_loaded":false,"model_id":null,"revision":null,"dimension":null},"disk_budget":{"bytes":"<any>","budget_bytes":2500000000,"bytes_at_full_vectors":"<any>","ratio_now":0,"ratio_at_full_vectors":0,"pages_at_budget":"<any>","level":"ok"},"meaning_background":{"enabled":true,"budget_minutes":10,"last_batch":null,"pages_left":6},"write_lock":{"held":false,"role":null,"pid":null,"since":null},"agent":{"queried":false},"read_only":true,"index_freshness":{"vector_index_loaded_at":null,"vector_index_count":null}}}}
+
+# 4. Un argument du mauvais TYPE : -32602, avec le chemin exact du fautif.
+#    Erreur de REQUÊTE, donc erreur JSON-RPC — pas un isError.
+> {"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"fouine_status","arguments":{"include_roots":"oui"}}}
+< {"jsonrpc":"2.0","id":5,"error":{"code":-32602,"message":"Invalid params: fouine_status.include_roots: expected a boolean","data":{"reason":"fouine_status.include_roots: expected a boolean"}}}
+
+# 5. Un argument INCONNU : `additionalProperties: false` est appliqué.
+> {"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"fouine_status","arguments":{"include_everything":true}}}
+< {"jsonrpc":"2.0","id":6,"error":{"code":-32602,"message":"Invalid params: fouine_status: unknown argument \"include_everything\" — accepted: include_agent, include_roots","data":{"reason":"fouine_status: unknown argument \"include_everything\" — accepted: include_agent, include_roots"}}}
+
+# 6. Un outil qui n'existe pas — et n'existera pas : ce serveur n'écrit jamais.
+#    -32602, et le message ÉNUMÈRE ce qu'il expose vraiment, ce qui permet à un
+#    modèle de se corriger au coup suivant plutôt que d'abandonner.
+> {"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"fouine_index","arguments":{}}}
+< {"jsonrpc":"2.0","id":7,"error":{"code":-32602,"message":"Invalid params: unknown tool \"fouine_index\" — this server exposes: fouine_status, fouine_search, fouine_read_page, fouine_similar_pages, fouine_list_documents","data":{"reason":"unknown tool \"fouine_index\" — this server exposes: fouine_status, fouine_search, fouine_read_page, fouine_similar_pages, fouine_list_documents"}}}
+
+# 7. `tools/call` sans nom d'outil.
+> {"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"arguments":{}}}
+< {"jsonrpc":"2.0","id":8,"error":{"code":-32602,"message":"Invalid params: tools/call requires a tool name","data":{"reason":"tools/call requires a tool name"}}}

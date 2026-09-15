@@ -1,0 +1,5 @@
+{
+  "campagne": "fixtures",
+  "grandeur": "hygrometrie",
+  "points": [40, 45, 52]
+}

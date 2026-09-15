@@ -1,0 +1,15 @@
+/* AppShortcuts.strings (fr) — les phrases dictées à Siri (lot L2, audit BU-35).
+
+   « Dis Siri, cherche dans Fouine » ne marchait qu'en anglais : les titres et
+   descriptions des actions Raccourcis sont des `LocalizedStringResource` que
+   Raccourcis résout dans le catalogue de l'app, mais les phrases PARLÉES
+   d'`AppShortcutsProvider` ne passent pas par un catalogue. AppIntents les lit
+   ici, à la clé de la phrase source anglaise.
+
+   UNE CLÉ PAR PHRASE SOURCE, et pas d'autre. Un `.strings` n'admet pas
+   plusieurs variantes derrière une même clé : ajouter une tournure française
+   de plus (« Trouve dans Fouine ») demande d'abord une phrase source de plus
+   dans `Sources/FouineApp/Intents/FouineShortcuts.swift`. */
+
+"Search ${applicationName}" = "Cherche dans ${applicationName}";
+"Search my documents with ${applicationName}" = "Cherche dans mes documents avec ${applicationName}";

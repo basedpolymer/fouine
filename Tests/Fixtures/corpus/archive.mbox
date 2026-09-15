@@ -1,0 +1,25 @@
+From amelie@example.org Mon Sep  8 9:00:00 2026
+From: Amelie Roux <amelie@example.org>
+To: Bruno Vidal <bruno@example.org>
+Subject: Premier releve
+Date: Mon, 08 Sep 2026 9:00:00 +0200
+Content-Type: text/plain; charset=utf-8
+
+La colorimetrie du bain est stable.
+From amelie@example.org Mon Sep  8 10:00:00 2026
+From: Amelie Roux <amelie@example.org>
+To: Bruno Vidal <bruno@example.org>
+Subject: Deuxieme releve
+Date: Mon, 08 Sep 2026 10:00:00 +0200
+Content-Type: text/plain; charset=utf-8
+
+>From le message precedent :
+La conductimetrie a double.
+From amelie@example.org Mon Sep  8 11:00:00 2026
+From: Amelie Roux <amelie@example.org>
+To: Bruno Vidal <bruno@example.org>
+Subject: Troisieme releve
+Date: Mon, 08 Sep 2026 11:00:00 +0200
+Content-Type: text/plain; charset=utf-8
+
+La gravimetrie confirme le depot.

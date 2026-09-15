@@ -1,0 +1,43 @@
+# list-documents-failed.jsonl — « pourquoi ce document n'apparaît pas ? »
+#
+# C'est la première question d'un utilisateur, et cette transcription fige la
+# réponse en un appel : `state: "failed"` plus le champ `error`.
+#
+# `error` EST EN ANGLAIS. Ce n'était pas le cas avant B1-33 : une vingtaine de
+# messages de `docs.err` étaient français, et un serveur MCP anglophone aurait
+# exposé le mélange à un modèle sans moyen de savoir laquelle des deux langues
+# est la bonne. B1-33 était donc un prérequis du palier 4, pas une finition.
+#
+# ATTENTION à la lecture d'une base ANCIENNE : `docs.err` porte le message tel
+# qu'il a été écrit. Un document dont l'échec date d'avant B1-33 rendra encore
+# une phrase française tant qu'il n'a pas été réindexé. C'est un fait de la
+# base, pas du serveur — `docs/mcp.md` le dit au dépannage.
+
+> {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{}}}
+< {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"fouine","title":"Fouine","version":"1.0.0-test"},"instructions":"<any>"}}
+
+# 1. Les échecs d'extraction, avec le pourquoi.
+> {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"fouine_list_documents","arguments":{"state":"failed"}}}
+< {"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"documents":[{"doc_id":3,"path":"Users/essai/Livres/casse-1.pdf","abs_path":null,"link":"fouine://open?doc=3","folder":"Livres","ext":"pdf","pages":0,"modified":"2023-11-14T22:15:00Z","state":"failed","error":"extraction: the file is encrypted","doc_date":null,"ocr_pages":0,"vectorised_pages":0}],"total":1,"has_more":false,"next_cursor":null,"elapsed_ms":"<any>"}}}
+
+# 2. Les documents ÉCARTÉS — trop gros, format non pris en charge. Ce n'est pas
+#    un échec : rien n'a été tenté, et le message dit quoi.
+> {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"fouine_list_documents","arguments":{"state":"skipped"}}}
+< {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"documents":[{"doc_id":4,"path":"Users/essai/Cours/enorme-1.zip","abs_path":null,"link":"fouine://open?doc=4","folder":"Cours","ext":"zip","pages":0,"modified":"2023-11-14T22:16:40Z","state":"skipped","error":"file too large (3.0 GiB)","doc_date":null,"ocr_pages":0,"vectorised_pages":0}],"total":1,"has_more":false,"next_cursor":null,"elapsed_ms":"<any>"}}}
+
+# 3. `state: "any"` avec `order: "pages"` : tout, du plus long au plus court.
+#    L'ordre est TOTAL (`n_pages` puis `id`) — sans le second critère, les deux
+#    documents à zéro page permuteraient d'un appel à l'autre et la pagination
+#    perdrait des lignes.
+> {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"fouine_list_documents","arguments":{"state":"any","order":"pages"}}}
+< {"jsonrpc":"2.0","id":4,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"documents":[{"doc_id":1,"path":"Users/essai/Livres/document-1.pdf","abs_path":null,"link":"fouine://open?doc=1","folder":"Livres","ext":"pdf","pages":3,"modified":"2023-11-14T22:13:20Z","state":"indexed","error":null,"doc_date":null,"ocr_pages":0,"vectorised_pages":0},{"doc_id":2,"path":"Users/essai/Livres/document-2.pdf","abs_path":null,"link":"fouine://open?doc=2","folder":"Livres","ext":"pdf","pages":3,"modified":"2023-11-14T22:13:20Z","state":"indexed","error":null,"doc_date":null,"ocr_pages":0,"vectorised_pages":0},{"doc_id":3,"path":"Users/essai/Livres/casse-1.pdf","abs_path":null,"link":"fouine://open?doc=3","folder":"Livres","ext":"pdf","pages":0,"modified":"2023-11-14T22:15:00Z","state":"failed","error":"extraction: the file is encrypted","doc_date":null,"ocr_pages":0,"vectorised_pages":0},{"doc_id":4,"path":"Users/essai/Cours/enorme-1.zip","abs_path":null,"link":"fouine://open?doc=4","folder":"Cours","ext":"zip","pages":0,"modified":"2023-11-14T22:16:40Z","state":"skipped","error":"file too large (3.0 GiB)","doc_date":null,"ocr_pages":0,"vectorised_pages":0}],"total":4,"has_more":false,"next_cursor":null,"elapsed_ms":"<any>"}}}
+
+# 4. Un état qui n'existe pas est refusé par le SCHÉMA, pas par l'outil : le
+#    message énumère les cinq valeurs, ce qui suffit à se corriger.
+> {"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"fouine_list_documents","arguments":{"state":"broken"}}}
+< {"jsonrpc":"2.0","id":5,"error":{"code":-32602,"message":"Invalid params: fouine_list_documents.state must be one of indexed, failed, skipped, pending, any","data":{"reason":"fouine_list_documents.state must be one of indexed, failed, skipped, pending, any"}}}
+
+# 5. `pending` — vu par le crawler, pas encore extrait. Vide ici, et c'est une
+#    information : rien n'attend.
+> {"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"fouine_list_documents","arguments":{"state":"pending"}}}
+< {"jsonrpc":"2.0","id":6,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"documents":[],"total":0,"has_more":false,"next_cursor":null,"elapsed_ms":"<any>"}}}

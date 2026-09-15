@@ -1,0 +1,36 @@
+# read-page.jsonl — `fouine_read_page` sur des pages courtes.
+#
+# Les deux ERREURS de la fin sont le cœur de cette transcription. Une page qui
+# n'existe pas et un document qui n'existe pas sont des `isError: true` avec un
+# bloc TEXTE, jamais des erreurs JSON-RPC : c'est la forme que le modèle LIT et
+# sait exploiter pour corriger son appel suivant. Le message donne le nombre de
+# pages réel, ce qui suffit à se corriger sans un appel de plus.
+
+> {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{}}}
+< {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"fouine","title":"Fouine","version":"1.0.0-test"},"instructions":"<any>"}}
+
+# 1. Une page entière. `truncated: false` et `next_offset: null` disent
+#    ensemble qu'il n'y a rien de plus — deux champs pour un seul fait, parce
+#    qu'un booléen manquant se lit mal et qu'un nul seul s'interprète mal.
+> {"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"fouine_read_page","arguments":{"doc_id":1,"page":2}}}
+< {"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"doc_id":1,"page":2,"page_label":null,"slide":null,"embedded_image":null,"time_seconds":null,"path":"Users/essai/Livres/document-1.pdf","abs_path":null,"link":"fouine://open?doc=1&page=2","folder":"Livres","ext":"pdf","page_count":3,"text":"electrolyse enthalpie page 2 du document 1","chars":42,"total_chars":42,"truncated":false,"next_offset":null,"source":"native","engine":"none","ocr_confidence":null,"note":null}}}
+
+# 2. Avec une page de contexte de chaque côté, LES PLUS PROCHES D'ABORD. Les
+#    pages voisines portent les mêmes champs, sauf `page_count` : il décrit le
+#    document, pas la page, et le répéter trois fois serait du bruit.
+> {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"fouine_read_page","arguments":{"doc_id":1,"page":2,"context_pages":1}}}
+< {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"<any>"}],"structuredContent":{"doc_id":1,"page":2,"page_label":null,"slide":null,"embedded_image":null,"time_seconds":null,"path":"Users/essai/Livres/document-1.pdf","abs_path":null,"link":"fouine://open?doc=1&page=2","folder":"Livres","ext":"pdf","page_count":3,"text":"electrolyse enthalpie page 2 du document 1","chars":42,"total_chars":42,"truncated":false,"next_offset":null,"source":"native","engine":"none","ocr_confidence":null,"note":null,"context":[{"doc_id":1,"page":1,"page_label":null,"slide":null,"embedded_image":null,"time_seconds":null,"path":"Users/essai/Livres/document-1.pdf","abs_path":null,"link":"fouine://open?doc=1&page=1","folder":"Livres","ext":"pdf","text":"electrolyse enthalpie page 1 du document 1","chars":42,"total_chars":42,"truncated":false,"next_offset":null,"source":"native","engine":"none","ocr_confidence":null,"note":null},{"doc_id":1,"page":3,"page_label":null,"slide":null,"embedded_image":null,"time_seconds":null,"path":"Users/essai/Livres/document-1.pdf","abs_path":null,"link":"fouine://open?doc=1&page=3","folder":"Livres","ext":"pdf","text":"electrolyse enthalpie page 3 du document 1","chars":42,"total_chars":42,"truncated":false,"next_offset":null,"source":"native","engine":"none","ocr_confidence":null,"note":null}]}}}
+
+# 3. Une page que le document n'a pas : isError, et le nombre qu'il a vraiment.
+> {"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"fouine_read_page","arguments":{"doc_id":1,"page":99}}}
+< {"jsonrpc":"2.0","id":4,"result":{"content":[{"type":"text","text":"no page 99 in document 1 (it has 3 pages)"}],"isError":true}}
+
+# 4. Un document qui n'existe pas : isError, et l'outil qui répond à « qu'y
+#    a-t-il, alors ? ».
+> {"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"fouine_read_page","arguments":{"doc_id":404,"page":1}}}
+< {"jsonrpc":"2.0","id":5,"result":{"content":[{"type":"text","text":"no document 404 in this index — use fouine_list_documents to see what is indexed"}],"isError":true}}
+
+# 5. Un argument hors bornes reste une erreur de REQUÊTE : `max_chars` est borné
+#    par le schéma, et le refus vient de la validation, pas de l'outil.
+> {"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"fouine_read_page","arguments":{"doc_id":1,"page":1,"max_chars":99}}}
+< {"jsonrpc":"2.0","id":6,"error":{"code":-32602,"message":"Invalid params: fouine_read_page.max_chars: minimum is 200","data":{"reason":"fouine_read_page.max_chars: minimum is 200"}}}
