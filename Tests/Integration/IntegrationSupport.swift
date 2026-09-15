@@ -299,6 +299,14 @@ enum Recette {
         process.arguments = arguments
         var environment = ProcessInfo.processInfo.environment
         environment["FOUINE_DB"] = database.path
+        // Les trois familles « sur demande » sont allumées par défaut depuis
+        // la 1.0.1 (DF1) ; le corpus versionné, lui, est compté SANS elles
+        // (`pieges/photo.png` prouve qu'un réglage éteint ne ramasse rien,
+        // les fixtures médias vivent hors du manifeste). La recette fige donc
+        // ce que le défaut donnait avant, et `extraEnvironment` peut le lever.
+        environment["FOUINE_EXTRACT_IMAGES"] = "false"
+        environment["FOUINE_EXTRACT_MEDIA"] = "false"
+        environment["FOUINE_EXTRACT_TRANSCRIBE"] = "false"
         for (key, value) in extraEnvironment { environment[key] = value }
         process.environment = environment
 

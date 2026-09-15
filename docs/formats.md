@@ -4,8 +4,9 @@ Over a hundred file types, on one rule: Fouine reads the **text** of a document
 and indexes it **page by page**. When a page carries no text, Fouine reads it
 from the image with Apple's text recognition. Your files are never modified.
 
-Three families are off by default and turn on in Settings: images, audio and
-video. One needs a tool that is not part of macOS: DjVu.
+Three families have their own checkbox in Settings, on by default since 1.0.1:
+images, audio and video, and the transcription of what is said in them. One
+format needs a tool that is not part of macOS: DjVu.
 
 - [Documents and office files](#documents-and-office-files)
 - [Books, comics and scans](#books-comics-and-scans)
@@ -106,7 +107,7 @@ Anki can stay open while Fouine reads it.
 ## On request: images
 
 **Settings ▸ Indexing ▸ "Index images (photos, scans, camera RAW files)"**,
-off by default. Every image then goes through text recognition, which can keep
+on by default. Every image goes through text recognition, which can keep
 Fouine busy for hours on a large photo library. What it finds is the text of
 photographed documents: a receipt, a letter, a page. Shop signs, labels and
 decorative lettering often escape it.
@@ -127,8 +128,8 @@ already indexed stay, with their text.
 ## On request: audio and video
 
 **Settings ▸ Indexing ▸ "Index audio and video files (titles, artists,
-chapters…)"**, off by default: a music library is not a set of documents. With
-it on, the title, artist, album, author, description, comment, lyrics, date,
+chapters…)"**, on by default; untick it if a watched folder is a music library
+rather than a set of documents. With it on, the title, artist, album, author, description, comment, lyrics, date,
 duration and chapters of each recording become searchable without listening to
 a second of it.
 

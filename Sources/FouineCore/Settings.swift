@@ -222,37 +222,40 @@ public enum SettingKeys {
 
     /// Prise en charge des images seules — dix-neuf extensions depuis INT-F2
     /// (`ImageExtractor.supportedExtensions` : photos, scans, PSD, RAW).
-    /// Désactivée par défaut : ne change rien pour un utilisateur existant.
+    /// Allumée par défaut depuis la 1.0.1 (DF1, décision du propriétaire du
+    /// 15/09/2026) : un réglage éteint que personne ne trouve laissait dormir
+    /// les documents photographiés. La case reste dans Réglages ▸ Indexation.
     public static let extractImages = SettingSpec(
-        key: "extract.images", kind: .boolean, fallback: "false",
+        key: "extract.images", kind: .boolean, fallback: "true",
         environmentVariable: "FOUINE_EXTRACT_IMAGES",
         summary: "Index standalone images (photos, scans, Photoshop and camera RAW files) "
-               + "and queue them for OCR (disabled by default).")
+               + "and queue them for OCR (enabled by default).")
 
     // — Audio et vidéo (lot INT-F3) ------------------------------------------
 
-    /// Prise en charge des fichiers son et vidéo. Éteinte par défaut pour la
-    /// même raison que les images : une bibliothèque musicale de 20 000 titres
-    /// n'est pas un fonds documentaire, et l'allumer sur un dossier
-    /// « Musique » ferait entrer des dizaines de milliers de documents d'une
-    /// ligne dans l'index de quelqu'un qui cherchait ses cours.
+    /// Prise en charge des fichiers son et vidéo. Allumée par défaut depuis
+    /// la 1.0.1 (DF1) : la réserve d'origine — une bibliothèque musicale de
+    /// 20 000 titres n'est pas un fonds documentaire — tient toujours, mais
+    /// elle se règle en décochant la case, pas en cachant la famille entière
+    /// derrière un réglage éteint.
     public static let extractMedia = SettingSpec(
-        key: "extract.media", kind: .boolean, fallback: "false",
+        key: "extract.media", kind: .boolean, fallback: "true",
         environmentVariable: "FOUINE_EXTRACT_MEDIA",
         summary: "Index audio and video files: titles, artists, albums, "
-               + "descriptions, lyrics and chapters (disabled by default).")
+               + "descriptions, lyrics and chapters (enabled by default).")
 
     /// Mise par écrit de la parole, SUR L'APPAREIL. Second étage, sous le
     /// premier : sans `extract.media`, ce réglage ne fait rien. Séparé parce
     /// que les deux coûts n'ont pas d'ordre de grandeur commun — lire les
     /// métadonnées d'un fichier coûte des millisecondes, transcrire une heure
     /// d'enregistrement coûte environ une heure de machine.
+    /// Allumée par défaut depuis la 1.0.1 (DF1), comme `extract.media`.
     public static let extractTranscribe = SettingSpec(
-        key: "extract.transcribe", kind: .boolean, fallback: "false",
+        key: "extract.transcribe", kind: .boolean, fallback: "true",
         environmentVariable: "FOUINE_EXTRACT_TRANSCRIBE",
         summary: "Transcribe the speech of audio and video files on this Mac "
-               + "(needs `extract.media`, a Dictation language installed and "
-               + "Speech Recognition permission; nothing is ever sent out).")
+               + "(enabled by default; needs `extract.media`, a Dictation language "
+               + "installed and Speech Recognition permission; nothing is ever sent out).")
 
     /// Plafond de durée d'un média à transcrire. Au-delà, seules les
     /// métadonnées sont indexées et `docs.meta` le dit. 120 minutes couvrent un
@@ -319,15 +322,16 @@ public enum SettingKeys {
 
     /// La campagne de vecteurs, confiée à l'agent (constat PR-21, lot AG1).
     ///
-    /// VRAI PAR DÉFAUT, et c'est tout le constat : `fouine embed` était le SEUL
+    /// Vrai par défaut à sa naissance (AG1) : `fouine embed` était le SEUL
     /// chemin vers la recherche par le sens, en ligne de commande, sur un
-    /// public qui n'ouvre pas de terminal. Un acheteur qui coche « Chercher
-    /// aussi par le sens » le premier soir travaillait des semaines sur un
-    /// fonds amputé, ou laissait sa machine chauffer huit heures d'un coup.
-    /// L'agent sait déjà travailler par tranches sous les six conditions du
-    /// §5.7 : c'est le même travail, à la même prudence.
+    /// public qui n'ouvre pas de terminal. FAUX PAR DÉFAUT depuis la 1.0.1
+    /// (DF1, décision du propriétaire du 15/09/2026) : la préparation reste
+    /// un choix explicite — la case dans Réglages ▸ Indexation, ou le bouton
+    /// « Préparer la recherche par le sens… » de la barre latérale, qui
+    /// s'affiche justement tant que la case est décochée. L'agent sait
+    /// toujours travailler par tranches sous les six conditions du §5.7.
     public static let agentPrepareMeaning = SettingSpec(
-        key: "agent.prepareMeaning", kind: .boolean, fallback: "true",
+        key: "agent.prepareMeaning", kind: .boolean, fallback: "false",
         environmentVariable: "FOUINE_AGENT_PREPARE_MEANING",
         summary: "Let the background agent produce the semantic vectors "
                + "(what `fouine embed` does), once the OCR queue is empty and "

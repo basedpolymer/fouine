@@ -15,6 +15,20 @@ The authoritative version number lives in the `VERSION` file and in
 `Sources/FouineCore/Version.swift`; the two must agree (`make check-version`).
 See `RELEASING.md`.
 
+## [1.0.1] — 2026-09-15
+
+### Changed
+
+- **Images, audio and video files, and what is said in them, are now indexed
+  by default.** The three boxes of Settings ▸ Indexing ("Index images",
+  "Index audio and video files", "Also write down what is said in them") start
+  ticked. Untick the second one if a watched folder is a music library rather
+  than a set of documents. A box you set yourself keeps its value; a box you
+  never touched takes the new default. *(DF1)*
+- **"Also prepare search by meaning in the background" is now off by
+  default.** Preparing search by meaning stays a deliberate choice: tick the
+  box, or click "Prepare search by meaning…" in the sidebar. *(DF1)*
+
 ## [1.0.0] — 2026-09-15
 
 First public version. Fouine indexes the documents in the folders you choose
@@ -518,4 +532,5 @@ and searches them, on your Mac, without sending anything anywhere.
   by where it lives — Fouine's own copy folder — and its link must use its
   application's scheme (`notes:`, `bear:`). *(AN2)*
 
+[1.0.1]: https://github.com/basedpolymer/fouine/releases/tag/v1.0.1
 [1.0.0]: https://github.com/basedpolymer/fouine/releases/tag/v1.0.0

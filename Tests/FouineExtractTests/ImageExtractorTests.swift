@@ -364,13 +364,13 @@ final class ImageExtractorTests: XCTestCase {
     // MARK: - Réglage extract.images
 
     func testSettingExtractImagesBehavior() {
-        // Desactive par defaut
-        let def = SettingsSnapshot(rows: [:])
-        XCTAssertFalse(def.extractImages)
+        // Allumé par défaut depuis la 1.0.1 (DF1)
+        let def = SettingsSnapshot(rows: [:], environment: [:])
+        XCTAssertTrue(def.extractImages)
 
-        // Active via snapshot
-        let enabled = SettingsSnapshot(rows: [SettingKeys.extractImages.key: "true"])
-        XCTAssertTrue(enabled.extractImages)
+        // Éteint via snapshot
+        let disabled = SettingsSnapshot(rows: [SettingKeys.extractImages.key: "false"])
+        XCTAssertFalse(disabled.extractImages)
 
         // Valeurs invalides retombent sur false
         let invalid = SettingsSnapshot(rows: [SettingKeys.extractImages.key: "non"])

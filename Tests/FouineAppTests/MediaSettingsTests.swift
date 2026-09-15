@@ -52,7 +52,7 @@ final class MediaSettingsTests: XCTestCase {
     @MainActor
     func testLaCaseDesImagesALaCleEtLaPhraseQuIlFaut() {
         XCTAssertEqual(SettingKeys.extractImages.key, "extract.images")
-        XCTAssertEqual(SettingKeys.extractImages.fallback, "false")
+        XCTAssertEqual(SettingKeys.extractImages.fallback, "true")   // DF1
         // La case vit dans `settings`, et pas dans une variable
         // d'environnement : c'est ce qui la rend visible de l'agent
         // d'arrière-plan et de la ligne de commande (volet 2 de C2-04).
@@ -62,13 +62,13 @@ final class MediaSettingsTests: XCTestCase {
 
     // MARK: - Les trois réglages
 
-    /// Éteints par défaut, tous les trois lisibles depuis la fenêtre ⌘, — et
-    /// `transcribe.max_minutes` borné, pour que le pas à pas ne puisse pas
-    /// écrire une valeur que le cœur refuserait.
+    /// Allumés par défaut depuis la 1.0.1 (DF1), tous les trois lisibles depuis
+    /// la fenêtre ⌘, — et `transcribe.max_minutes` borné, pour que le pas à
+    /// pas ne puisse pas écrire une valeur que le cœur refuserait.
     @MainActor
-    func testLesReglagesDesMediasSontEteintsEtBornes() {
-        XCTAssertEqual(SettingKeys.extractMedia.fallback, "false")
-        XCTAssertEqual(SettingKeys.extractTranscribe.fallback, "false")
+    func testLesReglagesDesMediasSontAllumesEtBornes() {
+        XCTAssertEqual(SettingKeys.extractMedia.fallback, "true")
+        XCTAssertEqual(SettingKeys.extractTranscribe.fallback, "true")
         XCTAssertEqual(SettingKeys.transcribeMaxMinutes.fallback, "120")
         let bounds = SettingKeys.transcribeMaxMinutes.range
         XCTAssertEqual(bounds?.min, 1)

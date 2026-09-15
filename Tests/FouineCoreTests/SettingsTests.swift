@@ -51,11 +51,11 @@ final class SettingsTests: XCTestCase {
     }
 
     /// La préparation de la recherche par le sens en arrière-plan (lot AG1,
-    /// PR-21). Le défaut VRAI est le constat lui-même : sans lui, la campagne
-    /// resterait une commande de terminal que personne ne tape.
-    func testMeaningIsPreparedInTheBackgroundByDefault() {
+    /// PR-21) est ÉTEINTE par défaut depuis la 1.0.1 (DF1) : elle se demande,
+    /// par la case ou par le bouton « Préparer… » de la barre latérale.
+    func testMeaningIsNotPreparedInTheBackgroundByDefault() {
         let snapshot = SettingsSnapshot.environmentOnly([:])
-        XCTAssertTrue(snapshot.agentPrepareMeaning)
+        XCTAssertFalse(snapshot.agentPrepareMeaning)
         XCTAssertEqual(snapshot.agentEmbedBudgetMinutes, 10)
         XCTAssertEqual(snapshot.agentLastEmbedBatchAt, 0)
         // La clé d'horodatage est un état interne : elle n'est pas au

@@ -141,9 +141,9 @@ final class SettingsModel: ObservableObject {
         case SettingKeys.extractJobs.key:
             return String(localized: "How many documents are read at once when you ask Fouine to update the index (1 to 4).")
         case SettingKeys.extractImages.key:
-            return String(localized: "Index the images of the watched folders (photos, scans, Photoshop and camera RAW files) and read the text on them. Off by default.")
+            return String(localized: "Index the images of the watched folders (photos, scans, Photoshop and camera RAW files) and read the text on them.")
         case SettingKeys.extractMedia.key:
-            return String(localized: "Index audio and video files: their titles, artists, albums, descriptions, lyrics and chapters. Off by default.")
+            return String(localized: "Index audio and video files: their titles, artists, albums, descriptions, lyrics and chapters.")
         case SettingKeys.extractTranscribe.key:
             return String(localized: "Write down what is said in audio and video files, on this Mac. Slow, and needs a Dictation language installed.")
         case SettingKeys.transcribeMaxMinutes.key:

@@ -7582,19 +7582,19 @@
         }
       }
     },
-    "Index audio and video files: their titles, artists, albums, descriptions, lyrics and chapters. Off by default.": {
+    "Index audio and video files: their titles, artists, albums, descriptions, lyrics and chapters.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Index audio and video files: their titles, artists, albums, descriptions, lyrics and chapters. Off by default."
+            "value": "Index audio and video files: their titles, artists, albums, descriptions, lyrics and chapters."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Indexer les fichiers son et vidéo : leurs titres, artistes, albums, descriptions, paroles et chapitres. Éteint par défaut."
+            "value": "Indexer les fichiers son et vidéo : leurs titres, artistes, albums, descriptions, paroles et chapitres."
           }
         }
       }
@@ -7667,19 +7667,19 @@
         }
       }
     },
-    "Index the images of the watched folders (photos, scans, Photoshop and camera RAW files) and read the text on them. Off by default.": {
+    "Index the images of the watched folders (photos, scans, Photoshop and camera RAW files) and read the text on them.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Index the images of the watched folders (photos, scans, Photoshop and camera RAW files) and read the text on them. Off by default."
+            "value": "Index the images of the watched folders (photos, scans, Photoshop and camera RAW files) and read the text on them."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Indexer les images des dossiers suivis (photos, scans, fichiers Photoshop et RAW d’appareil photo) et lire le texte qui s’y trouve. Éteint par défaut."
+            "value": "Indexer les images des dossiers suivis (photos, scans, fichiers Photoshop et RAW d’appareil photo) et lire le texte qui s’y trouve."
           }
         }
       }

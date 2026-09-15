@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "fouine",
   "display_name": "Fouine",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Search your own indexed documents, locally. No network.",
   "long_description": "Fouine indexes the documents on your Mac — text, PDF, OCR — and searches them in full text and, when the optional semantic model is installed, by meaning. This extension gives an assistant read-only access to that index: it never writes to it, never starts an indexing pass, never returns your original files, and never goes out on the network. Five tools: fouine_status, fouine_search, fouine_read_page, fouine_similar_pages, fouine_list_documents.",
   "author": {

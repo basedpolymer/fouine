@@ -922,7 +922,7 @@ exported from Notion reopens in Notion from the preview.
 
 - **When to update automatically**: three tickable conditions (only when the Mac
   is plugged in, not in Low Power Mode, not when the Mac is hot).
-- **Also prepare search by meaning in the background**, ticked by default.
+- **Also prepare search by meaning in the background**, unticked by default.
   Fouine then produces, in short stretches and under those same three
   conditions, what search by meaning needs, once every scanned page has been
   read. Under the box, a sentence says when that will happen, or, if the model is
@@ -931,18 +931,20 @@ exported from Notion reopens in Notion from the preview.
   scanned pages, most likely first. They are also the languages used when
   writing down recordings. Languages carry **their name**, in alphabetical order
   of that name, and the technical code goes into the tooltip.
-- **Index images (photos, scans, camera RAW files)**, off by default. Ticked,
+- **Index images (photos, scans, camera RAW files)**, on by default. Ticked,
   the photos, scans and RAW files of your watched folders enter the index and go
   through text recognition. Two sentences accompany it, and they say what
   matters: **each image goes through text recognition**, which can keep Fouine
   busy for hours on a large photo folder; and **Fouine reads the text of
   photographed documents**, a receipt, a letter, a page, while shop signs, labels
   and decorative lettering often escape it.
-- **Index audio and video files (titles, artists, chapters…)**, off by default:
-  a music library is not a set of documents. Ticked, the titles, artists, albums,
+- **Index audio and video files (titles, artists, chapters…)**, on by default;
+  untick it if a watched folder is a music library rather than a set of
+  documents. Ticked, the titles, artists, albums,
   lyrics and chapters of a recording become searchable without listening to a
-  second of it. Under it, **Also write down what is said in them**: Fouine
-  listens on this Mac and writes the words, nothing is sent anywhere; count
+  second of it. Under it, **Also write down what is said in them**, on by
+  default too: Fouine listens on this Mac and writes the words, nothing is sent
+  anywhere; count
   roughly the length of the recording, and the language must be installed in
   System Settings ▸ Keyboard ▸ Dictation (otherwise the document is set aside
   saying so). **Longest recording to write down (minutes)** bounds the effort

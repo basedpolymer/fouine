@@ -17,7 +17,7 @@ text.](docs/images/hero.png)
 
 ## Start in five minutes
 
-1. **Download the disk image.** `Fouine-1.0.0.dmg`, from the releases page of
+1. **Download the disk image.** `Fouine-1.0.1.dmg`, from the releases page of
    this repository. The product page is
    [basedpolymer.eu/fouine](https://basedpolymer.eu/fouine).
 2. **Open the disk image and drag `Fouine.app` onto `Applications`.** macOS

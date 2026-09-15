@@ -113,8 +113,10 @@ An FSEvents burst waits for the current recognition batch to finish: the agent
 never does two heavy things at once.
 
 **Search by meaning.** The agent also prepares search by meaning, which is what
-`fouine embed` does, in batches of `agent.embedBudgetMinutes` minutes (10 by
-default) and under the **same six conditions**. Four more guards, in this
+`fouine embed` does, when `agent.prepareMeaning` is on (off by default since
+1.0.1: the app's "Prepare search by meaning…" button or the checkbox in
+Settings ▸ Indexing arms it), in batches of `agent.embedBudgetMinutes` minutes
+(10 by default) and under the **same six conditions**. Four more guards, in this
 order:
 
 1. **recognition first**: a batch starts only when the recognition queue is

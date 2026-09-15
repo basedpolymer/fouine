@@ -982,8 +982,8 @@ un dossier… ». Une page exportée de Notion se rouvre dans Notion depuis l'ap
 - **« Quand mettre à jour automatiquement »** : trois critères cochables
   (seulement quand le Mac est branché, pas en mode économie d'énergie, pas quand
   le Mac chauffe).
-- **« Préparer aussi la recherche par le sens en arrière-plan »**, cochée par
-  défaut. Fouine produit alors elle-même, par courtes tranches et sous les mêmes
+- **« Préparer aussi la recherche par le sens en arrière-plan »**, décochée par
+  défaut. Cochée, Fouine produit elle-même, par courtes tranches et sous les mêmes
   trois critères, ce que la recherche par le sens réclame, une fois toutes les
   pages scannées lues. Sous la case, une phrase dit quand cela se fera, ou, si le
   modèle n'est pas encore téléchargé, où le prendre.
@@ -993,7 +993,7 @@ un dossier… ». Une page exportée de Notion se rouvre dans Notion depuis l'ap
   nom**, rangé par ordre alphabétique de ce nom, et le code technique passe en
   infobulle.
 - **« Indexer les images (photos, scans, fichiers RAW d'appareil photo) »**,
-  éteinte par défaut. Cochée, les photos, les scans et les fichiers RAW des
+  cochée par défaut. Cochée, les photos, les scans et les fichiers RAW des
   dossiers suivis entrent dans l'index et passent par la reconnaissance de texte.
   Deux phrases l'accompagnent, et elles disent l'essentiel : **chaque image passe
   par la reconnaissance de texte**, ce qui peut occuper Fouine des heures sur un
@@ -1001,10 +1001,11 @@ un dossier… ». Une page exportée de Notion se rouvre dans Notion depuis l'ap
   la photo d'un ticket, d'un courrier, d'une page, tandis que les enseignes, les
   étiquettes et les écritures décoratives lui échappent souvent.
 - **« Indexer les fichiers son et vidéo (titres, artistes, chapitres…) »**,
-  éteinte par défaut : une bibliothèque musicale n'est pas un fonds documentaire.
-  Cochée, les titres, artistes, albums, paroles et chapitres d'un enregistrement
+  cochée par défaut ; décochez-la si un dossier suivi est une bibliothèque
+  musicale plutôt qu'un fonds documentaire. Cochée, les titres, artistes, albums, paroles et chapitres d'un enregistrement
   deviennent cherchables sans en écouter une seconde. Sous elle, **« Mettre aussi
-  par écrit ce qui est dit »** : Fouine écoute sur ce Mac et écrit les mots, rien
+  par écrit ce qui est dit »**, cochée par défaut elle aussi : Fouine écoute sur
+  ce Mac et écrit les mots, rien
   n'est envoyé nulle part ; comptez à peu près la durée de l'enregistrement, et
   la langue doit être installée dans Réglages Système ▸ Clavier ▸ Dictée (sinon le
   document est écarté en le disant). **« Durée maximale mise par écrit

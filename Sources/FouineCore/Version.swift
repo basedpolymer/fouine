@@ -27,5 +27,5 @@
 public enum FouineVersion {
     /// Version marketing, telle qu'elle part dans `CFBundleShortVersionString`
     /// et dans `fouine --version` (SemVer, sans le « v » du tag git).
-    public static let string = "1.0.0"
+    public static let string = "1.0.1"
 }

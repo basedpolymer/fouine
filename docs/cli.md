@@ -57,7 +57,7 @@ clipboard. It never asks for your administrator password.
 ```sh
 sudo mkdir -p /usr/local/bin
 sudo ln -sf /Applications/Fouine.app/Contents/Helpers/fouine /usr/local/bin/fouine
-fouine --version          # 1.0.0
+fouine --version          # 1.0.1
 ```
 
 A **link**, not a copy: a copy would drift at the first app update and read the
@@ -572,9 +572,9 @@ Erases the row: the value goes back to the default (or to the environment).
 | `ocr.languages` | BCP-47 list | `fr-FR,en-US` | `FOUINE_OCR_LANGUAGES` |
 | `ocr.jobs` | 1–4 | 4 | `FOUINE_OCR_JOBS` |
 | `extract.jobs` | 1–4 | 4 | `FOUINE_EXTRACT_JOBS` |
-| `extract.images` | boolean | `false` | `FOUINE_EXTRACT_IMAGES` |
-| `extract.media` | boolean | `false` | `FOUINE_EXTRACT_MEDIA` |
-| `extract.transcribe` | boolean | `false` | `FOUINE_EXTRACT_TRANSCRIBE` |
+| `extract.images` | boolean | `true` | `FOUINE_EXTRACT_IMAGES` |
+| `extract.media` | boolean | `true` | `FOUINE_EXTRACT_MEDIA` |
+| `extract.transcribe` | boolean | `true` | `FOUINE_EXTRACT_TRANSCRIBE` |
 | `transcribe.max_minutes` | 1–600 | 120 | `FOUINE_TRANSCRIBE_MAX_MINUTES` |
 | `agent.extractJobs` | 1–4 | 2 | `FOUINE_AGENT_JOBS` |
 | `agent.ocrBudgetMinutes` | 1–120 | 10 | `FOUINE_AGENT_OCR_BUDGET_MINUTES` |
@@ -582,7 +582,7 @@ Erases the row: the value goes back to the default (or to the environment).
 | `agent.requireAC` | boolean | `true` | `FOUINE_AGENT_REQUIRE_AC` |
 | `agent.pauseOnLowPower` | boolean | `true` | `FOUINE_AGENT_PAUSE_LOW_POWER` |
 | `agent.pauseOnThermal` | boolean | `true` | `FOUINE_AGENT_PAUSE_ON_THERMAL` |
-| `agent.prepareMeaning` | boolean | `true` | `FOUINE_AGENT_PREPARE_MEANING` |
+| `agent.prepareMeaning` | boolean | `false` | `FOUINE_AGENT_PREPARE_MEANING` |
 | `agent.embedBudgetMinutes` | 1–120 | 10 | `FOUINE_AGENT_EMBED_BUDGET_MINUTES` |
 | `embed.skip_spreadsheets` | boolean | `true` | `FOUINE_EMBED_SKIP_SPREADSHEETS` |
 | `roots.pinned` | identifiers | *(empty)* | `FOUINE_PINNED_ROOTS` |
@@ -613,7 +613,7 @@ but copies nothing right away: the copy happens at the start of the next
 indexing pass, where the `enable` subcommand does it immediately.
 
 **`extract.images`** turns on indexing images on their own: nineteen extensions
-listed in [formats](formats.md). Off by default. When on, each valid image
+listed in [formats](formats.md). On by default since 1.0.1. When on, each valid image
 declares a page (a multi-page TIFF declares as many as it holds) and enters the
 recognition queue. Two floors keep interface clutter out, with **two distinct
 reasons**: files under **8 KiB** (`image file below the OCR weight floor`) and
@@ -621,12 +621,13 @@ those whose smaller side is under 300 px (`image below the OCR size floor`) are
 skipped cleanly. **`fouine config set extract.images false` removes NOTHING from
 the index**: the next pass stops adding images, and the ones already indexed
 stay with their recognised text. Photos libraries (`.photoslibrary`) and caches
-stay excluded by the crawler. The app has no checkbox for images: this setting
-is command line or environment variable.
+stay excluded by the crawler. The app's checkbox is Settings ▸ Indexing ▸ "Index
+images".
 
 **`extract.media`** turns on indexing audio and video, twelve audio extensions
-and seven video ones. Off by default: a music library of 20 000 tracks is not a
-set of documents. On, each recording yields **one metadata page** (title,
+and seven video ones. On by default since 1.0.1; turn it off if a watched folder
+holds a music library, since 20 000 tracks are not a set of documents. On, each
+recording yields **one metadata page** (title,
 artist, album, author, description, comment, lyrics, date, duration, chapters)
 of origin `native`. A recording with no tag at all and no transcription is
 skipped cleanly (`no metadata`; with transcription on, the reason takes a
@@ -638,8 +639,8 @@ go through **ffmpeg** when it is installed (`/opt/homebrew/bin`,
 soon as the tool appears.
 
 **`extract.transcribe`** writes down the speech of media files, **on this
-machine**: nothing is sent anywhere (`requiresOnDeviceRecognition`). Without
-`extract.media` it does nothing. Each ten-minute window becomes a page of origin
+machine**: nothing is sent anywhere (`requiresOnDeviceRecognition`). On by
+default since 1.0.1. Without `extract.media` it does nothing. Each ten-minute window becomes a page of origin
 `transcript`, in paragraphs headed by their `[mm:ss]` timestamp. The languages
 are those of `ocr.languages`, there is no extra key, and the **dictation**
 language must be installed (System Settings ▸ Keyboard ▸ Dictation) along with
@@ -674,7 +675,9 @@ findable word for word. `fouine embed --include-tables` overrides it for one
 campaign.
 
 **`agent.prepareMeaning`** hands the production of vectors to the agent, which
-is what `fouine embed` does. **True by default**: a batch of
+is what `fouine embed` does. **False by default** since 1.0.1 (it was true in
+1.0.0): the app's "Prepare search by meaning…" button or the checkbox in
+Settings ▸ Indexing turns it on. Armed, a batch of
 `agent.embedBudgetMinutes` minutes starts when the recognition queue is empty,
 the model is installed, pages are left to prepare, and the six conditions of the
 agent hold. `fouine status` gives its state (line `meaning`), `fouine doctor`
