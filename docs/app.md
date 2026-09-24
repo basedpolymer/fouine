@@ -99,9 +99,10 @@ a mistake in how the query is written.
 Under "No result for “…”", the window offers the buttons that can still bring
 something back, and only those:
 
-- **Tolerate typos**, if the setting is not already on "always";
+- **Tolerate typos**, if **Typos** is set to "off";
 - **Remove the filters**, if a filter, a facet or a scope is active;
-- **Also search by meaning**, if the model is ready and the switch is off.
+- **Search by meaning too**, if the model is ready and the **Also search by
+  meaning** switch is off.
 
 Then comes the sentence "Try fewer words, or check the spelling." Each button
 changes the setting it names and runs the search again. No setting changes
@@ -640,9 +641,9 @@ tolerated:
 
 | Option | Behaviour |
 |---|---|
-| Never | strict word-for-word search |
-| Auto (default) | tolerance only when a word gives no exact result |
-| Always | search always widened to close variants |
+| off | strict word-for-word search |
+| auto (default) | tolerance only when a word gives no exact result |
+| always | search always widened to close variants |
 
 ### Also search by meaning
 

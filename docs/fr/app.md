@@ -103,8 +103,8 @@ signale qu'une erreur dans la façon d'écrire la requête.
 Sous « Aucun résultat pour “…” », la fenêtre propose les boutons qui peuvent
 encore ramener quelque chose, et eux seuls :
 
-- **Tolérer les fautes de frappe**, si le réglage n'est pas déjà sur
-  « toujours » ;
+- **Tolérer les fautes de frappe**, si **Fautes de frappe** est sur
+  « jamais » ;
 - **Retirer les filtres**, si un filtre, une facette ou une portée est actif ;
 - **Chercher aussi par le sens**, si le modèle est prêt et l'interrupteur éteint.
 
@@ -681,9 +681,9 @@ erreurs de reconnaissance :
 
 | Option | Comportement |
 |---|---|
-| Jamais | recherche stricte mot à mot |
-| Auto (défaut) | tolérance seulement si un mot ne donne aucun résultat exact |
-| Toujours | recherche élargie systématiquement aux variantes proches |
+| jamais | recherche stricte mot à mot |
+| auto (défaut) | tolérance seulement si un mot ne donne aucun résultat exact |
+| toujours | recherche élargie systématiquement aux variantes proches |
 
 ### Chercher aussi par le sens
 
