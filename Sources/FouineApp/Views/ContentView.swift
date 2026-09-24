@@ -218,9 +218,13 @@ struct TCCBannerView: View {
             Image(systemName: "lock.trianglebadge.exclamationmark")
                 .foregroundStyle(.orange)
                 .accessibilityHidden(true)     // le libellé du texte le dit
+            // Un cadre, pas `fixedSize` : au-dessus du `NavigationSplitView`,
+            // la phrase figée en hauteur était mesurée à largeur nulle et
+            // faisait grandir la fenêtre au-delà de l'écran
+            // (`ColumnOverflowTests`, 24/09/2026).
             Text(text)
                 .font(.callout)
-                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 // Le fond orange et le cadenas portaient seuls la nature du
                 // bandeau : le libellé nomme l'alerte avant de la lire.
                 .accessibilityAddTraits(.isStaticText)

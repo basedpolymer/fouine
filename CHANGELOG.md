@@ -25,6 +25,13 @@ See `RELEASING.md`.
   window content slid up under the title bar: the search field ended up out of
   reach, and the only way back was to run another search from outside the
   window. *(QN1)*
+- **Three other messages no longer push the window content out of view.** The
+  banner shown when macOS refuses access to a folder, the line saying that the
+  disk holding a document is not plugged in, and the header of a text preview
+  ("text read from the scan…") each made the window content slide under the
+  title bar, or made the window taller than the screen for the banner. The
+  same happened in a separate preview window when the page asked for no
+  longer exists. *(QN1)*
 
 ## [1.0.1] — 2026-09-15
 

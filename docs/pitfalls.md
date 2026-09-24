@@ -632,6 +632,23 @@ behind the title bar, out of reach, until a query without the notice was run.
 `ResultsView.swift` and refuses that modifier in the status line and in every
 `…Notice` view.
 
+The same day, four more lines turned out to have the same defect: the
+permission banner above the columns (`TCCBannerView`, window pushed to
+2 808 pt), the "disk not plugged in" line of the preview (`OfflineNoticeLine`),
+the header of the text preview (`TextPreviewNotices`, 2 005 pt) and the
+"page no longer exists" line of a detached preview window
+(`OutOfRangeNotice`). Placing the frame BEFORE `fixedSize` changes nothing:
+the modifier itself is the cause, wherever it sits in the chain. At the root
+of a window (a `VStack` holding the banner and the split view) the effect is
+worse than in a column: the window grows past the screen.
+`ColumnOverflowTests` lays each of these views out in an off-screen window
+built like `ContentView` and reads the height of the `NSSplitView`, which is
+the `AXSplitGroup` of the accessibility tree; a control test proves that the
+harness still sees the defect. A view that only appears after a `.task` must
+be extracted with its conditions as parameters: SwiftUI does not run the
+`.task` of a window that is never shown, and the test would stay green on the
+defect.
+
 ## Two gestures in a sidebar card
 
 An `HStack` of 231 points does not hold two French labels: the button gets cut

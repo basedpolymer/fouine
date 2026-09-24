@@ -53,7 +53,7 @@ struct PreviewPane: View {
             header
             Divider()
             if let notice = preview.offlineNotice {
-                offlineNoticeLine(notice)
+                OfflineNoticeLine(notice: notice) { preview.copyPageText() }
             }
             content
                 // Le menu contextuel de l'APERÇU (constat PR-24) : un clic droit
@@ -115,37 +115,6 @@ struct PreviewPane: View {
         .accessibilityAddTraits(.isStaticText)
         .accessibilityLabel(notice)
         .accessibilityIdentifier("preview.rereadNotice")
-    }
-
-    /// « Le disque n'est pas branché — voici le texte gardé » (lot PV1).
-    ///
-    /// Un bandeau, pas une page d'erreur : le texte de la page est en dessous,
-    /// il se lit et se feuillette. Le seul geste qui reste possible sans le
-    /// fichier est de l'emporter — d'où « Copier ce texte », et rien d'autre.
-    private func offlineNoticeLine(_ notice: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Image(systemName: "externaldrive.badge.questionmark")
-                .imageScale(.small)
-                .foregroundStyle(.orange)
-                .accessibilityHidden(true)
-            Text(verbatim: notice)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Button("Copy this text") { preview.copyPageText() }
-                .buttonStyle(.link)
-                .font(.caption)
-                .accessibilityIdentifier("preview.offline.copy")
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(nsColor: .windowBackgroundColor))
-        .overlay(Divider(), alignment: .bottom)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(notice)
-        .accessibilityIdentifier("preview.offlineNotice")
     }
 
     // MARK: - En-tête
@@ -710,5 +679,46 @@ struct PreviewPane: View {
         .accessibilityAddTraits(.isStaticText)
         .accessibilityLabel(String(localized: "\(title). \(detail)"))
         .accessibilityIdentifier("preview.placeholder")
+    }
+}
+
+/// « Le disque n'est pas branché — voici le texte gardé » (lot PV1).
+///
+/// Un bandeau, pas une page d'erreur : le texte de la page est en dessous,
+/// il se lit et se feuillette. Le seul geste qui reste possible sans le
+/// fichier est de l'emporter — d'où « Copier ce texte », et rien d'autre.
+///
+/// Un cadre et non `fixedSize` : figée en hauteur, la phrase faisait mesurer la
+/// colonne de l'aperçu à largeur nulle et le contenu de la fenêtre débordait
+/// sous le titre (pièges connus, « la colonne des résultats qui déborde » ;
+/// prouvé par `ColumnOverflowTests`, 24/09/2026). Sortie de `PreviewPane` pour
+/// que ce test la mette en page telle quelle.
+struct OfflineNoticeLine: View {
+    let notice: String
+    let copy: () -> Void
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Image(systemName: "externaldrive.badge.questionmark")
+                .imageScale(.small)
+                .foregroundStyle(.orange)
+                .accessibilityHidden(true)
+            Text(verbatim: notice)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button("Copy this text", action: copy)
+                .buttonStyle(.link)
+                .font(.caption)
+                .accessibilityIdentifier("preview.offline.copy")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .overlay(Divider(), alignment: .bottom)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(notice)
+        .accessibilityIdentifier("preview.offlineNotice")
     }
 }

@@ -61,7 +61,7 @@ struct DetachedPreviewWindow: View {
             } else {
                 VStack(spacing: 0) {
                     if let notice = target.notice {
-                        outOfRangeNotice(notice)
+                        OutOfRangeNotice(notice: notice)
                     }
                     PreviewPane()
                         .environmentObject(preview)
@@ -77,23 +77,6 @@ struct DetachedPreviewWindow: View {
         .onDisappear {
             if let key { windows.closed(identity: key) }
         }
-    }
-
-    /// « La page 99 999 n'existe plus dans ce document » (BU-18). Une citation
-    /// d'il y a un an dont le document a été raccourci ouvrait une fenêtre vide
-    /// qui affirmait « page 99 999 » ; elle ouvre maintenant la page 1 et le
-    /// dit.
-    private func outOfRangeNotice(_ notice: String) -> some View {
-        Label(notice, systemImage: "exclamationmark.triangle")
-            .font(.caption)
-            .foregroundStyle(.orange)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(nsColor: .windowBackgroundColor))
-            .overlay(Divider(), alignment: .bottom)
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityIdentifier("detachedPreview.outOfRange")
     }
 
     private var unavailable: some View {
@@ -150,5 +133,30 @@ struct DetachedPreviewWindow: View {
         // Le moment porté par un lien `fouine://…&t=` voyage avec la page :
         // c'est la fenêtre qui pose la tête de lecture, pas le lecteur.
         preview.load(hit: hit, roots: app.roots, time: target.time)
+    }
+}
+
+/// « La page 99 999 n'existe plus dans ce document » (BU-18). Une citation
+/// d'il y a un an dont le document a été raccourci ouvrait une fenêtre vide
+/// qui affirmait « page 99 999 » ; elle ouvre maintenant la page 1 et le
+/// dit.
+///
+/// Sans `fixedSize(horizontal: false, vertical: true)` : posé au-dessus de
+/// l'aperçu, il faisait mesurer la fenêtre à largeur nulle et la poussait
+/// au-delà de l'écran (`ColumnOverflowTests`, 24/09/2026). Vue à part pour que
+/// ce test la mette en page telle quelle.
+struct OutOfRangeNotice: View {
+    let notice: String
+
+    var body: some View {
+        Label(notice, systemImage: "exclamationmark.triangle")
+            .font(.caption)
+            .foregroundStyle(.orange)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(nsColor: .windowBackgroundColor))
+            .overlay(Divider(), alignment: .bottom)
+            .accessibilityIdentifier("detachedPreview.outOfRange")
     }
 }

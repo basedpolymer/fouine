@@ -41,7 +41,9 @@ struct TextPreviewView: View {
     var body: some View {
         VStack(spacing: 0) {
             if let rendered, page.fromOCR || rendered.truncated || rendered.capped {
-                notices(rendered)
+                TextPreviewNotices(fromOCR: page.fromOCR,
+                                   truncated: rendered.truncated,
+                                   capped: rendered.capped)
             }
             ScrollView {
                 // Les coupures invisibles valent AUSSI pour le premier rendu,
@@ -84,30 +86,41 @@ struct TextPreviewView: View {
     private var spokenText: String {
         String((rendered?.text ?? AttributedString(page.text)).characters)
     }
+}
 
-    /// Tout ce que l'aperçu doit AVOUER : d'où vient ce texte, et ce qu'il ne
-    /// montre pas. Une troncature muette est le défaut reproché au surlignage
-    /// du PDF (audit A12) ; on ne le reproduit pas ici.
-    private func notices(_ rendered: TextHighlighter.Result) -> some View {
+/// Tout ce que l'aperçu doit AVOUER : d'où vient ce texte, et ce qu'il ne
+/// montre pas. Une troncature muette est le défaut reproché au surlignage
+/// du PDF (audit A12) ; on ne le reproduit pas ici.
+///
+/// Sans `fixedSize(horizontal: false, vertical: true)` : hors du `ScrollView`,
+/// il faisait mesurer la colonne de l'aperçu à largeur nulle, et une page
+/// scannée en mode Texte poussait le contenu de la fenêtre sous le titre
+/// (`ColumnOverflowTests`, 24/09/2026). Vue à part pour que ce test la mette en
+/// page sans attendre le surlignage, qui décide de son affichage.
+struct TextPreviewNotices: View {
+    let fromOCR: Bool
+    let truncated: Bool
+    let capped: Bool
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            if page.fromOCR {
+            if fromOCR {
                 Label("text read from the scan: it may differ from what the page shows",
                       systemImage: "text.viewfinder")
                     .foregroundStyle(Color.teal)
             }
-            if rendered.truncated {
+            if truncated {
                 Label("page truncated to \(Format.integer(TextHighlighter.maxCharacters)) characters for display; the whole text stays searchable",
                       systemImage: "scissors")
                     .foregroundStyle(.secondary)
             }
-            if rendered.capped {
+            if capped {
                 Label("first \(Format.integer(TextHighlighter.maxOccurrences)) occurrences highlighted",
                       systemImage: "highlighter")
                     .foregroundStyle(.secondary)
             }
         }
         .font(.caption)
-        .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 14)
         .padding(.vertical, 5)
         .frame(maxWidth: .infinity, alignment: .leading)
