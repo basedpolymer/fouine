@@ -1,7 +1,7 @@
 # Fouine documentation
 
-English is the language of this project. The app itself follows the system
-language and speaks English and French; its built-in guide exists in both
+English is the language of this project. The app follows the system language
+and is available in English and French, and its built-in guide exists in both
 ([`app.md`](app.md), [`fr/app.md`](fr/app.md)).
 
 ## Using Fouine
