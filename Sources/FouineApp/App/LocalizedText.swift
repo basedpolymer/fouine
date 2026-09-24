@@ -57,6 +57,28 @@ enum TCCText {
     }
 }
 
+/// Le texte du bandeau d'autorisation de la fenêtre principale (§7.1), ou
+/// `nil` quand il n'a rien à dire.
+///
+/// Seules les racines actives, montées et REFUSÉES par macOS comptent : le
+/// bandeau porte « Open Settings », et un disque débranché, un dossier
+/// déplacé ou vide ne s'y réparent pas. Le motif de chaque racine (« disk not
+/// plugged in », « read denied (…) ») est un sous-titre de barre latérale :
+/// collé après une phrase, il faisait un fragment en minuscules.
+enum PermissionBannerText {
+    static func make(_ roots: [RootStatus]) -> String? {
+        let denied = roots.filter {
+            $0.record.enabled && $0.mounted && !$0.readable
+                && $0.probeReason == .permissionDenied
+        }
+        guard !denied.isEmpty else { return nil }
+        let names = denied
+            .map { String(localized: "“\($0.label)”") }
+            .joined(separator: ", ")
+        return String(localized: "Fouine is not allowed to read \(names). Results already indexed stay searchable, but preview and indexing are impossible. To allow it: \(TCCText.guidance)")
+    }
+}
+
 /// Pourquoi une racine ne se lit pas, dans la langue de l'utilisateur.
 ///
 /// `RootProbe.Reason` (palier 3.5) porte le motif sous forme de DONNÉES : la

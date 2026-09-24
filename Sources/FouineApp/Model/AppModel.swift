@@ -21,6 +21,10 @@ struct RootStatus: Identifiable, Equatable {
     var mounted: Bool
     var readable: Bool
     var reason: String?
+    /// Le motif de la sonde, en DONNÉES : seul `.permissionDenied` appelle le
+    /// bandeau d'autorisation. `reason` est une phrase d'affichage, qu'on ne
+    /// relit pas pour deviner la nature du refus.
+    var probeReason: RootProbe.Reason? = nil
 
     var label: String { record.label }
 
@@ -29,6 +33,7 @@ struct RootStatus: Identifiable, Equatable {
             && a.absolutePath == b.absolutePath && a.reason == b.reason
             && a.record.enabled == b.record.enabled
             && a.record.label == b.record.label
+            && a.probeReason == b.probeReason
     }
 }
 
@@ -717,7 +722,8 @@ final class AppModel: ObservableObject {
                     // il devient ici la phrase de la langue de l'utilisateur.
                     return RootStatus(record: record, absolutePath: url.path,
                                       mounted: true, readable: false,
-                                      reason: RootProbeText.describe(raw: raw))
+                                      reason: RootProbeText.describe(raw: raw),
+                                      probeReason: RootProbe.reason(raw))
                 } catch {
                     return RootStatus(record: record, absolutePath: url.path,
                                       mounted: true, readable: false,
@@ -743,19 +749,15 @@ final class AppModel: ObservableObject {
         refreshIndexStatus()
         guard probe else { return }
 
+        // Le bandeau ne parle que des REFUS d'autorisation : un disque
+        // débranché ou un dossier disparu y affichait « Open Settings », où il
+        // n'y a rien à cocher (24/09/2026). Ces cas-là, la carte « Index » et
+        // la ligne du dossier les disent déjà, avec le bon geste.
+        tccBanner = PermissionBannerText.make(statuses)
         let blocked = statuses.filter { $0.record.enabled && !$0.readable }
-        if blocked.isEmpty {
-            tccBanner = nil
-            if !statuses.isEmpty {
-                firstRunProbeDone = true
-                Prefs.defaults.set(true, forKey: Prefs.firstRunProbeDone)
-            }
-        } else {
-            let names = blocked
-                .map { String(localized: "“\($0.label)”") }
-                .joined(separator: ", ")
-            let detail = blocked.compactMap(\.reason).first ?? ""
-            tccBanner = String(localized: "Fouine cannot read \(names). Results already indexed stay searchable, but preview and indexing are impossible. \(detail.isEmpty ? TCCText.guidance : detail)")
+        if blocked.isEmpty, !statuses.isEmpty {
+            firstRunProbeDone = true
+            Prefs.defaults.set(true, forKey: Prefs.firstRunProbeDone)
         }
     }
 

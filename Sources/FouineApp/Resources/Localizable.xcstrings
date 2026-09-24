@@ -6154,23 +6154,6 @@
         }
       }
     },
-    "Fouine cannot read %@. Results already indexed stay searchable, but preview and indexing are impossible. %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fouine cannot read %@. Results already indexed stay searchable, but preview and indexing are impossible. %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fouine ne peut pas lire %1$@. Les résultats déjà indexés restent consultables, mais l’aperçu et l’indexation sont impossibles. %2$@"
-          }
-        }
-      }
-    },
     "Fouine cannot read or create its index file. Check that the disk is not read-only and that Fouine is allowed to access its folder.": {
       "extractionState": "manual",
       "localizations": {
@@ -6558,6 +6541,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fouine prépare déjà le sens de vos documents, dans une autre fenêtre ou dans le Terminal. Attendez la fin de ce travail."
+          }
+        }
+      }
+    },
+    "Fouine is not allowed to read %@. Results already indexed stay searchable, but preview and indexing are impossible. To allow it: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fouine is not allowed to read %@. Results already indexed stay searchable, but preview and indexing are impossible. To allow it: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fouine n’a pas l’autorisation de lire %1$@. Les résultats déjà indexés restent consultables, mais l’aperçu et l’indexation sont impossibles. Pour l’autoriser : %2$@"
           }
         }
       }

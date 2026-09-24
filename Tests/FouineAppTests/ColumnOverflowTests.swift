@@ -143,7 +143,7 @@ final class ColumnOverflowTests: XCTestCase {
     func testPermissionBannerDoesNotGrowTheWindow() throws {
         let db = try TempAppDB()
         let app = AppModel(service: db.service)
-        let text = "Fouine cannot read “Documents” and “Desktop”. Results already indexed stay searchable, but preview and indexing are impossible. Open System Settings, then Privacy & Security, then Files and Folders, and allow Fouine."
+        let text = "Fouine is not allowed to read “Documents”, “Desktop”. Results already indexed stay searchable, but preview and indexing are impossible. To allow it: \(TCCText.guidance)"
         assertFits(layout(VStack(spacing: 0) {
             TCCBannerView(text: text).environmentObject(app)
             Columns(content: column(EmptyView()), detail: column(EmptyView()))

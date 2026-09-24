@@ -32,6 +32,14 @@ See `RELEASING.md`.
   title bar, or made the window taller than the screen for the banner. The
   same happened in a separate preview window when the page asked for no
   longer exists. *(QN1)*
+- **An unplugged disk no longer shows the permission banner.** When the disk
+  holding a folder was not plugged in, the top of the window said "Fouine
+  cannot read “Documents”" with an "Open Settings" button, although no setting
+  can bring a disk back, and the sentence ended with the words "disk not
+  plugged in" stuck after a full stop. The banner now appears only when macOS
+  refuses access to a folder, and it names the place in System Settings where
+  to allow it. A disk that is not plugged in is still shown in the sidebar,
+  where the Index card offers "Check again". *(PB1)*
 
 ## [1.0.1] — 2026-09-15
 
