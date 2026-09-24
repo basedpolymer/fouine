@@ -574,7 +574,7 @@ Four pages there are part of the product, and a release checks them:
 
 | Page | What it is | Where it comes from |
 |---|---|---|
-| `/fouine/privacy`, `/fouine/fr/confidentialite` | the privacy policy Creem and the app's **What Fouine sends, in detail** button point at | `docs/privacy.md`, converted with `marked` and pasted into the site template; the French page is a summary and says the English text prevails. **Update it when `docs/privacy.md` changes** |
+| `/fouine/privacy`, `/fouine/fr/confidentialite` | the privacy policy Creem and the app's **What Fouine sends, in detail** button point at | the same text as `docs/privacy.md`, written directly in HTML and kept in step by hand (no conversion step); the French page is a summary and says the English text prevails. **Change both together** |
 | `/fouine/terms`, `/fouine/fr/conditions` | terms of sale and use: what a key buys, the trial, Creem as merchant of record, refunds, the licence, support | written by hand, dated |
 | `/fouine/thanks`, `/fouine/fr/merci` | where Creem sends a buyer after payment (`default_success_url` of the product) | by hand |
 | `api/fouine/license.js` | the licence relay, the only server-side code: holds `CREEM_API_KEY` (a Vercel environment variable, **Production**), forwards activate / validate / deactivate, and talks to Creem's sandbox by itself when the key starts with `creem_test_` | by hand |
