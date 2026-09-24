@@ -19,8 +19,8 @@ text.](docs/images/hero.png)
 
 ## Start in five minutes
 
-1. Download the disk image, `Fouine-1.0.1.dmg`, from the releases page of this
-   repository. The product page is
+1. Download the disk image from the
+   [latest release](https://github.com/basedpolymer/fouine/releases/latest). The product page is
    [basedpolymer.eu/fouine](https://basedpolymer.eu/fouine).
 2. Open the disk image and drag `Fouine.app` onto `Applications`, then leave it
    there. macOS files privacy permissions by path and signature, so an app that
@@ -160,7 +160,8 @@ install the command line from Settings ▸ Advanced, it lives inside the app, at
 `/Applications/Fouine.app/Contents/Helpers/fouine`. On the welcome screen,
 **Copy the request for your assistant** puts the whole request on the
 clipboard. For Claude Desktop you can skip the command: the
-`Fouine-<version>.mcpb` file attached to each release installs with a
+`.mcpb` file attached to each
+[release](https://github.com/basedpolymer/fouine/releases) installs with a
 double-click. See [the assistant server](docs/mcp.md).
 
 ---
