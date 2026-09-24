@@ -91,7 +91,13 @@ struct HealthRow: Sendable, Equatable {
         // Dossiers
         case noFolders
         case diskNotPluggedIn(folder: String)
+        /// macOS refuse la lecture : le SEUL cas qui mène aux Réglages Système.
         case folderNotAllowed(folder: String)
+        /// Dossier déplacé, renommé ou supprimé.
+        case folderNotFound(folder: String)
+        /// Aucun fichier lisible, ou une erreur du système (disque qui
+        /// répond mal) : rien à autoriser non plus.
+        case folderCannotBeRead(folder: String)
         case foldersAllAccessible
     }
 
@@ -265,10 +271,23 @@ enum HealthBannerEvaluator {
             return HealthRow(kind: .roots, severity: .orange,
                              message: .diskNotPluggedIn(folder: unmounted.label))
         }
-        if let unreadable = active.first(where: { !$0.readable }) {
+        // Le geste des Réglages Système ne vaut que pour un REFUS de macOS
+        // (`probeReason`, PB1) : un dossier déplacé ou vide y envoyait
+        // l'utilisateur cocher une case qui ne répare rien. Le refus passe
+        // devant les autres cas : c'est le seul qu'un bouton répare.
+        let unreadable = active.filter { !$0.readable }
+        if let denied = unreadable.first(where: { $0.probeReason == .permissionDenied }) {
             return HealthRow(kind: .roots, severity: .orange,
-                             message: .folderNotAllowed(folder: unreadable.label),
+                             message: .folderNotAllowed(folder: denied.label),
                              action: .openPrivacySettings)
+        }
+        if let missing = unreadable.first(where: { $0.probeReason == .missing }) {
+            return HealthRow(kind: .roots, severity: .orange,
+                             message: .folderNotFound(folder: missing.label))
+        }
+        if let other = unreadable.first {
+            return HealthRow(kind: .roots, severity: .orange,
+                             message: .folderCannotBeRead(folder: other.label))
         }
         return HealthRow(kind: .roots, severity: .green, message: .foldersAllAccessible)
     }

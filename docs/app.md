@@ -393,6 +393,8 @@ writing, automatic updates, up to date.
 | The index is being updated | "Another program is writing to the index; searching still works." | the command line is updating the index | none |
 | Up to date — N scanned pages to read | "They will be read once the Mac is plugged in." (or: once Low Power Mode is off, once the Mac has cooled down, once the other program has finished, once every folder can be read again) | the text is current; reading scanned pages waits for the Mac | none *("Read scanned pages…" is in the "Your index" window)* |
 | Fouine is not allowed to read “…” | "Its documents stay searchable. Allow Fouine in System Settings ▸ Privacy & Security ▸ Files and Folders…" | macOS refuses to read the folder | Allow access… |
+| Fouine cannot find “…” | "Its documents stay searchable. If you moved or renamed it, remove it from your folders and add it again from its new place." | the folder was moved, renamed or deleted | Check again |
+| Fouine cannot open the files in “…” | "Its documents stay searchable. Check that the folder still holds your documents and that its disk works, then check again." | no file in the folder can be opened, or its disk answers with an error | Check again |
 | The disk holding “…” is not plugged in | "Its documents stay searchable. Plug the disk in…" | the folder is on an absent drive | Check again |
 | Automatic updates are waiting for your approval | "Allow Fouine in System Settings ▸ General ▸ Login Items & Extensions." | macOS is waiting for your confirmation | Open System Settings |
 | Automatic updates are not starting | "Restarting them usually fixes it…" | the service never reported, or stopped | Restart automatic updates |

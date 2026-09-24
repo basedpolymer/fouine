@@ -686,6 +686,10 @@ extension HealthRow.Message {
             return String(localized: "The disk holding “\(folder)” is not plugged in")
         case .folderNotAllowed(let folder):
             return String(localized: "Fouine is not allowed to read “\(folder)”")
+        case .folderNotFound(let folder):
+            return String(localized: "Fouine cannot find “\(folder)”")
+        case .folderCannotBeRead(let folder):
+            return String(localized: "Fouine cannot open the files in “\(folder)”")
         case .foldersAllAccessible:
             return String(localized: "All folders are accessible")
         }
@@ -876,6 +880,10 @@ enum IndexStatusText {
         switch attention {
         case .folderNotAllowed(let folder):
             return String(localized: "Fouine is not allowed to read “\(folder)”")
+        case .folderNotFound(let folder):
+            return String(localized: "Fouine cannot find “\(folder)”")
+        case .folderCannotBeRead(let folder):
+            return String(localized: "Fouine cannot open the files in “\(folder)”")
         case .diskNotPluggedIn(let folder):
             return String(localized: "The disk holding “\(folder)” is not plugged in")
         case .awaitingApproval:
@@ -893,6 +901,10 @@ enum IndexStatusText {
         switch attention {
         case .folderNotAllowed:
             return String(localized: "Its documents stay searchable. Allow Fouine in System Settings ▸ Privacy & Security ▸ Files and Folders to keep them up to date.")
+        case .folderNotFound:
+            return String(localized: "Its documents stay searchable. If you moved or renamed it, remove it from your folders and add it again from its new place.")
+        case .folderCannotBeRead:
+            return String(localized: "Its documents stay searchable. Check that the folder still holds your documents and that its disk works, then check again.")
         case .diskNotPluggedIn:
             return String(localized: "Its documents stay searchable. Plug the disk in to keep them up to date.")
         case .awaitingApproval:

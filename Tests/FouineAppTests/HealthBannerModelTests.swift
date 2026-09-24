@@ -12,12 +12,14 @@ import FouineCore
 final class HealthBannerModelTests: XCTestCase {
 
     private func root(id: Int64, label: String, mounted: Bool = true, readable: Bool = true,
-                      enabled: Bool = true) -> RootStatus {
+                      enabled: Bool = true,
+                      probeReason: RootProbe.Reason? = nil) -> RootStatus {
         RootStatus(
             record: RootRecord(id: id, volUUID: "U\(id)", relPath: label.lowercased(),
                                label: label, enabled: enabled),
             absolutePath: mounted ? "/Volumes/Data/\(label)" : nil,
-            mounted: mounted, readable: readable, reason: nil)
+            mounted: mounted, readable: readable, reason: nil,
+            probeReason: probeReason)
     }
 
     private func report(agent: AgentOperationalState = .active,
@@ -159,7 +161,8 @@ final class HealthBannerModelTests: XCTestCase {
 
         let ok = root(id: 1, label: "Docs")
         let unmounted = root(id: 2, label: "External", mounted: false, readable: false)
-        let unreadable = root(id: 3, label: "Secret", readable: false)
+        let unreadable = root(id: 3, label: "Secret", readable: false,
+                              probeReason: .permissionDenied)
 
         let disk = report(roots: [ok, unmounted]).rootsRow
         XCTAssertEqual(disk.severity, .orange)
@@ -175,6 +178,36 @@ final class HealthBannerModelTests: XCTestCase {
         // absent rend ses dossiers illisibles, et c'est lui qu'il faut nommer.
         XCTAssertEqual(report(roots: [unreadable, unmounted]).rootsRow.message,
                        .diskNotPluggedIn(folder: "External"))
+    }
+
+    /// Seul un refus de macOS mène aux Réglages Système : un dossier déplacé,
+    /// vide ou en erreur n'a rien à autoriser (suite de PB1).
+    func testOnlyAPermissionDenialOpensPrivacySettings() {
+        let moved = root(id: 4, label: "Moved", readable: false, probeReason: .missing)
+        let row = report(roots: [moved]).rootsRow
+        XCTAssertEqual(row.severity, .orange)
+        XCTAssertEqual(row.message, .folderNotFound(folder: "Moved"))
+        XCTAssertNil(row.action)
+
+        let others: [RootProbe.Reason?] = [.noReadableFile, .system("Input/output error"), nil]
+        for reason in others {
+            let broken = root(id: 5, label: "Broken", readable: false, probeReason: reason)
+            let row = report(roots: [broken]).rootsRow
+            XCTAssertEqual(row.severity, .orange)
+            XCTAssertEqual(row.message, .folderCannotBeRead(folder: "Broken"),
+                           "\(String(describing: reason))")
+            XCTAssertNil(row.action)
+        }
+
+        // Le refus passe devant, où qu'il soit dans la liste : c'est le seul
+        // qu'un bouton répare. Puis le dossier introuvable.
+        let denied = root(id: 6, label: "Secret", readable: false,
+                          probeReason: .permissionDenied)
+        let empty = root(id: 7, label: "Empty", readable: false, probeReason: .noReadableFile)
+        XCTAssertEqual(report(roots: [moved, empty, denied]).rootsRow.message,
+                       .folderNotAllowed(folder: "Secret"))
+        XCTAssertEqual(report(roots: [empty, moved]).rootsRow.message,
+                       .folderNotFound(folder: "Moved"))
     }
 
     /// Un dossier DÉSACTIVÉ par l'utilisateur n'est plus une promesse : son
@@ -236,6 +269,7 @@ final class HealthBannerModelTests: XCTestCase {
             .indexUpdating(by: .app, since: holder.clockText, ownProcess: true),
             .semanticReady, .semanticPreparing, .semanticNotInstalled,
             .noFolders, .diskNotPluggedIn(folder: "X"), .folderNotAllowed(folder: "X"),
+            .folderNotFound(folder: "X"), .folderCannotBeRead(folder: "X"),
             .foldersAllAccessible,
         ]
         for message in messages {

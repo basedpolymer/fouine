@@ -115,6 +115,8 @@ enum IndexPauseReason: Equatable, Sendable {
 /// (`action`), jamais un geste générique (§5.6 amendé, A2-11).
 enum IndexAttention: Equatable, Sendable {
     case folderNotAllowed(folder: String)
+    case folderNotFound(folder: String)
+    case folderCannotBeRead(folder: String)
     case diskNotPluggedIn(folder: String)
     case awaitingApproval
     case automaticUpdatesNotStarting
@@ -124,7 +126,10 @@ enum IndexAttention: Equatable, Sendable {
     var action: IndexAction {
         switch self {
         case .folderNotAllowed: return .openPrivacySettings
-        case .diskNotPluggedIn: return .retestFolders
+        // Rien à autoriser : on revérifie une fois le dossier remis en place
+        // ou le disque rebranché.
+        case .diskNotPluggedIn, .folderNotFound, .folderCannotBeRead:
+            return .retestFolders
         case .awaitingApproval: return .openLoginItems
         // « Relancer » ne peut RIEN faire quand Fouine n'est pas dans le
         // dossier Applications (AP-21) : le ré-enregistrement se refuse avant
@@ -308,6 +313,8 @@ enum IndexStatusEvaluator {
         switch input.health.rootsRow.message {
         case .folderNotAllowed(let folder): return .folderNotAllowed(folder: folder)
         case .diskNotPluggedIn(let folder): return .diskNotPluggedIn(folder: folder)
+        case .folderNotFound(let folder): return .folderNotFound(folder: folder)
+        case .folderCannotBeRead(let folder): return .folderCannotBeRead(folder: folder)
         default: break
         }
         switch input.health.agentRow.message {

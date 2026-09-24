@@ -14,12 +14,14 @@ final class IndexStatusTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
 
     private func root(id: Int64 = 1, label: String = "Docs", mounted: Bool = true,
-                      readable: Bool = true) -> RootStatus {
+                      readable: Bool = true,
+                      probeReason: RootProbe.Reason? = nil) -> RootStatus {
         RootStatus(
             record: RootRecord(id: id, volUUID: "U\(id)", relPath: label.lowercased(),
                                label: label, enabled: true),
             absolutePath: mounted ? "/Volumes/Data/\(label)" : nil,
-            mounted: mounted, readable: readable, reason: nil)
+            mounted: mounted, readable: readable, reason: nil,
+            probeReason: probeReason)
     }
 
     private func status(_ phase: AgentStatusRecord.Phase, detail: String = "",
@@ -112,9 +114,30 @@ final class IndexStatusTests: XCTestCase {
 
     func testUnreadableFolderComesFirstWithItsGesture() {
         let s = IndexStatusEvaluator.evaluate(
-            input(roots: [root(readable: false)], agentState: .requiresApproval))
+            input(roots: [root(readable: false, probeReason: .permissionDenied)],
+                  agentState: .requiresApproval))
         XCTAssertEqual(s, .needsAttention(.folderNotAllowed(folder: "Docs")))
         XCTAssertEqual(s.primaryAction, .openPrivacySettings)
+    }
+
+    /// Un dossier déplacé, vide ou en erreur ne se répare pas dans les
+    /// Réglages Système : la carte le dit et propose de revérifier (suite de
+    /// PB1). Avant, tout dossier illisible disait « Fouine is not allowed to
+    /// read » avec le bouton des Réglages.
+    func testFolderThatSettingsCannotFixAsksToCheckAgain() {
+        let missing = IndexStatusEvaluator.evaluate(
+            input(roots: [root(readable: false, probeReason: .missing)]))
+        XCTAssertEqual(missing, .needsAttention(.folderNotFound(folder: "Docs")))
+        XCTAssertEqual(missing.primaryAction, .retestFolders)
+
+        let others: [RootProbe.Reason?] = [.noReadableFile, .system("Input/output error"), nil]
+        for reason in others {
+            let s = IndexStatusEvaluator.evaluate(
+                input(roots: [root(readable: false, probeReason: reason)]))
+            XCTAssertEqual(s, .needsAttention(.folderCannotBeRead(folder: "Docs")),
+                           "\(String(describing: reason))")
+            XCTAssertEqual(s.primaryAction, .retestFolders)
+        }
     }
 
     func testUnpluggedDiskAsksToCheckAgain() {
@@ -402,6 +425,8 @@ final class IndexStatusTests: XCTestCase {
         let statuses: [IndexStatus] = [
             .checking, .noFolders,
             .needsAttention(.folderNotAllowed(folder: "Docs")),
+            .needsAttention(.folderNotFound(folder: "Docs")),
+            .needsAttention(.folderCannotBeRead(folder: "Docs")),
             .needsAttention(.diskNotPluggedIn(folder: "Docs")),
             .needsAttention(.awaitingApproval),
             .needsAttention(.automaticUpdatesNotStarting),

@@ -6154,6 +6154,40 @@
         }
       }
     },
+    "Fouine cannot find “%@”": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fouine cannot find “%@”"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fouine ne trouve pas « %@ »"
+          }
+        }
+      }
+    },
+    "Fouine cannot open the files in “%@”": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fouine cannot open the files in “%@”"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fouine ne parvient pas à ouvrir les fichiers de « %@ »"
+          }
+        }
+      }
+    },
     "Fouine cannot read or create its index file. Check that the disk is not read-only and that Fouine is allowed to access its folder.": {
       "extractionState": "manual",
       "localizations": {
@@ -7918,6 +7952,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ses documents restent consultables. Autorisez Fouine dans Réglages Système ▸ Confidentialité et sécurité ▸ Fichiers et dossiers pour les garder à jour."
+          }
+        }
+      }
+    },
+    "Its documents stay searchable. Check that the folder still holds your documents and that its disk works, then check again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its documents stay searchable. Check that the folder still holds your documents and that its disk works, then check again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses documents restent consultables. Vérifiez que le dossier contient toujours vos documents et que son disque fonctionne, puis revérifiez."
+          }
+        }
+      }
+    },
+    "Its documents stay searchable. If you moved or renamed it, remove it from your folders and add it again from its new place.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its documents stay searchable. If you moved or renamed it, remove it from your folders and add it again from its new place."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses documents restent consultables. Si vous l’avez déplacé ou renommé, retirez-le de vos dossiers puis ajoutez-le de nouveau depuis son nouvel emplacement."
           }
         }
       }

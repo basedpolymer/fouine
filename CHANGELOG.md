@@ -40,6 +40,14 @@ See `RELEASING.md`.
   refuses access to a folder, and it names the place in System Settings where
   to allow it. A disk that is not plugged in is still shown in the sidebar,
   where the Index card offers "Check again". *(PB1)*
+- **The Index card no longer sends you to System Settings for a folder that
+  was moved.** Any folder Fouine could not read was reported as "Fouine is not
+  allowed to read" with an "Open System Settings" button, even when the folder
+  had been moved, renamed or deleted, held no file Fouine could open, or sat on
+  a disk that answered with an error. The card now says "Fouine cannot find"
+  the folder, and explains how to add it again from its new place, or "Fouine
+  cannot open the files in" it. Both offer "Check again". System Settings is
+  offered only when macOS refuses access. *(PB2)*
 
 ## [1.0.1] — 2026-09-15
 
