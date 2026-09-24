@@ -42,7 +42,7 @@ binding](#an-empty-window-at-99--cpu-the-isinserted-binding-of-menubarextra) ·
 [a modifier after
 `.environmentObject`](#a-modifier-placed-after-environmentobject-kills-the-app-at-launch)
 · [`application(_:open:)` silences
-`.onOpenURL`](#applicationopen-silences-onopenurl) · [ten children in
+`.onOpenURL`](#application_open-silences-onopenurl) · [ten children in
 `commands`](#commands-caps-out-at-ten-children) · [a date that loses its
 sub-seconds](#a-date-that-round-trips-through-json-loses-its-sub-seconds)
 
