@@ -15,6 +15,17 @@ The authoritative version number lives in the `VERSION` file and in
 `Sources/FouineCore/Version.swift`; the two must agree (`make check-version`).
 See `RELEASING.md`.
 
+## [1.0.2] — unreleased
+
+### Fixed
+
+- **The search field stays in place when some results carry only part of your
+  words.** As soon as the line "Few pages carry all your words: here are also
+  the pages that carry most of them." appeared above the results, the whole
+  window content slid up under the title bar: the search field ended up out of
+  reach, and the only way back was to run another search from outside the
+  window. *(QN1)*
+
 ## [1.0.1] — 2026-09-15
 
 ### Changed

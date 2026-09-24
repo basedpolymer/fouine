@@ -127,4 +127,49 @@ final class WindowLifecycleTests: XCTestCase {
         }
         XCTAssertEqual(sends, 1, "le sélecteur ne s'envoie que depuis SettingsWindow.open()")
     }
+
+    // MARK: - La fenêtre qui déborde (pièges connus)
+
+    /// La barre d'état des résultats n'est ni une `List` ni un `ScrollView` :
+    /// un texte figé en hauteur y fait mesurer la colonne à largeur nulle, et
+    /// le `NavigationSplitView` déborde de la fenêtre — champ de recherche
+    /// derrière le titre. Arrivé deux fois : à requête vide (11/09/2026), puis
+    /// par la ligne « Few pages carry all your words » (24/09/2026). Chaque
+    /// ligne de la barre, et chaque avis qu'elle affiche, passe à la ligne par
+    /// un cadre.
+    func testResultsStatusBarNeverFixesATextHeight() throws {
+        let file = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()      // FouineAppTests
+            .deletingLastPathComponent()      // Tests
+            .deletingLastPathComponent()      // racine du dépôt
+            .appendingPathComponent("Sources/FouineApp/Views/ResultsView.swift")
+        let lines = try String(contentsOf: file, encoding: .utf8)
+            .components(separatedBy: "\n")
+        let pattern = try NSRegularExpression(
+            pattern: #"^    private var (statusBar|countsRow|commandsRow|\w+Notice): some View \{$"#)
+        var checked: [String] = []
+        var index = 0
+        while index < lines.count {
+            let line = lines[index]
+            guard let match = pattern.firstMatch(
+                    in: line, range: NSRange(line.startIndex..., in: line)),
+                  let nameRange = Range(match.range(at: 1), in: line) else {
+                index += 1
+                continue
+            }
+            let name = String(line[nameRange])
+            checked.append(name)
+            index += 1
+            // Le code seul : les commentaires citent le modificateur interdit.
+            while index < lines.count, lines[index] != "    }" {
+                let code = lines[index].components(separatedBy: "//")[0]
+                XCTAssertFalse(code.contains("fixedSize(horizontal: false, vertical: true)"),
+                               "\(name), ligne \(index + 1) : un cadre, pas fixedSize")
+                index += 1
+            }
+        }
+        XCTAssertTrue(checked.contains("statusBar"), "barre d'état introuvable")
+        XCTAssertTrue(checked.contains("quorumNotice"), "avis de quorum introuvable")
+        XCTAssertGreaterThanOrEqual(checked.count, 10, "blocs lus : \(checked)")
+    }
 }

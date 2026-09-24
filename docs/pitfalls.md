@@ -623,6 +623,15 @@ To check a new view: read the accessibility tree (`osascript` plus System
 Events) and compare the size of the window's `AXSplitGroup` with the window
 itself.
 
+It came back on 24/09/2026 through a notice added later to the same status
+line: "Few pages carry all your words…" kept `fixedSize(horizontal: false,
+vertical: true)` while its neighbours had the frame. In a 691 pt window the
+`AXSplitGroup` measured 973 pt and started at y = −6; the search field sat
+behind the title bar, out of reach, until a query without the notice was run.
+`WindowLifecycleTests.testResultsStatusBarNeverFixesATextHeight` now reads
+`ResultsView.swift` and refuses that modifier in the status line and in every
+`…Notice` view.
+
 ## Two gestures in a sidebar card
 
 An `HStack` of 231 points does not hold two French labels: the button gets cut

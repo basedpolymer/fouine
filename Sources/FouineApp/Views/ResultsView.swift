@@ -544,11 +544,16 @@ struct ResultsView: View {
     /// Peu de pages portent tous les mots demandés : après celles qui les
     /// portent tous, la liste montre celles qui en portent la plupart (RK-04).
     /// Aucun mot de technicien — ni « quorum », ni « ET », ni « requête ».
+    ///
+    /// Cadre et non `fixedSize`, comme ses voisines : figée en hauteur, cette
+    /// ligne faisait mesurer le `NavigationSplitView` à 973 pt dans une
+    /// fenêtre de 691 — champ de recherche remonté derrière le titre, hors
+    /// d'atteinte (build 918, arbre d'accessibilité, 24/09/2026).
     private var quorumNotice: some View {
         Text("Few pages carry all your words: here are also the pages that carry most of them.")
             .font(.caption)
             .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityIdentifier("results.quorum")
     }
 
