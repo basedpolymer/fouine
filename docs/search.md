@@ -266,7 +266,7 @@ exclusion, a `name:` filter and a query restricted to one origin. They are
 applied as typed. A folder, an extension, a language or a date do not disarm
 this rule: otherwise the same question could return 28 pages on its own and zero
 under `folder:Books`, which is exactly how an assistant writes its queries. A
-filter narrows the set of documents; it says nothing about how many words a page
+filter narrows the set of documents; it has no bearing on how many words a page
 must contain. When the strict search returns ten pages or more, nothing changes,
 not even one extra query. There is no setting in the app; `--no-quorum` disarms
 it.
