@@ -15,39 +15,27 @@ The authoritative version number lives in the `VERSION` file and in
 `Sources/FouineCore/Version.swift`; the two must agree (`make check-version`).
 See `RELEASING.md`.
 
-## [1.0.2] — unreleased
+## [1.0.2] — 2026-09-24
 
 ### Fixed
 
-- **The search field stays in place when some results carry only part of your
-  words.** As soon as the line "Few pages carry all your words: here are also
-  the pages that carry most of them." appeared above the results, the whole
-  window content slid up under the title bar: the search field ended up out of
-  reach, and the only way back was to run another search from outside the
-  window. *(QN1)*
-- **Three other messages no longer push the window content out of view.** The
-  banner shown when macOS refuses access to a folder, the line saying that the
-  disk holding a document is not plugged in, and the header of a text preview
-  ("text read from the scan…") each made the window content slide under the
-  title bar, or made the window taller than the screen for the banner. The
-  same happened in a separate preview window when the page asked for no
-  longer exists. *(QN1)*
-- **An unplugged disk no longer shows the permission banner.** When the disk
-  holding a folder was not plugged in, the top of the window said "Fouine
-  cannot read “Documents”" with an "Open Settings" button, although no setting
-  can bring a disk back, and the sentence ended with the words "disk not
-  plugged in" stuck after a full stop. The banner now appears only when macOS
-  refuses access to a folder, and it names the place in System Settings where
-  to allow it. A disk that is not plugged in is still shown in the sidebar,
-  where the Index card offers "Check again". *(PB1)*
-- **The Index card no longer sends you to System Settings for a folder that
-  was moved.** Any folder Fouine could not read was reported as "Fouine is not
-  allowed to read" with an "Open System Settings" button, even when the folder
-  had been moved, renamed or deleted, held no file Fouine could open, or sat on
-  a disk that answered with an error. The card now says "Fouine cannot find"
-  the folder, and explains how to add it again from its new place, or "Fouine
-  cannot open the files in" it. Both offer "Check again". System Settings is
-  offered only when macOS refuses access. *(PB2)*
+- **The search field stays where it is.** When the line "Few pages carry all
+  your words" appeared above the results, the window content slid up under the
+  title bar and the search field could no longer be reached. Three other
+  messages did the same. All four now stay in place. *(QN1)*
+- **An unplugged disk is no longer mistaken for a permission problem.** It used
+  to bring up a banner with an "Open Settings" button, which could not help.
+  The Index card now says the disk is not plugged in and offers "Check
+  again". *(PB1)*
+- **A folder that was moved or renamed is reported as not found.** Instead of
+  sending you to System Settings, the Index card explains how to add the folder
+  again from its new place. *(PB2)*
+
+### Changed
+
+- **The guide in the Help menu has been rewritten**, in English and French, in
+  plainer words, and the details that no longer matched the app were
+  corrected. *(DR1)*
 
 ## [1.0.1] — 2026-09-15
 
@@ -566,5 +554,6 @@ and searches them, on your Mac, without sending anything anywhere.
   by where it lives — Fouine's own copy folder — and its link must use its
   application's scheme (`notes:`, `bear:`). *(AN2)*
 
+[1.0.2]: https://github.com/basedpolymer/fouine/releases/tag/v1.0.2
 [1.0.1]: https://github.com/basedpolymer/fouine/releases/tag/v1.0.1
 [1.0.0]: https://github.com/basedpolymer/fouine/releases/tag/v1.0.0
