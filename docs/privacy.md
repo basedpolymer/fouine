@@ -284,7 +284,7 @@ of them.
 
 ## 3. What the database holds, and where
 
-Everything Fouine knows is in one SQLite file:
+Everything Fouine stores is in one SQLite file:
 
 ```
 ~/Library/Application Support/Fouine/fouine.db   (+ -wal, -shm)
