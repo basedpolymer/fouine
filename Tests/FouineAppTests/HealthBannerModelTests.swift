@@ -76,11 +76,27 @@ final class HealthBannerModelTests: XCTestCase {
         XCTAssertEqual(approval.message, .backgroundIndexingAwaitingApproval)
         XCTAssertEqual(approval.action, .openLoginItems)
 
-        // Introuvable : orange, pas rouge — rien n'est perdu.
-        let notFound = report(agent: .notFound).agentRow
-        XCTAssertEqual(notFound.severity, .orange)
-        XCTAssertEqual(notFound.message, .backgroundIndexingServiceMissing)
-        XCTAssertEqual(notFound.action, .reregisterAgent)
+        // Introuvable, copie hors d'Applications : orange, pas rouge — rien
+        // n'est perdu.
+        for copies in [AppCopiesReport.Verdict.notInstalled,
+                       .outsideApplications(path: "/Users/moi/Downloads/Fouine.app")] {
+            let notFound = HealthBannerEvaluator.evaluate(
+                agentState: .notFound, appCopies: copies, lockStatus: .free,
+                semanticInstalled: true, hasVectors: true,
+                roots: [root(id: 1, label: "Docs")]).agentRow
+            XCTAssertEqual(notFound.severity, .orange, "\(copies)")
+            XCTAssertEqual(notFound.message, .backgroundIndexingServiceMissing, "\(copies)")
+            XCTAssertEqual(notFound.action, .reregisterAgent, "\(copies)")
+        }
+
+        // Introuvable, copie unique dans Applications : c'est l'interrupteur
+        // éteint. `smd` répond « introuvable » quelques secondes après
+        // `unregister()` (25/09/2026) ; le bandeau disait « Fouine doit être
+        // dans le dossier Applications » à une copie qui y était.
+        let switchedOff = report(agent: .notFound).agentRow
+        XCTAssertEqual(switchedOff.severity, .green)
+        XCTAssertEqual(switchedOff.message, .backgroundIndexingOff)
+        XCTAssertNil(switchedOff.action)
 
         let unknown = report(agent: .unknown).agentRow
         XCTAssertEqual(unknown.severity, .green)

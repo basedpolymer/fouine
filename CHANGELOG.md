@@ -15,6 +15,16 @@ The authoritative version number lives in the `VERSION` file and in
 `Sources/FouineCore/Version.swift`; the two must agree (`make check-version`).
 See `RELEASING.md`.
 
+## [1.0.3] — unreleased
+
+### Fixed
+
+- **Turning off automatic updates no longer says Fouine is in the wrong
+  place.** A few seconds after the switch was turned off, the Index card showed
+  "Automatic updates are unavailable — Fouine must be installed in the
+  Applications folder", even though it was. When Fouine is in the Applications
+  folder, the switch is now simply shown as off. *(AU1)*
+
 ## [1.0.2] — 2026-09-24
 
 ### Fixed

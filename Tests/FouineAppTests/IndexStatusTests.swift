@@ -151,7 +151,9 @@ final class IndexStatusTests: XCTestCase {
             IndexStatusEvaluator.evaluate(input(agentState: .requiresApproval)),
             .needsAttention(.awaitingApproval))
         XCTAssertEqual(
-            IndexStatusEvaluator.evaluate(input(agentState: .notFound)),
+            IndexStatusEvaluator.evaluate(
+                input(agentState: .notFound,
+                      appCopies: .outsideApplications(path: "/Users/moi/Downloads/Fouine.app"))),
             .needsAttention(.serviceMissing))
         XCTAssertEqual(
             IndexStatusEvaluator.evaluate(

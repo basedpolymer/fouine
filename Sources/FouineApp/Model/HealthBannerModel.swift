@@ -180,7 +180,8 @@ enum HealthBannerEvaluator {
     // MARK: - 1. Indexation en arrière-plan
 
     /// `.off` : l'utilisateur l'a éteinte, c'est son choix — vert. `.notFound`
-    /// est orange et non rouge : rien n'est perdu, il faut ré-enregistrer.
+    /// d'une copie bien installée est un `.off` (voir le cas) ; ailleurs, il est
+    /// orange et non rouge : rien n'est perdu, il faut ré-enregistrer.
     private static func evaluateAgent(
         _ state: AgentOperationalState,
         appCopies: AppCopiesReport.Verdict
@@ -207,6 +208,15 @@ enum HealthBannerEvaluator {
         case .requiresApproval:
             return HealthRow(kind: .agent, severity: .orange, message: .backgroundIndexingAwaitingApproval,
                              action: .openLoginItems)
+        case .notFound where appCopies == .ok:
+            // Une seule copie, dans Applications : `.notFound` n'y veut dire
+            // qu'« éteint ». Après `unregister()` puis la fin du bootout
+            // (≈ 5 s), `smd` ne répond plus « non enregistré » (0) mais
+            // « introuvable » (erreur 22 → `.notFound`) — constaté le
+            // 25/09/2026 sur le build 938. Le bandeau disait alors « Fouine
+            // doit être dans le dossier Applications » à qui venait d'éteindre
+            // l'interrupteur d'une copie bien installée.
+            return HealthRow(kind: .agent, severity: .green, message: .backgroundIndexingOff)
         case .notFound:
             return HealthRow(kind: .agent, severity: .orange,
                              message: severalCopies ? .backgroundIndexingSeveralCopies
