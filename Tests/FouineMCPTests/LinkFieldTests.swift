@@ -88,20 +88,6 @@ final class LinkFieldTests: XCTestCase {
                        ["fouine://open?doc=1&page=1", "fouine://open?doc=1&page=3"])
     }
 
-    func testSimilarPagesCarriesALinkOnEveryNeighbour() throws {
-        let payload = call("fouine_similar_pages",
-                           ["doc_id": 1, "page": 1,
-                            "exclude_same_document": false],
-                           index: try TempIndex(vectorisedPages: 2))
-        let neighbours = try XCTUnwrap(payload["neighbours"] as? [[String: Any]])
-        XCTAssertFalse(neighbours.isEmpty)
-        for neighbour in neighbours {
-            let page = try XCTUnwrap(neighbour["page"] as? Int)
-            XCTAssertEqual(try readable(neighbour["link"]),
-                           .open(target: .doc(1), page: page, query: nil))
-        }
-    }
-
     func testListDocumentsCarriesALinkWithoutAPage() throws {
         let payload = call("fouine_list_documents", [:])
         let documents = try XCTUnwrap(payload["documents"] as? [[String: Any]])

@@ -142,24 +142,6 @@ final class LangDateFilterTests: XCTestCase {
         XCTAssertEqual(try c.db.store.facets(parLangue, by: .folder).map(\.0), ["Livres"])
     }
 
-    // MARK: - Ensemble de documents pour le canal vectoriel
-
-    /// Le canal sémantique ne lit pas le SQL du canal lexical : il ne connaît
-    /// des filtres que l'ensemble de documents qu'on lui autorise. Sans cette
-    /// méthode, `--lang fr --hybrid` rendait des pages anglaises.
-    func testEnsembleDeDocumentsPourLeCanalVectoriel() throws {
-        let c = try fixture()
-        XCTAssertNil(try c.db.store.docIDsMatching(langs: [], modifiedAfter: nil),
-                     "aucun filtre armé : aucune restriction, et pas de requête")
-        XCTAssertEqual(try c.db.store.docIDsMatching(langs: ["fr"], modifiedAfter: nil),
-                       [c.fr])
-        XCTAssertEqual(try c.db.store.docIDsMatching(langs: [], modifiedAfter: Self.y2024),
-                       [c.en, c.inconnu])
-        XCTAssertEqual(try c.db.store.docIDsMatching(langs: ["en", "fr"],
-                                                     modifiedAfter: Self.y2024),
-                       [c.en], "les deux filtres se combinent en ET")
-    }
-
     // MARK: - Bornes de date (DateWindow)
 
     /// Calendrier grégorien à Paris : les bornes sont des instants LOCAUX, la

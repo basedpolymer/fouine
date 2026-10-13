@@ -27,7 +27,6 @@
 
 import XCTest
 import FouineCore
-import FouineEmbed
 @testable import FouineApp
 
 final class L10nTests: XCTestCase {
@@ -72,8 +71,8 @@ final class L10nTests: XCTestCase {
     // MARK: - 2. Les erreurs rendues par l'app
 
     /// Un échantillon COUVRANT : les huit cas de `FouineError`, les cinq de
-    /// `QueryError`, les quatre motifs typés de `SettingsError` et les deux de
-    /// `FouineEmbedError` — tout ce qu'`ErrorText.describe` sait rendre.
+    /// `QueryError` et les quatre motifs typés de `SettingsError` — tout ce
+    /// qu'`ErrorText.describe` sait rendre.
     private static let renderedErrors: [(Error, key: String)] = [
         // Sans l'UUID depuis le lot I1 : il reste dans la CLI et le journal.
         (FouineError.volumeNotMounted(uuid: "ABC"),
@@ -110,8 +109,6 @@ final class L10nTests: XCTestCase {
          "“%@” is not a folder identifier for %@: expected integers separated by commas"),
         (SettingsError("x", reason: .unknownKey("k")),
          "unknown setting key: %@"),
-        (FouineEmbedError.model("CoreML"), "meaning-search model: %@"),
-        (FouineEmbedError.inference("shape"), "inference: %@"),
     ]
 
     func testEveryRenderedErrorHasATranslatedKey() throws {
@@ -123,86 +120,6 @@ final class L10nTests: XCTestCase {
             assertTranslated(key, in: catalog)
             XCTAssertFalse(ErrorText.describe(error).isEmpty,
                            "\(error) ne rend rien")
-        }
-    }
-
-    /// L'aide de `SemanticAvailability` ne renvoie plus l'utilisateur vers un
-    /// script Python (audit B1-07).
-    ///
-    /// La phrase « Model missing from … — produce it with Tools/convert_e5.py »
-    /// était affichée DEUX fois dans l'interface — sous l'interrupteur de la
-    /// barre latérale et dans l'onglet Sémantique — quinze lignes au-dessus du
-    /// bouton « Download the model (220.2 MB)… » du même onglet, et elle
-    /// désignait un fichier absent du bundle. C'était un vestige d'avant que le
-    /// modèle devienne téléchargeable, et tout utilisateur de la v1.0.0 qui
-    /// ouvre cet onglet avant d'avoir téléchargé le modèle le voyait.
-    ///
-    /// Le test porte sur le RENDU, pas sur la clé : c'est le rendu qui est
-    /// affiché, et une régression pourrait passer par un autre cas.
-    func testModelMissingSendsToSettingsNotToAScript() throws {
-        let rendered = SemanticAvailability.modelMissing.help
-        XCTAssertFalse(rendered.contains("Tools/"), rendered)
-        XCTAssertFalse(rendered.contains(".py"), rendered)
-        XCTAssertFalse(rendered.isEmpty)
-        // Et le geste EST là : le nom exact de l'onglet et celui du bouton.
-        // L'onglet ne s'appelle plus « Semantic » mais « Search by meaning »
-        // (UX-10) — un mot que le public visé ne connaît pas n'a pas à servir
-        // de point de repère dans une consigne.
-        XCTAssertTrue(rendered.contains("Settings"), rendered)
-        XCTAssertTrue(rendered.contains("Search by meaning"), rendered)
-        XCTAssertFalse(rendered.contains("Semantic"), rendered)
-
-        let catalog = try Self.catalog()
-        let key = "Model not installed — Settings ▸ Search by meaning ▸ “Download the model”."
-        XCTAssertTrue(catalog.keys.contains(key), "« \(key) » manque")
-        assertTranslated(key, in: catalog)
-        // Les anciennes clés sont RETIRÉES du catalogue, pas seulement
-        // inutilisées : une clé morte finit par être retraduite, puis réutilisée.
-        for dead in ["Model missing from %@ — produce it with Tools/convert_e5.py.",
-                     "Model not installed — Settings ▸ Semantic ▸ “Download the model”."] {
-            XCTAssertFalse(catalog.keys.contains(dead),
-                           "« \(dead) » est encore au catalogue")
-        }
-    }
-
-    /// Le repli du canal sémantique ne parle ni de vecteur ni de commande
-    /// (A2-05, SPEC §5.6 amendé du 03/09/2026).
-    ///
-    /// Ce que l'app affichait sous les résultats et dans la barre latérale :
-    /// « Recherche sémantique indisponible (modèle d'embeddings : aucun vecteur
-    /// en base — lancez “fouine embed”) — repli sur la recherche plein texte. »
-    /// Trois mots que le public ne connaît pas, et une commande qu'il ne sait
-    /// pas lancer. Le test porte sur le RENDU : c'est lui qui est affiché.
-    func testSemanticFallbackSpeaksNoJargon() throws {
-        let rendered = ErrorText.describe(
-            FouineEmbedError.model(SemanticService.noVectorsDetail))
-        for banned in ["vecteur", "vector", "embed", "fouine "] {
-            XCTAssertFalse(rendered.lowercased().contains(banned),
-                           "« \(banned) » est encore là : \(rendered)")
-        }
-        // Et le geste EST là : le nom exact de l'onglet des réglages, qui
-        // s'appelle « Search by meaning » depuis UX-10 — et qui PRÉPARE les
-        // pages depuis UX-12, au lieu de se contenter d'expliquer l'étape.
-        XCTAssertTrue(rendered.contains("Settings"), rendered)
-        XCTAssertTrue(rendered.contains("Search by meaning"), rendered)
-        XCTAssertFalse(rendered.contains("Semantic"), rendered)
-
-        let catalog = try Self.catalog()
-        for key in ["no page is ready for meaning search yet — Settings ▸ Search by meaning prepares them",
-                    "meaning-search model: %@",
-                    "the meaning search is not ready yet"] {
-            XCTAssertTrue(catalog.keys.contains(key), "« \(key) » manque")
-            assertTranslated(key, in: catalog)
-        }
-        // Les anciennes clés sont RETIRÉES, pas seulement inutilisées : une clé
-        // morte finit par être retraduite, puis réutilisée.
-        for dead in ["embedding model: %@",
-                     "no vector in the database — run “fouine embed”",
-                     "vector index not loaded",
-                     "no page is ready for meaning search yet — Settings ▸ Semantic explains the remaining step",
-                     "No page is ready for meaning search yet — Settings ▸ Semantic explains the remaining step."] {
-            XCTAssertFalse(catalog.keys.contains(dead),
-                           "« \(dead) » est encore au catalogue")
         }
     }
 
@@ -479,14 +396,12 @@ final class L10nTests: XCTestCase {
                             "« \(key) » : l'anglais n'a pas de variation")
         }
 
-        // b. Les trois clés en %@ : une phrase qui ne s'accorde plus. L'espace
+        // b. Les deux clés en %@ : une phrase qui ne s'accorde plus. L'espace
         // devant les deux-points est l'espace fine insécable U+202F (AP-20) et
         // l'apostrophe est courbe (BU-10) — écrites en échappement pour que le
         // test reste lisible.
         let invariant = [
             "%@ p. loaded": "%@ p. pour l\u{2019}instant",
-            "%@ of %@ pages are ready":
-                "Pages prêtes\u{202F}: %1$@ sur %2$@",
             "Not supported here, therefore ignored: %@":
                 "Non pris en charge ici, donc ignorés\u{202F}: %@",
         ]
@@ -573,9 +488,6 @@ final class L10nTests: XCTestCase {
             "Background indexing: off",
             "Index available",
             "The index is being updated (background indexing, since %@)",
-            "Search by meaning: ready",
-            "Search by meaning: being prepared",
-            "Search by meaning: not installed",
             "No folder to index",
             "The disk holding “%@” is not plugged in",
             "Fouine is not allowed to read “%@”",
@@ -600,7 +512,23 @@ final class L10nTests: XCTestCase {
                      // produit appelle cela « la recherche par le sens ».
                      "Semantic search: ready",
                      "Semantic search: being prepared",
-                     "Semantic search: not installed"] {
+                     "Semantic search: not installed",
+                     // SR1 : la recherche par le sens est retirée du produit,
+                     // et ses clés quittent le catalogue — une clé morte finit
+                     // par être retraduite, puis réutilisée.
+                     "Search by meaning: ready",
+                     "Search by meaning: being prepared",
+                     "Search by meaning: not installed",
+                     "Also search by meaning",
+                     "Prepare search by meaning",
+                     "Prepare search by meaning…",
+                     "Preparing search by meaning",
+                     "Search by meaning too",
+                     "Download the model for search by meaning",
+                     "meaning-search model: %@",
+                     "the meaning search is not ready yet",
+                     "searching by meaning…",
+                     "Found by your words and by meaning."] {
             XCTAssertFalse(catalog.keys.contains(gone), "clé morte encore au catalogue : \(gone)")
         }
     }
@@ -624,6 +552,8 @@ final class L10nTests: XCTestCase {
         let exempt: Set<String> = ["OCR: %@", "text recognition (OCR)"]
         let banned = ["semantic", "sémantique", "vector", "vecteur", "lexical",
                       "cosin", "rowid", "OCR queue", "file OCR", "stats()",
+                      // SR1 : plus rien ne cherche « par le sens ».
+                      "by meaning", "par le sens",
                       "background agent", "agent d'arrière-plan",
                       "agent d’arrière-plan", "write lock", "verrou"]
         for (key, entry) in try Self.catalog() where !exempt.contains(key) {

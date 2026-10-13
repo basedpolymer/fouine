@@ -7,7 +7,7 @@
 // que le modèle fait déjà tourner (`AppModel.startAgentStatusProbe`, 2 s au
 // premier plan, 30 s au fond), qui republie l'état de l'index : aucune
 // minuterie de plus. Mais pas à chaque battement — `stats()` compte toute la
-// base, balayage des vecteurs compris, et une lecture toutes les deux secondes
+// base, et une lecture toutes les deux secondes
 // ferait travailler le disque sans répit pendant toute la mise à jour.
 //
 // Deux règles : pendant un travail, une relecture au plus toutes les

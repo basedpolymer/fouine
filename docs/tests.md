@@ -3,15 +3,13 @@
 For contributors: what runs, where, with what, and why some of it skips.
 `git clone && make test` exercises the product on a real corpus (formats,
 indexing, search, OCR, schema creation, packaging). What stays optional (the
-maintainer's personal corpus, the 220 MB semantic model) skips cleanly and says
-what to do about it.
+maintainer's personal corpus) skips cleanly and says what to do about it.
 
 - [Build and test fast](#build-and-test-fast)
 - [The suites](#the-suites)
 - [The versioned fixture corpus](#the-versioned-fixture-corpus)
 - [The two regimes of the integration recipe](#the-two-regimes-of-the-integration-recipe)
 - [Schema creation](#schema-creation)
-- [The semantic model](#the-semantic-model)
 - [The gate, and continuous integration](#the-gate-and-continuous-integration)
 - [Rules for writing a test](#rules-for-writing-a-test)
 - [What is not tested, and why](#what-is-not-tested-and-why)
@@ -40,7 +38,6 @@ make check-docs check-changelog              # after any doc or CHANGELOG change
 | `Sources/FouineExtract` | `FouineExtractTests`, then `make ci-corpus` | 3 to 6 min |
 | `Sources/FouineOCR` | `FouineOCRTests`, `FouineIndexTests` | 36 s |
 | `Sources/FouineIndex` | `FouineIndexTests`, `FouineAgentTests` | 8 s |
-| `Sources/FouineEmbed` | `FouineEmbedTests`, `FouineMCPTests/SemanticModelTests` | 20 s |
 | `Sources/FouineMCPKit`, `Sources/FouineMCP` | `make ci-mcp`, plus `docs/mcp.md` and `Packaging/mcpb/manifest.json` when a tool changes | 19 s |
 | `Sources/FouineApp` | `FouineAppTests`, plus `./Tools/l10n-lint.sh` when a string changes | 25 s |
 | `Sources/FouineApp/Resources/Localizable.xcstrings` | `FouineAppTests/L10nTests`, `./Tools/l10n-lint.sh`, then `make ci-bundle-i18n` | 25 s |
@@ -92,8 +89,8 @@ build under `-warn-long-function-bodies=150
 -warn-long-expression-type-checking=150`. Absolute values move with the load;
 the ranking does not.
 
-**Execution.** The ten unit suites run 2 058 tests in about 270 s in series,
-and **one test is 40 to 60 % of that**:
+**Execution.** The unit suites run in about 270 s in series, and **one test is
+40 to 60 % of that**:
 
 | Test | Alone | Why it costs that |
 |---|---:|---|
@@ -101,11 +98,9 @@ and **one test is 40 to 60 % of that**:
 | `MediaExtractorTests.testStopDuringAWindowRaisesTheNamedCase` | 8 s | two minutes of audio, stop asked two seconds in |
 | `MediaExtractorTests.testRecordingLongerThanTheCapNamesTheCap` | 3–13 s | same synthesis, then the refusal that names the cap |
 | `ImageExtractorTests.testRealOCRRecognizesTextOnStandaloneImage` | 2–8 s | real Vision OCR on a real image |
-| `QuantizerTests.testCosineSurvivesQuantization` | 2.7 s | 2 000 pairs of 384-dimension unit vectors quantised and compared — the arithmetic in a debug build, *not* the 2 000 assertions (removing them changed nothing, measured) |
 | `T6FixtureTests` (two tests) | 3–5 s each | real OCR on a real scan; they skip without `Tests/Fixtures/paths.json` |
 | `RendererTests.testRenderGiantStandaloneImageIsBounded` | 3.7 s | renders a deliberately enormous image to prove the budget holds |
 | `FSEventsWatcherTests.testAQuietRestartOnAValidCursorAsksForNothing` | 3.4 s | 0.4 s for `fseventsd` to hand out an id, then an **inverted** expectation, which by construction waits its whole 3 s |
-| `RealModelTests.testTokenizerParity` | 3.4 s | loads the real CoreML encoder (shared, once per suite) |
 | `SchemaCreationTests.testAFreshDatabaseIsCreatedAtTheCurrentSchema` | 2.3 s | creates the whole schema, FTS5 tables included |
 
 **The speech tests take turns, and fail instead of hanging.** The four tests
@@ -128,7 +123,7 @@ reach: that deadline bounds the wait for an answer once the audio is in, not
 the synthesis, nor the synchronous Speech calls before it.
 
 Two rules come out of that list. **Real work is the cost** — speech
-recognition, Vision, CoreML, SQLite — and it is the proof, so it stays.
+recognition, Vision, SQLite — and it is the proof, so it stays.
 **A proof of a negative costs its whole window**: an inverted expectation, or
 the network-silence windows of `NetworkSilenceTests`, wait on purpose. Keep
 those windows short and let one measured test guard the margin — that file's
@@ -147,16 +142,14 @@ it concentrates:
 | `Sources/FouineCore/Query/GRDBStore+Search.swift` | 10.5 s → 2.0 s | `searchOnce` 5.5 s, all of it one `StatementArguments(…)` concatenation |
 | `Sources/fouine/CommandsConfig.swift` | 7.9 s → 0 | `canonicalOCRLanguages` 5.9 s, a five-part `+` of strings |
 | `Sources/FouineApp/Views/ContentView.swift` | 4.1 s | `body` 3.5 s |
-| `Tests/FouineEmbedTests/EmbedTests.swift` | 2.9 s → 0.8 s | `reduce(0, +)` on untyped literals |
-| `Tests/FouineEmbedTests/RankFusionTests.swift` | 2.7 s → 0.8 s | `1 / 62 + 1 / 66` inside an assertion |
 | `Tests/FouineExtractTests/LegacyOfficeBuilder.swift` | 2.7 s → 0.3 s | `UInt8(value & 0xFF)` four times in one array literal |
 
 The pattern is always the same, and it is **not** the size of the function: a
 chain of `+` over untyped literals, or a heterogeneous array literal, makes the
 type-checker try every overload. The fix is to name the type once — a `let`
 with an annotation, a string interpolation instead of `+`,
-`UInt8(truncatingIfNeeded:)` instead of a mask. Those six files went from 62 s
-to 4 s that way, and the package total from 116 s to 54 s; untouched files vary
+`UInt8(truncatingIfNeeded:)` instead of a mask. The four files with an arrow
+went from 56.5 s to 2.3 s that way, and the package total from 116 s to 54 s; untouched files vary
 by up to a fifth between two builds, so trust the per-file column, not the
 total. `Sources/FouineApp/Views` is untouched and is now the largest remaining
 share.
@@ -170,15 +163,14 @@ share.
   `FouinePackageTests`); touching `Sources/FouineCore` rebuilds everything that
   depends on it, so expect two to four minutes under load.
 - `make ci-unit` cannot go below its slowest process, because `--parallel`
-  runs one process per test (2 058 tests, 0 failures, 460 s measured on 14/09
-  under a second build; the speech test alone was 272 s of it, with three
-  recognitions overlapping). Since the speech tests queue behind one file lock,
+  runs one process per test (0 failures, 460 s measured on 14/09 under a
+  second build; the speech test alone was 272 s of it, with three recognitions
+  overlapping). Since the speech tests queue behind one file lock,
   that floor is their sum rather than the longest of them: 57 s in series at a
   load of 3, 49 s of it for the long test. `swift test --parallel --filter
   FouineExtractTests` then ran three times in a row in 66, 85 and 83 s, 308
-  tests, 0 failures. `make ci-integration` is 123 s for 142
-  tests, 31 of them skipped without the personal corpus, and `make ci-corpus`
-  31 s for 35.
+  tests, 0 failures. `make ci-integration` took 123 s on the same day, and
+  `make ci-corpus` 31 s for 35 tests.
 - Avoid a second compilation on the machine. It is the single biggest factor in
   every number on this page.
 
@@ -186,20 +178,20 @@ share.
 
 | Suite | Tests | What it covers |
 |---|---:|---|
-| `FouineCoreTests` | 519 | schema creation and the refusal of every other version, store, query parsing (path filter, filter exclusions, NFC, quorum under filters), search and its ranking bonuses, fuzzy matching (distance cap by scope), transcript moments, page layout, hit relevance, `fouine://` links, the language, date and provenance filters, backup and maintenance, the named lock, read-only opening in its three awkward cases, the disk budget projection, the status objects three surfaces share, the printed page number of a PDF, the exclusion rules kept per root (and the column a v9 index only receives with its first rule) |
-| `FouineCrawlTests` | 100 | walking, root policy, FSEvents lifecycle and stress, build-folder exclusion under a project, `Name.mbox/` packages, the `.fouineignore` rules (pure, then on a real crawl: an excluded document leaves with its vectors), the rules kept by Fouine (validated when typed, united with the file, applied without it) and the event a hidden file raises |
+| `FouineCoreTests` | — | schema creation and the refusal of every other version, store, query parsing (path filter, filter exclusions, NFC, quorum under filters), search and its ranking bonuses, fuzzy matching (distance cap by scope), transcript moments, page layout, hit relevance, `fouine://` links, the language, date and provenance filters, backup and maintenance, the named lock, read-only opening in its three awkward cases, the disk budget projection, the status objects three surfaces share, the printed page number of a PDF, the exclusion rules kept per root (and the column a v9 index only receives with its first rule) |
+| `FouineCrawlTests` | — | walking, root policy, FSEvents lifecycle and stress, build-folder exclusion under a project, `Name.mbox/` packages, the `.fouineignore` rules (pure, then on a real crawl: an excluded document leaves the index), the rules kept by Fouine (validated when typed, united with the file, applied without it) and the event a hidden file raises |
 | `FouineExtractTests` | 302 | the 114 extensions, the 19 images under `extract.images` and the 19 media under `extract.media` (metadata, named refusal without ffmpeg, on-device transcription, ten-minute windows), mail attachments, guards, deadlines, the versioned corpus, network silence |
 | `FouineOCRTests` | 63 | Vision, page rendering (webp, psd, animated gif, Sketch and Figma previews), thermal governor, deadlines, cancellation |
-| `FouineIndexTests` | 122 | the shared indexing pass, OCR priority, pinned roots, Spotlight donation against a fake donor, language catch-up at the end of a pass, Apple Notes, Bear and Anki against SQLite bases built at the real schema (an Anki collection held open in WAL mode), a copy recognised by where it lives and named as in its app, a rule kept in the settings taking a document and its vectors out of a real pass |
-| `FouineEmbedTests` | 131 | quantisation, vector index, RRF, `EmbedRun`, semantic windowing, lock released per batch, model download, parity with the Python reference, a page encoded on the fly byte for byte like the campaign |
-| `FouineAppTests` | 602 | the pure models behind the window: `SearchModel`, sorting, export, facets and restored session, preview, the single index state, the deep-link router, the menu-bar search, Shortcuts actions, uninstalling, the “What Fouine skips…” sheet, plus accessibility and localisation |
-| `FouineAgentTests` | 67 | the pure state machine, transitions, the §5.7 conditions, the 0o600 log, `agent_status`, the roots walked again when their kept exclusion rules change |
-| `FouineMCPTests` | 176 | stdio framing, `stdout` hygiene, thirteen golden transcripts, read-only proved on all five tools, pagination, response budget, semantic fallback, the search parameters (`since`, `fuzzy`, `facet`, `compact`, `marks`), citation fields, semantic scope, network silence, the `.mcpb` manifest against `tools/list`, client configuration, the agent verdict and the per-root coverage, `encode_if_missing` and `compact` on neighbours, the `--folders` scope (served roots, refusals naming only them, an out-of-scope document unknown, exact pagination across roots) |
-| `IntegrationTests` | 142 | the recipe: the CLI driven by `Process`, `read` and `similar`, `search --mark`, the citation keys and `bm25` of `search --json`, `--hybrid-auto`, `similar --encode`, `mcp --folders`, `root list ignore_rules`, `root ignore add`, `remove` and `list`, named refusals in 64, `status --unreadable`, a copy without `-wal` repaired by `maintain`, `ocr` under lock exiting 3, semantics disarmed end to end |
+| `FouineIndexTests` | — | the shared indexing pass, OCR priority, pinned roots, Spotlight donation against a fake donor, language catch-up at the end of a pass, Apple Notes, Bear and Anki against SQLite bases built at the real schema (an Anki collection held open in WAL mode), a copy recognised by where it lives and named as in its app, a rule kept in the settings taking a document out of a real pass |
+| `FouineAppTests` | — | the pure models behind the window: `SearchModel`, sorting, export, facets and restored session, preview, the single index state, the deep-link router, the menu-bar search, Shortcuts actions, uninstalling, the “What Fouine skips…” sheet, plus accessibility and localisation |
+| `FouineAgentTests` | — | the pure state machine, transitions, the §5.7 conditions, the 0o600 log, `agent_status`, the roots walked again when their kept exclusion rules change |
+| `FouineMCPTests` | — | stdio framing, `stdout` hygiene, eleven golden transcripts, read-only proved on all four tools, pagination, response budget, the search parameters (`since`, `fuzzy`, `facet`, `compact`, `marks`), citation fields, network silence, the `.mcpb` manifest against `tools/list`, client configuration, the agent verdict, the `--folders` scope (served roots, refusals naming only them, an out-of-scope document unknown, exact pagination across roots) |
+| `IntegrationTests` | — | the recipe: the CLI driven by `Process`, `read`, `search --mark`, the citation keys and `bm25` of `search --json`, `mcp --folders`, `root list ignore_rules`, `root ignore add`, `remove` and `list`, named refusals in 64, `status --unreadable`, a copy without `-wal` repaired by `maintain`, `ocr` under lock exiting 3 |
 
-The nine unit suites make **2 132 tests** and are what `make ci-unit` runs, in
-`--parallel`; `IntegrationTests` counts separately, as `make ci-integration`. Counts are refreshed at the end of a
-session, after a green gate, not on every change.
+The eight unit suites make **—** tests and are what `make ci-unit` runs, in
+`--parallel`; `IntegrationTests` counts separately, as `make ci-integration`.
+Counts are refreshed at the end of a session, after a green gate, not on every
+change.
 
 **Skips are expected, and each says what to do.** Three unit tests skip
 everywhere: `P8RealVocabularyTests` (wants `FOUINE_P8_DB`), the DjVu test that
@@ -207,9 +199,7 @@ exists only for a missing djvulibre, and `PDFExtractorTests.testRealCorpusBookIf
 (wants `FOUINE_TEST_DB` on top of `Tests/Fixtures/paths.json`, because ten
 seconds of extracting a 600-page book do not belong in every run). The three
 `T6FixtureTests` skip wherever `paths.json` is missing, which includes a fresh
-worktree, since the file is gitignored. On the CI runner, where the semantic
-model is absent, there are ten more unit skips and five more integration skips;
-`.github/workflows/ci.yml` lists them in its header.
+worktree, since the file is gitignored.
 
 `make ci-unit` runs in `--parallel`, whose log carries neither per-test
 durations nor the `Executed N tests, with M skipped` line. To time a test or
@@ -330,16 +320,21 @@ threshold measured on a shared runner would mean nothing.
 
 ## Schema creation
 
-There is no schema migration: no old-base fixture, no migration suite, no
-migration chain. `FouineCoreTests.SchemaCreationTests` (14 cases) proves, on
-disposable bases:
+There is no migration chain: no old-base fixture and no migration suite, only
+the one step from version 9 to 10 (see
+[architecture](architecture.md#4-the-sqlite-schema)).
+`FouineCoreTests.SchemaCreationTests` (16 cases) proves, on disposable bases:
 
-- a new base is born at the current schema, with its sixteen tables,
-  `ocr_layout` on the structured rowid, the windowing geometry in `vec_meta`,
-  `integrity_check` at `ok`, and every table empty;
+- a new base is born at the current schema, with its fourteen tables,
+  `ocr_layout` on the structured rowid, `integrity_check` at `ok`, and every
+  table empty;
 - it is usable immediately: settings written and read back, agent state
   published;
-- a base at any earlier schema is refused, for EVERY earlier version, with the
+- a base at version 9 is brought to 10: the two tables it carried in addition
+  go, and its documents, their text and search do not move; the step can be
+  replayed, and a read-only opening names the gesture that runs it rather than
+  sending you to index again;
+- a base at any older schema is refused, for EVERY older version, with the
   gesture («delete it and index again»), without promising a migration that
   does not exist, and **without the refused base being touched**;
 - a base at a newer schema is refused with the OTHER gesture (update the
@@ -350,56 +345,13 @@ disposable bases:
 - creation takes the named lock and opening an up-to-date base does not,
   otherwise `search`, `status` and `doctor` would fail during indexing;
 - reopening is idempotent: `created_at` does not move and the data stays;
-- moving a document erases nothing: pages, OCR layer, queue and vectors follow
-  the `doc_id`, and swapping two paths fits in one transaction;
-- vector invalidation follows the window rowid: rewriting a page takes its
-  three windows, sentinel included, and nothing else;
+- moving a document erases nothing: pages, OCR layer and queue follow the
+  `doc_id`, and swapping two paths fits in one transaction;
 - search answers on the base thus created: native, OCR, accent fallback.
 
 Bases «at another schema» are built inside the test by `/usr/bin/sqlite3`: a
 `meta` table and one `schema_version` row describe everything the store looks
 at before deciding. No fixture to version, therefore no fixture to maintain.
-
-## The semantic model
-
-The e5 model (`multilingual-e5-small` converted to CoreML) weighs 220 MB. It is
-not in the repository and never will be.
-
-```sh
-fouine model download            # 220 MB, from the release asset
-fouine model status --json       # `installed`: the gate the tests read
-```
-
-Without it, **14 tests skip**: the 3 parity tests and the floor test of
-`FouineEmbedTests`, the 3 of `FouineMCPTests.SemanticModelTests`, the 2 seeded
-semantic journeys of `FouineAppTests.SeedTests`, and the 5 of
-`IntegrationTests.HybridCorpusTests`. Everything else runs, deliberately:
-semantic fallback, lazy loading and the MCP server's network silence are all
-about the model's absence, so they are proved without it.
-
-To work on a copy without touching the installation:
-
-```sh
-FOUINE_MODEL_DIR=/tmp/e5 fouine model download --url file:///path/e5-small-v1.zip
-FOUINE_MODEL_DIR=/tmp/e5 make ci-unit
-```
-
-CoreML loading costs about 2,5 s on an i5, so **each suite loads the model once
-per process** and shares it (`sharedRealEncoder()` in `FouineEmbedTests`,
-`fixtureEncoder` in `SemanticModelTests`, `SharedModel.encoder()` in
-`FouineAppTests`). The exception is the test that exercises loading itself,
-`SemanticModelTests.testTheModelIsLoadedOnceAndOnlyWhenNeeded`, which measures
-the server's own load. A new test that needs the real model takes the shared
-instance; it builds one only when it tests `E5Encoder(modelDir:)`.
-
-In CI the model comes from `actions/cache`, keyed by its **expected SHA-256**,
-so changing model changes the key and therefore the cache without anyone
-remembering to invalidate it. Failing that, `fouine model download` writes into
-a `FOUINE_MODEL_DIR` **under the workspace**, never into the runner's
-`~/Library`. A missing asset is not a failure: while the asset is unpublished
-the download returns 404, and the step warns (`::warning::` plus a note in the
-job summary) and exits 0. A red job for a file the maintainer has not published
-yet would teach reviewers to ignore red.
 
 ## The gate, and continuous integration
 
@@ -408,7 +360,7 @@ Use `make gate PURGE=1` after a change to a shared public struct.
 
 ```sh
 make check-docs && make check-changelog && make check-ranking && make check-l10n
-make ci-unit                       # the ten unit suites in --parallel
+make ci-unit                       # the eight unit suites in --parallel
 make release-cli && make ci-integration
 make ci-bundle ARCHS=$(uname -m) && make ci-bundle-i18n
 ```
@@ -448,8 +400,7 @@ default is universal, which builds a second tree under
 `.github/workflows/ci.yml` has three jobs. `test` runs on every push and pull
 request: `make check-version`, `check-docs`, `check-changelog`, `check-ranking`
 (the bench scripts on a fabricated pool), `swift build`, `make release-cli`,
-the semantic model on a best-effort basis, `make ci-unit`, `make
-ci-integration`. `bundle` runs `make ci-bundle` (bundle, `plutil -lint`, `lipo
+`make ci-unit`, `make ci-integration`. `bundle` runs `make ci-bundle` (bundle, `plutil -lint`, `lipo
 -archs`, ad-hoc signature, `ci-bundle-dock`) and `make ci-bundle-i18n`. `release-tests` runs
 `make ci-unit CONFIG="-c release"` on `main` only.
 
@@ -470,17 +421,16 @@ on a `precondition` to refuse a rowid that would belong to the next document.
   codes and the state of the base. CLI wording changes; a recipe that broke on
   a translation would not be testing the product.
 - **Never use unseeded randomness.** A test that draws lots must draw the same
-  lot everywhere (`SeededGenerator` in `FouineEmbedTests`, an explicit seed
-  elsewhere). A test that is red one time in ten is noise people learn to
+  lot everywhere, from an explicit seed. A test that is red one time in ten is noise people learn to
   ignore.
-- **A skip always names the gesture.** `XCTSkip("model missing — `fouine model
-  download` installs it")`, not `XCTSkip("preconditions not met")`.
+- **A skip always names the gesture.** `XCTSkip("fouine binary missing — run
+  `swift build -c release`")`, not `XCTSkip("preconditions not met")`.
 - **A missing repository file is a failure, not a skip.** `manifest.json` is
-  versioned, so its absence is a regression. `paths.json` and the model are
-  personal, so their absence is a machine precondition.
+  versioned, so its absence is a regression. `paths.json` is personal, so its
+  absence is a machine precondition.
 - **One counter-proof per strong claim.** «This term appears on this page»
-  holds only if it is also shown NOT to appear elsewhere; «the hybrid finds
-  this page» holds only after showing that full text does not.
+  holds only if it is also shown NOT to appear elsewhere; «the fuzzy fallback
+  finds this page» holds only after showing that the exact search does not.
 - **A test that proves a lock refusal uses `lockTimeout: 0.3`**, never the
   default five seconds.
 - **Application tests write into a disposable preferences domain**, named after
@@ -494,8 +444,8 @@ on a `precondition` to refuse a rowid that would belong to the next document.
 Suites can run in separate processes because each test builds its base and its
 folder under a UUID (`TempDB`, `TempIndex`, `TempStore`, `TempAppDB`,
 `IndexScratch`), the network-silence listeners take an ephemeral port, and the
-`setenv` calls (`FOUINE_PDF_TIMEOUT`, `FOUINE_OCR_TIMEOUT`, `FOUINE_MODEL_*`)
-are undone in a `defer`. The CoreML model is read, never written.
+`setenv` calls (`FOUINE_PDF_TIMEOUT`, `FOUINE_OCR_TIMEOUT`) are undone in a
+`defer`.
 
 ## What is not tested, and why
 

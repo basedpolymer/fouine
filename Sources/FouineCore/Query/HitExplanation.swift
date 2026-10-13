@@ -1,11 +1,9 @@
 // HitExplanation.swift — POURQUOI cette page est dans les résultats.
 // Propriété : A-Core. Idée F2 de l'audit A2 du 04/09/2026, lot U1 (R-06).
 //
-// Tout était déjà calculé — `Hit.fuzzyDistance`, `HybridHit.lexRank` /
-// `vecRank`, les termes de la requête — et rien ne le DISAIT : ces valeurs
-// vivaient dans des infobulles que personne ne survole, et dans un JSON que
-// seul un agent lit. Une page trouvée par le seul canal sémantique était même
-// indiscernable d'une page contenant les mots, sinon par un insigne « ≈ ».
+// Tout était déjà calculé — `Hit.fuzzyDistance`, les termes de la requête — et
+// rien ne le DISAIT : ces valeurs vivaient dans des infobulles que personne ne
+// survole, et dans un JSON que seul un agent lit.
 //
 // CE FICHIER NE LIT PAS LA BASE, et c'est la condition pour qu'il soit
 // testable : l'appelant apporte le texte (celui de la page pour l'application,
@@ -65,20 +63,13 @@ public enum HitExplanation: Sendable, Equatable {
     /// Le mot tapé n'est pas sur la page, mais un mot très proche y est
     /// (§5.5.2). `distance` est le nombre de lettres qui les séparent.
     case fuzzy(typed: String, found: String, distance: Int)
-    /// Aucun mot de la requête n'est sur la page : elle vient du seul canal
-    /// sémantique (§12).
-    case semanticOnly
-    /// Les deux canaux ont trouvé cette page.
-    case both(terms: [String])
 
     /// L'étiquette du cas dans le JSON de `fouine search` et de `fouine_search`.
     public var kindLabel: String {
         switch self {
-        case .exact:        return "exact"
-        case .partial:      return "partial"
-        case .fuzzy:        return "fuzzy"
-        case .semanticOnly: return "semantic"
-        case .both:         return "both"
+        case .exact:   return "exact"
+        case .partial: return "partial"
+        case .fuzzy:   return "fuzzy"
         }
     }
 }
@@ -104,8 +95,6 @@ extension HitExplanation {
     ///     désigner à l'utilisateur exactement ce qu'il a demandé d'écarter.
     ///   - text: le texte de la page, ou à défaut l'extrait.
     ///   - fuzzyDistance: `Hit.fuzzyDistance` (0 = correspondance exacte).
-    ///   - lexRank, vecRank: les rangs de la fusion RRF (§12) ; tous deux `nil`
-    ///     en recherche plein texte, où la question ne se pose pas.
     ///   - textIsWholePage: `text` est-il TOUTE la page, ou seulement un
     ///     extrait ? Sur un extrait, l'absence d'un mot ne prouve rien, et le
     ///     mesurer l'a montré tout de suite : `fouine search 'cinetique
@@ -123,14 +112,7 @@ extension HitExplanation {
     ///     ne peut plus être « exacte » (constat PM-14 : une page qui portait
     ///     trois mots sur neuf rendait `kind: "exact"` avec les neuf).
     public init?(words: [QueryWord], text: String, fuzzyDistance: Int = 0,
-                 lexRank: Int? = nil, vecRank: Int? = nil,
                  textIsWholePage: Bool = true, quorum: Bool = false) {
-        // Canal sémantique pur : le texte n'a par définition aucun des mots, il
-        // est inutile de le parcourir pour le constater.
-        if lexRank == nil, vecRank != nil {
-            self = .semanticOnly
-            return
-        }
         let words = Self.deduplicated(words)
         guard !words.isEmpty else { return nil }
 
@@ -153,8 +135,7 @@ extension HitExplanation {
             return
         }
         if !textIsWholePage {
-            // Le hit est lexical (le cas sémantique pur est sorti plus haut) :
-            // FTS5 a apparié TOUS les nœuds positifs sur cette page. Ce que
+            // FTS5 a apparié TOUS les nœuds positifs sur cette page : ce que
             // l'extrait ne montre pas n'est donc pas absent.
             //
             // Sauf si la requête a été expansée : le mot a pu n'être apparié
@@ -169,12 +150,7 @@ extension HitExplanation {
                 self = .partial(found: found, missing: [])
                 return
             }
-            let all = words.map(\.text)
-            self = vecRank != nil ? .both(terms: all) : .exact(terms: all)
-            return
-        }
-        if lexRank != nil, vecRank != nil {
-            self = .both(terms: found)
+            self = .exact(terms: words.map(\.text))
             return
         }
         guard !found.isEmpty else { return nil }
@@ -234,7 +210,7 @@ extension HitExplanation {
         var out: [String: Any] = ["kind": explanation.kindLabel]
         if tableOfContents { out["table_of_contents"] = true }
         switch explanation {
-        case .exact(let terms), .both(let terms):
+        case .exact(let terms):
             if !terms.isEmpty { out["terms_found"] = terms }
         case .partial(let found, let missing):
             out["terms_found"] = found
@@ -245,8 +221,6 @@ extension HitExplanation {
             out["typed"] = typed
             out["found"] = found
             out["distance"] = distance
-        case .semanticOnly:
-            break
         }
         return out
     }

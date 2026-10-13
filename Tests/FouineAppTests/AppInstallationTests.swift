@@ -89,33 +89,3 @@ final class AppInstallationTests: XCTestCase {
             .canRegister)
     }
 }
-
-/// La marge sémantique DITE, pas chiffrée en écarts-types (lot J2).
-final class SemanticMarginTextTests: XCTestCase {
-
-    /// Quatre paliers, quatre phrases distinctes, et aucune ne dit « σ »,
-    /// « écart-type », « cosinus » ni « vecteur » : le public n'est pas
-    /// technicien (CLAUDE.md).
-    func testFourTiersAndNoJargon() {
-        let texts = [3.4, 2.0, 1.0, 0.2].map(SemanticMarginText.describe)
-        XCTAssertEqual(Set(texts).count, 4, "quatre paliers, quatre phrases")
-        for text in texts {
-            XCTAssertFalse(text.isEmpty)
-            for banned in ["σ", "sigma", "cosine", "cosinus", "vector", "vecteur",
-                           "margin", "marge", "standard deviation", "écart-type", "rank"] {
-                XCTAssertFalse(text.lowercased().contains(banned), "« \(banned) » dans « \(text) »")
-            }
-        }
-    }
-
-    /// Les bornes tombent du bon côté : 2,5 · 1,5 · 0,75.
-    func testTierBoundaries() {
-        XCTAssertEqual(SemanticMarginText.describe(2.5), SemanticMarginText.describe(9.0))
-        XCTAssertEqual(SemanticMarginText.describe(1.5), SemanticMarginText.describe(2.49))
-        XCTAssertEqual(SemanticMarginText.describe(0.75), SemanticMarginText.describe(1.49))
-        XCTAssertEqual(SemanticMarginText.describe(0.74), SemanticMarginText.describe(-3.0))
-        XCTAssertNotEqual(SemanticMarginText.describe(2.5), SemanticMarginText.describe(2.49))
-        XCTAssertNotEqual(SemanticMarginText.describe(0.75), SemanticMarginText.describe(0.74))
-    }
-}
-

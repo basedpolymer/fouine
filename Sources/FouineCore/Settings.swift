@@ -320,66 +320,6 @@ public enum SettingKeys {
         summary: "Suspend OCR while the machine is hot (CPU_Speed_Limit "
                + "below 70%, or a degraded thermal state).")
 
-    /// La campagne de vecteurs, confiée à l'agent (constat PR-21, lot AG1).
-    ///
-    /// Vrai par défaut à sa naissance (AG1) : `fouine embed` était le SEUL
-    /// chemin vers la recherche par le sens, en ligne de commande, sur un
-    /// public qui n'ouvre pas de terminal. FAUX PAR DÉFAUT depuis la 1.0.1
-    /// (DF1, décision du propriétaire du 15/09/2026) : la préparation reste
-    /// un choix explicite — la case dans Réglages ▸ Indexation, ou le bouton
-    /// « Préparer la recherche par le sens… » de la barre latérale, qui
-    /// s'affiche justement tant que la case est décochée. L'agent sait
-    /// toujours travailler par tranches sous les six conditions du §5.7.
-    public static let agentPrepareMeaning = SettingSpec(
-        key: "agent.prepareMeaning", kind: .boolean, fallback: "false",
-        environmentVariable: "FOUINE_AGENT_PREPARE_MEANING",
-        summary: "Let the background agent produce the semantic vectors "
-               + "(what `fouine embed` does), once the OCR queue is empty and "
-               + "under the same six conditions of §5.7.")
-
-    /// Durée d'un lot de vecteurs de l'agent. Même plage et même défaut que
-    /// `agent.ocrBudgetMinutes` : c'est la même promesse — dix minutes, puis on
-    /// re-décide.
-    public static let agentEmbedBudgetMinutes = SettingSpec(
-        key: "agent.embedBudgetMinutes", kind: .integer(min: 1, max: 120),
-        fallback: "10", environmentVariable: "FOUINE_AGENT_EMBED_BUDGET_MINUTES",
-        summary: "Length of one vectorisation batch of the agent, in minutes. "
-               + "The conditions of §5.7 are decided again for every batch.")
-
-    /// Fin du dernier lot de vecteurs de l'agent, en secondes epoch. `0` =
-    /// jamais.
-    ///
-    /// HORS DU CATALOGUE `all`, comme `spotlight.synced_at` et pour la même
-    /// raison : ce n'est pas une préférence mais un état interne. Il existe
-    /// parce que `fouine status` doit pouvoir répondre à « est-ce que ça
-    /// avance ? » quand l'agent n'est pas en train de travailler à la seconde
-    /// où on regarde — `agent_status` ne porte que l'instant présent.
-    public static let agentLastEmbedBatchAt = SettingSpec(
-        key: "agent.lastEmbedBatchAt", kind: .integer(min: 0, max: Int.max),
-        fallback: "0", environmentVariable: nil,
-        summary: "internal: end of the last vectorisation batch of the agent "
-               + "(epoch seconds; 0 = never).")
-
-    // — Recherche par le sens (lot MC3) -------------------------------------
-
-    /// Laisser les tableurs hors de la vectorisation (constat PM-09).
-    ///
-    /// VRAI PAR DÉFAUT, et c'est une décision de QUALITÉ, pas d'espace disque.
-    /// Sur la production mesurée, 24 420 des 31 986 pages d'une racine ont plus
-    /// de chiffres que de lettres et 99,6 % d'entre elles sont des pages de
-    /// tableur : le vecteur d'une colonne de nombres est proche de tous les
-    /// autres tableaux du corpus et de rien d'utile, et il prend une place dans
-    /// chaque résultat par le sens. Le disque, lui, n'y gagnerait que ~21 Mo
-    /// sur un dépassement de 110 Mo déjà acquis. Les pages restent trouvables
-    /// au mot près par le canal lexical, comme toute page à vecteur nul.
-    public static let embedSkipSpreadsheets = SettingSpec(
-        key: "embed.skip_spreadsheets", kind: .boolean, fallback: "true",
-        environmentVariable: "FOUINE_EMBED_SKIP_SPREADSHEETS",
-        summary: "Leave spreadsheets (csv, xlsx, ods…) out of the meaning "
-               + "vectors: a column of numbers describes nothing, and it would "
-               + "take a place in every result by meaning. They stay findable "
-               + "word for word.")
-
     // — Racines (audit F4) --------------------------------------------------
 
     /// Racines épinglées : leurs pages passent en priorité 0, devant tout le
@@ -519,8 +459,6 @@ public enum SettingKeys {
         extractMedia, extractTranscribe, transcribeMaxMinutes,
         agentExtractJobs, agentOCRBudgetMinutes, agentPollSeconds,
         agentRequireAC, agentPauseOnLowPower, agentPauseOnThermal,
-        agentPrepareMeaning, agentEmbedBudgetMinutes,
-        embedSkipSpreadsheets,
         pinnedRoots, notifyOnQueueDrained,
         spotlightEnabled, spotlightAllDocuments, spotlightTextKB,
         sourceNotes, sourceBear, sourceAnki,
@@ -698,16 +636,6 @@ public struct SettingsSnapshot: Sendable {
     public var agentPauseOnLowPower: Bool { bool(SettingKeys.agentPauseOnLowPower) }
     public var agentPauseOnThermal: Bool { bool(SettingKeys.agentPauseOnThermal) }
     public var notifyOnQueueDrained: Bool { bool(SettingKeys.notifyOnQueueDrained) }
-    /// Préparation de la recherche par le sens en arrière-plan (lot AG1).
-    public var agentPrepareMeaning: Bool { bool(SettingKeys.agentPrepareMeaning) }
-    public var agentEmbedBudgetMinutes: Int { int(SettingKeys.agentEmbedBudgetMinutes) }
-    /// Tableurs hors vectorisation (lot MC3, constat PM-09).
-    public var embedSkipSpreadsheets: Bool { bool(SettingKeys.embedSkipSpreadsheets) }
-    /// Fin du dernier lot de vecteurs de l'agent, en secondes epoch. `0` = jamais.
-    public var agentLastEmbedBatchAt: Double {
-        Double(int(SettingKeys.agentLastEmbedBatchAt))
-    }
-
     /// Spotlight (lot INT-S1).
     public var spotlightEnabled: Bool { bool(SettingKeys.spotlightEnabled) }
     public var spotlightAllDocuments: Bool { bool(SettingKeys.spotlightAllDocuments) }

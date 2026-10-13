@@ -27,22 +27,14 @@
 // répondre alors qu'il n'y a pas d'index lisible — un client qui affiche
 // « serveur déconnecté » ne montre jamais la phrase qui porte le geste.
 //
-// SURFACE. Une ligne par méthode, toutes lectures. Deux d'entre elles font
-// exception au « republier tel quel » et sont commentées à leur place :
-//
-//   · `hybrid(…)` — `HybridSearch.run` prend un `GRDBStore`, pas un
-//     `ReadOnlyStore`. Plutôt que de rendre le magasin interne (ce qui
-//     abattrait le mur de types du point 2 ci-dessus), on expose l'APPEL :
-//     le `GRDBStore` reste privé, et le seul chemin qui y mène de l'extérieur
-//     est une recherche.
-//   · `vectorisedPageCount()` / `vectorisedPageCounts(forDocIDs:)` — le POINT
-//     UNIQUE où « des vecteurs » devient « des pages ». Voir leur commentaire :
-//     c'est là, et nulle part ailleurs dans le serveur, que le fenêtrage v5
-//     (plusieurs vecteurs par page) interviendra.
+// SURFACE. Une ligne par méthode, toutes lectures. Une seule fait exception au
+// « republier tel quel » et elle est commentée à sa place : `pageReading(…)`,
+// dont le chargeur prend un `GRDBStore` et non un `ReadOnlyStore`. Plutôt que
+// de rendre le magasin interne (ce qui abattrait le mur de types du point 2
+// ci-dessus), on expose l'APPEL : le `GRDBStore` reste privé.
 
 import Foundation
 import FouineCore
-import FouineEmbed
 
 public final class ReadOnlyStore {
 
@@ -179,7 +171,7 @@ public final class ReadOnlyStore {
     }
 
     /// La requête, restreinte au périmètre. Point de passage de `search`, du
-    /// canal des noms, des facettes et des deux appels sémantiques.
+    /// canal des noms et des facettes.
     private func scoped(_ query: SearchQuery) throws -> SearchQuery {
         guard let scope = try scopeFolders() else { return query }
         var out = query
@@ -248,8 +240,6 @@ public final class ReadOnlyStore {
 
     public func ocrQueueLength() throws -> Int { try opened().ocrQueueLength() }
 
-    public func vecMeta() throws -> [String: String] { try opened().vecMeta() }
-
     // MARK: - Valeurs connues d'un filtre (CM-11)
 
     /// Les langues présentes dans le PÉRIMÈTRE SERVI. Sert à REFUSER un `lang`
@@ -280,9 +270,8 @@ public final class ReadOnlyStore {
     }
 
     /// Les documents dont le NOM DE FICHIER répond (lot MP1, PR-02). À part de
-    /// `search` parce que le canal hybride ne passe pas par elle : c'est
-    /// `HybridSearch.run` qui appelle le canal lexical, et son type de retour
-    /// ne porte pas ce champ.
+    /// `search` : ce sont des DOCUMENTS et non des pages, et ils ne comptent
+    /// pas dans les totaux.
     public func documentsMatchingName(_ q: SearchQuery,
                                       limit: Int = 5) throws -> [DocumentListing] {
         try opened().documentsMatchingName(try scoped(q), limit: limit)
@@ -291,19 +280,6 @@ public final class ReadOnlyStore {
     public func facets(_ q: SearchQuery, by key: FacetKey,
                        excludingDocsMatching negative: String?) throws -> [(String, Int)] {
         try opened().facets(try scoped(q), by: key, excludingDocsMatching: negative)
-    }
-
-    public func docIDsMatchingFilters(folders: [String], exts: [String],
-                                      inDocIDs: [Int64],
-                                      excludingDocsMatching negative: String?)
-        throws -> Set<Int64>? {
-        var folders = folders
-        if let scope = try scopeFolders() {
-            folders = try intersect(folders, with: scope)
-        }
-        return try opened().docIDsMatchingFilters(folders: folders, exts: exts,
-                                                  inDocIDs: inDocIDs,
-                                                  excludingDocsMatching: negative)
     }
 
     // MARK: - Documents et pages
@@ -415,80 +391,9 @@ public final class ReadOnlyStore {
         return try opened().ocrLayout(docID: docID, page: page)
     }
 
-    /// Dénominateur de la couverture sémantique : pages indexées, comptées sur
-    /// la table d'ombre `page_fts_docsize` (0,13 s contre 16,5 s, C2-03).
+    /// Pages indexées, comptées sur la table d'ombre `page_fts_docsize`
+    /// (0,13 s contre 16,5 s, C2-03).
     public func indexedPageCount() throws -> Int { try opened().indexedPageCount() }
-
-    // MARK: - Pages vectorisées — LE POINT UNIQUE (fenêtrage v5)
-
-    /// Nombre de pages portant un vecteur, pour tout l'index.
-    ///
-    /// Fenêtrage v5 (fusionné le même jour) : `vectorCount()` compte des
-    /// LIGNES de `page_vec`, c'est-à-dire des FENÊTRES ; les pages que le canal
-    /// sémantique voit sont celles qui portent une fenêtre 0, et c'est
-    /// `GRDBStore.vectorisedPageCount()` qui les compte. Tout ce que le serveur
-    /// MCP annonce en pages — `semantic_coverage_pct`, `coverage_pct`,
-    /// `vector_coverage_pct` de `fouine_status` — passe par ici.
-    ///
-    /// Le compte de FRAÎCHEUR de l'index vectoriel, lui, ne passe PAS par ici :
-    /// `SemanticEngine` compare des lignes à des lignes (`vectorLineCount()`
-    /// contre `index.count`), et c'est ce qu'il doit continuer de faire.
-    public func vectorisedPageCount() throws -> Int { try opened().vectorisedPageCount() }
-
-    /// Idem, par document (`fouine_list_documents.vectorised_pages`).
-    public func vectorisedPageCounts(forDocIDs ids: [Int64]) throws -> [Int64: Int] {
-        try opened().vectorisedPageCounts(forDocIDs: try inScope(ids))
-    }
-
-    /// Dimension lue sur un blob, quand `vec_meta` manque. Voir son
-    /// commentaire dans FouineCore : c'est un recours, pas la source normale.
-    public func vectorBlobDimension() throws -> Int? {
-        try opened().vectorBlobDimension()
-    }
-
-    /// Nombre de LIGNES de `page_vec`, pour la seule comparaison de fraîcheur
-    /// avec `VectorIndex.count`. Ne jamais s'en servir pour annoncer une
-    /// couverture : voir `vectorisedPageCount()`.
-    public func vectorLineCount() throws -> Int { try opened().vectorCount() }
-
-    // MARK: - Sémantique
-
-    /// Charge l'index vectoriel en mémoire. Le `GRDBStore` interne ne sort pas :
-    /// c'est l'appel qui traverse le mur, pas le magasin.
-    public func makeVectorIndex(dim: Int) throws -> VectorIndex {
-        try VectorIndex(store: try opened(), dim: dim)
-    }
-
-    /// Recherche hybride (RRF lexical + vectoriel, §12). Même raison que
-    /// ci-dessus : `HybridSearch.run` réclame un `GRDBStore`, on lui passe le
-    /// nôtre — ouvert en `SQLITE_OPEN_READONLY` — sans jamais le publier.
-    public func hybrid(engine: any EmbedEngine, index: VectorIndex,
-                       query: SearchQuery, excludingDocsMatching negative: String?,
-                       rawQuery: String, typedQuery: String,
-                       limit: Int, offset: Int,
-                       depth: Int = HybridSearch.defaultDepth,
-                       scope: SemanticScope? = nil) throws -> HybridResults {
-        try HybridSearch.run(store: try opened(), engine: engine, index: index,
-                             query: try scoped(query), excludingDocsMatching: negative,
-                             rawQuery: rawQuery, typedQuery: typedQuery,
-                             limit: limit, offset: offset, depth: depth,
-                             scope: scope)
-    }
-
-    /// Ce que le canal du sens VOIT du périmètre demandé (lot MC2, PM-06).
-    ///
-    /// Le serveur l'appelle AVANT de charger le modèle : un périmètre sans
-    /// vecteur coûtait 6,2 s de mur — 2,3 s de CoreML, 1,9 s d'index — pour
-    /// comparer zéro vecteur, et rendait la couverture globale comme si elle
-    /// décrivait le dossier demandé. Même chemin que la fusion : le calcul est
-    /// dans `HybridSearch`, ici il n'y a qu'un magasin à traverser.
-    public func semanticScope(query: SearchQuery,
-                              excludingDocsMatching negative: String?,
-                              vectors: Int, pagesIndexed: Int) throws -> SemanticScope {
-        try HybridSearch.scope(store: try opened(), query: try scoped(query),
-                               excludingDocsMatching: negative,
-                               vectors: vectors, pagesIndexed: pagesIndexed)
-    }
 
     public func agentStatus() throws -> AgentStatusRecord? { try opened().agentStatus() }
 
@@ -510,10 +415,10 @@ public final class ReadOnlyStore {
     /// Le texte d'une page et de ses voisines, par le chemin PARTAGÉ avec
     /// `fouine read` (`PageReading`, lot MC3).
     ///
-    /// Troisième exception au « republier tel quel », même raison que
-    /// `hybrid(…)` et `semanticScope(…)` : le chargeur réclame un `GRDBStore`,
-    /// on lui passe le nôtre — ouvert en `SQLITE_OPEN_READONLY` — sans jamais
-    /// le publier. C'est la condition posée par l'audit (PM-18) : deux
+    /// L'exception au « republier tel quel » : le chargeur réclame un
+    /// `GRDBStore`, on lui passe le nôtre — ouvert en `SQLITE_OPEN_READONLY` —
+    /// sans jamais le publier. C'est la condition posée par l'audit (PM-18) :
+    /// deux
     /// implémentations de la même lecture divergeraient comme `score` et
     /// `bm25`.
     public func pageReading(docID: Int64, page: Int, maxChars: Int,

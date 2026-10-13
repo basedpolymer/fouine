@@ -31,7 +31,6 @@ let package = Package(
         .library(name: "FouineCrawl", targets: ["FouineCrawl"]),
         .library(name: "FouineExtract", targets: ["FouineExtract"]),
         .library(name: "FouineOCR", targets: ["FouineOCR"]),
-        .library(name: "FouineEmbed", targets: ["FouineEmbed"]),
         // FouineIndex : LA passe d'indexation, partagée par la CLI, l'app et
         // l'agent (audit F2). Aucune dépendance SPM nouvelle.
         .library(name: "FouineIndex", targets: ["FouineIndex"]),
@@ -59,9 +58,6 @@ let package = Package(
         // FouineOCR dépend de FouineExtract : le PageRenderer rend aussi les images
         // des archives cbz/cbr et les médias embarqués OOXML via ses helpers (§5.3).
         .target(name: "FouineOCR", dependencies: ["FouineCore", "FouineExtract"]),
-        // FouineEmbed : vecteurs sémantiques et recherche hybride (§12).
-        // CoreML + Accelerate (frameworks système) — aucune dépendance SPM.
-        .target(name: "FouineEmbed", dependencies: ["FouineCore"]),
         // FouineIndex : `IndexPass` + observateur + priorité OCR. Les trois
         // pipelines d'indexation s'y réduisent à un adaptateur de sortie
         // (audit F2, F3, F4, X3). FouineOCR pour `OCRPass`, qui rend le verrou.
@@ -83,23 +79,23 @@ let package = Package(
         // CETTE cible et lui seule, pas une ressource à embarquer.
         .target(name: "FouineMCPKit", exclude: ["LICENSE"]),
         // FouineMCP : le serveur proprement dit — ouverture en lecture seule,
-        // cycle de vie, et les outils. Lie FouineCore et FouineEmbed, donc
-        // sous la licence source-available de Fouine, donc l'exécutable livré
-        // aussi (LICENSING.md).
+        // cycle de vie, et les outils. Lie FouineCore, donc sous la licence
+        // source-available de Fouine, donc l'exécutable livré aussi
+        // (LICENSING.md).
         .target(name: "FouineMCP",
-                dependencies: ["FouineMCPKit", "FouineCore", "FouineEmbed"]),
+                dependencies: ["FouineMCPKit", "FouineCore"]),
         .executableTarget(
             name: "fouine",
             dependencies: [
                 "FouineCore", "FouineCrawl", "FouineExtract", "FouineOCR",
-                "FouineEmbed", "FouineIndex", "FouineMCP",
+                "FouineIndex", "FouineMCP",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]
         ),
         .executableTarget(
             name: "FouineApp",
             dependencies: ["FouineCore", "FouineCrawl", "FouineExtract",
-                           "FouineOCR", "FouineEmbed", "FouineIndex",
+                           "FouineOCR", "FouineIndex",
                            .product(name: "Sparkle", package: "Sparkle")],
             // Le String Catalog de l'app (palier 3.2, audit U1) est EXCLU de la
             // compilation SwiftPM, et ce n'est pas un oubli. Déclaré en
@@ -126,10 +122,8 @@ let package = Package(
         ),
         .executableTarget(
             name: "FouineAgent",
-            // FouineEmbed depuis le lot AG1 : l'agent prépare aussi la
-            // recherche par le sens, entre deux lots d'OCR (constat PR-21).
             dependencies: ["FouineCore", "FouineCrawl", "FouineExtract",
-                           "FouineOCR", "FouineIndex", "FouineEmbed"]
+                           "FouineOCR", "FouineIndex"]
         ),
         // Cible de tests de l'interface (audit F1 : « aucun test sur
         // SearchModel »). SwiftPM sait tester une cible EXÉCUTABLE : le
@@ -158,11 +152,9 @@ let package = Package(
         .testTarget(name: "FouineExtractTests",
                     dependencies: ["FouineExtract", "FouineOCR", "FouineCrawl"]),
         .testTarget(name: "FouineOCRTests", dependencies: ["FouineOCR"]),
-        .testTarget(name: "FouineEmbedTests",
-                    dependencies: ["FouineEmbed", "FouineCore"]),
         .testTarget(name: "FouineIndexTests",
                     dependencies: ["FouineIndex", "FouineCore", "FouineCrawl"]),
-        // NEUVIÈME suite (palier 4). `Transcripts/` est EXCLU de la
+        // Les transcriptions « golden » : `Transcripts/` est EXCLU de la
         // compilation : ce sont des `.jsonl` lus par `#filePath`, comme le fait
         // déjà `MaintenanceRecetteTests` pour `docs/cli.md`. Déclarés en
         // ressource, ils demanderaient un `Bundle.module` dont on n'a pas

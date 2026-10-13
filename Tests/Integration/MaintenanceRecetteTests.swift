@@ -452,14 +452,14 @@ final class MaintenanceRecetteTests: XCTestCase {
 
         // Vérifier que chaque sous-commande de fouine --help est documentée dans docs/cli.md
         let subcommands = ["root", "volume", "crawl", "extract", "ocr", "index",
-                           "embed", "model", "search", "config", "status", "doctor",
+                           "search", "config", "status", "doctor",
                            "backup", "maintain",
                            // Lot INT-F4 : les notes des applications.
                            "sources",
                            // Lot BR1 : parcourir l'index (constat PR-06).
                            "list",
-                           // Lot MC3 : lire une page, et ses voisines (PM-18).
-                           "read", "similar"]
+                           // Lot MC3 : lire une page (PM-18).
+                           "read"]
         for sub in subcommands {
             XCTAssertTrue(helpRes.stdout.contains(sub), "fouine --help doit lister '\(sub)'")
             XCTAssertTrue(docContent.contains("fouine \(sub)"), "docs/cli.md doit documenter 'fouine \(sub)'")
@@ -507,8 +507,8 @@ final class MaintenanceRecetteTests: XCTestCase {
                           "docs/cli.md doit documenter \(option)")
         }
 
-        // MC3 : les options des deux commandes de lecture, et celles que
-        // `embed` a gagnées, documentées comme les autres.
+        // MC3 : les options de la commande de lecture, documentées comme les
+        // autres.
         let readHelp = try Recette.run(["read", "--help"], database: scratch.database)
         XCTAssertEqual(readHelp.status, 0)
         for option in ["--max-chars", "--offset", "--context", "--json"] {
@@ -517,35 +517,13 @@ final class MaintenanceRecetteTests: XCTestCase {
             XCTAssertTrue(docContent.contains(option),
                           "docs/cli.md doit documenter \(option)")
         }
-        let similarHelp = try Recette.run(["similar", "--help"],
-                                          database: scratch.database)
-        XCTAssertEqual(similarHelp.status, 0)
-        for option in ["--limit", "--folder", "--ext", "--min-cosine",
-                       "--preview-chars", "--no-exclude-same-document",
-                       // CL2 : encoder la page à la volée (PM-07).
-                       "--encode"] {
-            XCTAssertTrue(similarHelp.stdout.contains(option),
-                          "`fouine similar --help` doit annoncer \(option)")
-            XCTAssertTrue(docContent.contains(option),
-                          "docs/cli.md doit documenter \(option)")
-        }
-        // CL2 : les deux options que `search` a gagnées.
+        // CL2 : l'option que `search` a gagnée.
         let searchHelp = try Recette.run(["search", "--help"],
                                          database: scratch.database)
         XCTAssertEqual(searchHelp.status, 0)
-        for option in ["--mark", "--hybrid-auto"] {
+        for option in ["--mark"] {
             XCTAssertTrue(searchHelp.stdout.contains(option),
                           "`fouine search --help` doit annoncer \(option)")
-            XCTAssertTrue(docContent.contains(option),
-                          "docs/cli.md doit documenter \(option)")
-        }
-
-        let embedHelp = try Recette.run(["embed", "--help"],
-                                        database: scratch.database)
-        XCTAssertEqual(embedHelp.status, 0)
-        for option in ["--folder", "--include-tables"] {
-            XCTAssertTrue(embedHelp.stdout.contains(option),
-                          "`fouine embed --help` doit annoncer \(option)")
             XCTAssertTrue(docContent.contains(option),
                           "docs/cli.md doit documenter \(option)")
         }

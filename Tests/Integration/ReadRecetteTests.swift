@@ -1,18 +1,12 @@
-// ReadRecetteTests.swift — recette de `fouine read`, `fouine similar`, des
-// clés que `list --json` a gagnées, de `embed --folder` et de la facette
-// renommée (lot MC3, constats PM-18, PM-16a, PM-05, PM-25).
+// ReadRecetteTests.swift — recette de `fouine read`, des clés que
+// `list --json` a gagnées et de la facette renommée (lot MC3, constats PM-18,
+// PM-16a, PM-25).
 // Propriété : A-Recette.
 //
 // Base JETABLE indexée : ce qui se vérifie ici est un CONTRAT DE SORTIE — les
-// clés sont celles des outils MCP correspondants, une demande impossible sort
-// en 64 avec le renseignement qui évite le second essai, et une page sans
-// vecteur sort en 1 plutôt qu'en 0 avec une liste vide. Rien n'a besoin du
-// corpus personnel.
-//
-// LES VECTEURS SONT POSÉS À LA MAIN (`sqlite3`), sur quatre dimensions : le
-// modèle réel pèse 220 Mo et 2,6 s de chargement, et ce qui est éprouvé ici est
-// la COMMANDE, pas l'encodeur — `fouine similar` ne charge d'ailleurs jamais le
-// modèle, c'est tout son intérêt.
+// clés sont celles des outils MCP correspondants, et une demande impossible
+// sort en 64 avec le renseignement qui évite le second essai. Rien n'a besoin
+// du corpus personnel.
 
 import Foundation
 import XCTest
@@ -118,117 +112,15 @@ final class ReadRecetteTests: XCTestCase {
         XCTAssertTrue(unknown.stderr.contains("fouine list"), unknown.stderr)
     }
 
-    // MARK: - PM-16 : les voisins d'une page
-
-    /// Sans vecteur, `similar` sort en 1 en disant le geste : un script doit
-    /// pouvoir distinguer « rien ne lui ressemble » de « le sens n'est pas
-    /// préparé ».
-    func testSimilarExitsOneWhenThePageHasNoVector() throws {
-        let docID = try aDocumentID()
-        let result = try Recette.run(["similar", "\(docID)", "1"], database: database)
-        XCTAssertEqual(result.status, 1, result.describe)
-        XCTAssertTrue(result.stderr.contains("fouine embed"), result.stderr)
-    }
-
-    /// `--encode` est la SEULE porte par laquelle cette commande charge le
-    /// modèle, et elle est fermée par défaut (lot CL2, constat PM-07) : sans
-    /// l'option, le refus NOMME l'option ; avec elle et sans modèle installé,
-    /// il nomme l'installation. Une racine entière peut être à zéro vecteur —
-    /// `M2SU`, 0 sur 139 638 pages — et « aucun voisin » se lit alors comme
-    /// « rien ne ressemble à cette page ».
-    func testSimilarEncodesOnDemandAndNamesTheGestureOtherwise() throws {
-        let ids = try Recette.sqlite("SELECT id FROM docs ORDER BY id LIMIT 2",
-                                     on: database)
-            .split(separator: "\n").compactMap { Int64($0) }
-        try XCTSkipUnless(ids.count == 2, "base jetable trop petite")
-        _ = try Recette.sqliteWrite("""
-            INSERT OR REPLACE INTO vec_meta(k, v) VALUES
-              ('model_id', 'recette'), ('dim', '4'), ('revision', '1');
-            INSERT OR REPLACE INTO page_vec(rowid, vec) VALUES
-              (\(Schema.vecRowID(pageRowID: Schema.ftsRowID(docID: ids[0], page: 1),
-                                 chunk: 0)), x'7F000000');
-            """, on: database)
-
-        let without = try Recette.run(["similar", "\(ids[1])", "1", "--json"],
-                                      database: database)
-        XCTAssertEqual(without.status, 1, without.describe)
-        let payload = try XCTUnwrap(try JSONSerialization.jsonObject(
-            with: Data(without.stdout.utf8)) as? [String: Any])
-        XCTAssertEqual(payload["source_has_vector"] as? Bool, false)
-        XCTAssertTrue(payload["source_vector"] is NSNull, "\(payload)")
-        XCTAssertTrue((payload["note"] as? String ?? "").contains("--encode"),
-                      "le refus nomme l'option : \(payload)")
-
-        // Le modèle est pointé sur un dossier VIDE : la branche `--encode` est
-        // exercée de bout en bout sans les 220 Mo du vrai modèle.
-        let empty = scratch.directory.appendingPathComponent("sans-modele",
-                                                             isDirectory: true)
-        try FileManager.default.createDirectory(at: empty,
-                                                withIntermediateDirectories: true)
-        let asked = try Recette.run(["similar", "\(ids[1])", "1", "--encode"],
-                                    database: database,
-                                    extraEnvironment: ["FOUINE_MODEL_DIR": empty.path])
-        XCTAssertEqual(asked.status, 1, asked.describe)
-        XCTAssertTrue(asked.stderr.contains("model is not installed"), asked.stderr)
-        XCTAssertTrue(asked.stderr.contains("fouine model download"), asked.stderr)
-    }
-
-    /// Avec des vecteurs en base, les clés sont celles de
-    /// `fouine_similar_pages`, et le voisin est la page dont le vecteur est le
-    /// plus proche.
-    func testSimilarRendersTheKeysOfTheMCPTool() throws {
-        let ids = try Recette.sqlite("SELECT id FROM docs ORDER BY id LIMIT 3",
-                                     on: database)
-            .split(separator: "\n").compactMap { Int64($0) }
-        try XCTSkipUnless(ids.count == 3, "base jetable trop petite")
-
-        // Quatre dimensions, vecteurs quantifiés int8 comme en production.
-        // Les deux premiers documents pointent dans la même direction, le
-        // troisième dans une autre.
-        func rowid(_ docID: Int64) -> Int64 {
-            Schema.vecRowID(pageRowID: Schema.ftsRowID(docID: docID, page: 1),
-                            chunk: 0)
-        }
-        _ = try Recette.sqliteWrite("""
-            INSERT OR REPLACE INTO vec_meta(k, v) VALUES
-              ('model_id', 'recette'), ('dim', '4'), ('revision', '1');
-            INSERT OR REPLACE INTO page_vec(rowid, vec) VALUES
-              (\(rowid(ids[0])), x'7F000000'),
-              (\(rowid(ids[1])), x'7F000000'),
-              (\(rowid(ids[2])), x'0000007F');
-            """, on: database)
-
-        let payload = try json(["similar", "\(ids[0])", "1", "--json"])
-        for key in ["neighbours", "vector_count", "coverage_pct", "model_id",
-                    "revision", "source_has_vector", "source_vector", "note",
-                    "elapsed_ms"] {
-            XCTAssertNotNil(payload[key], "clé « \(key) » absente : \(payload.keys)")
-        }
-        XCTAssertEqual(payload["source_has_vector"] as? Bool, true)
-        XCTAssertEqual(payload["source_vector"] as? String, "stored")
-        XCTAssertEqual(payload["model_id"] as? String, "recette")
-        let neighbours = try XCTUnwrap(payload["neighbours"] as? [[String: Any]])
-        XCTAssertEqual(neighbours.first?["doc_id"] as? Int, Int(ids[1]),
-                       "le plus proche est celui qui pointe dans la même "
-                       + "direction : \(neighbours)")
-        let cosine = try XCTUnwrap((neighbours.first?["cosine"] as? NSNumber)?
-            .doubleValue)
-        XCTAssertGreaterThan(cosine, 0.9)
-        for key in ["page", "path", "abs_path", "folder", "ext", "link", "preview"] {
-            XCTAssertNotNil(neighbours.first?[key], "clé « \(key) » absente")
-        }
-    }
-
     // MARK: - PM-16a : ce que `list --json` a gagné
 
-    func testListJSONCarriesTheErrorAndTheVectorisedPages() throws {
+    func testListJSONCarriesTheErrorOfEachDocument() throws {
         let documents = try XCTUnwrap(
             json(["list", "--json", "--limit", "500"])["documents"]
                 as? [[String: Any]])
         XCTAssertFalse(documents.isEmpty)
         for document in documents {
             XCTAssertNotNil(document["error"], "la clé est TOUJOURS présente")
-            XCTAssertNotNil(document["vectorised_pages"] as? Int)
         }
         // Un document INDEXÉ n'a rien à dire : `null`, et non une chaîne vide.
         let indexed = documents.filter { $0["state"] as? String == "indexed" }
@@ -247,22 +139,6 @@ final class ReadRecetteTests: XCTestCase {
         XCTAssertEqual(text.status, 0, text.describe)
         let cause = try XCTUnwrap(failed.first?["error"] as? String)
         XCTAssertTrue(text.stdout.contains("failed · " + cause), text.stdout)
-        // Aucune campagne n'a tourné sur cette base : zéro partout, clé
-        // présente (et non absente, ce qu'un script ne saurait pas distinguer).
-        XCTAssertTrue(documents.allSatisfy { ($0["vectorised_pages"] as? Int) == 0 })
-    }
-
-    // MARK: - PM-05 : `embed --folder`
-
-    /// Une étiquette de dossier inconnue est refusée en 64 en nommant les
-    /// vraies : sans ce refus, la campagne n'aurait rien fait, en sortie 0.
-    func testEmbedRefusesAnUnknownFolderInSixtyFour() throws {
-        let result = try Recette.run(["embed", "--folder", "Inconnu",
-                                      "--budget-minutes", "0.01"],
-                                     database: database)
-        XCTAssertEqual(result.status, 64, result.describe)
-        XCTAssertTrue(result.stderr.contains(scratch.label),
-                      "le refus nomme les dossiers réels : " + result.stderr)
     }
 
     // MARK: - PM-25 : la facette renommée

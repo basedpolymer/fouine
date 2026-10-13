@@ -53,36 +53,22 @@ was reachable and from when. Reports are credited unless you ask otherwise.
 
 ## Threat model
 
-Two attackers are taken seriously, because they are the two that really exist
-for a local search engine.
+One attacker is taken seriously, because it is the one that really exists for
+a local search engine.
 
 **The hostile document.** Fouine reads files the user did not write and does
 not control: downloaded archives, PDFs received by mail, scans, comics,
 attachments. Their content reaches extractors, external tools (`bsdtar`,
 `djvused`) and system importers. **That content is assumed to be written by an
 adversary** whose goal is to execute code, to read or write outside the indexed
-root, to send a request over the network, or to block indexing. This is the
-main model.
-
-**The hostile network during the model download.** The 220 MB of the semantic
-model arrive over the network, from an attacker assumed able to answer in place
-of the server, to redirect, or to send more than was announced. The main
-counter-measure is the SHA-256, checked before any installation: one byte out
-of place and nothing is installed. Two more surround it, because a digest is
-only verified at the end: **redirects are followed only in `https:`**, so a
-redirect to `http:` is refused rather than silently followed, and **a size
-ceiling applies IN FLIGHT**, at twice the expected size, on the announced
-`Content-Length` as well as on the bytes received, truncating the chunk that
-crosses it. That ceiling also applies when `FOUINE_MODEL_SHA256` is set, which
-is when the archive comes from elsewhere. A flaw in that path (redirect scheme,
-in-flight size, a partial write left behind) is in scope.
+root, to send a request over the network, or to block indexing.
 
 Two attackers are **outside** the model, and that deserves saying as clearly:
 
 - **anyone who can already set environment variables in the process.**
-  `FOUINE_DB`, `FOUINE_MODEL_URL`, `FOUINE_MODEL_SHA256` and `FOUINE_DJVUSED`
-  are accepted troubleshooting levers: whoever can set them already runs code
-  as the user and no longer needs Fouine;
+  `FOUINE_DB`, `FOUINE_DJVUSED` and `FOUINE_FFMPEG` are accepted
+  troubleshooting levers: whoever can set them already runs code as the user
+  and no longer needs Fouine;
 - **the other administrator account on the same machine.** macOS protects
   `~/Library` through the home directory's permissions, and Fouine tightens its
   own files further, but an administrator goes around that by design.
@@ -97,18 +83,16 @@ Two attackers are **outside** the model, and that deserves saying as clearly:
   construction of their command lines;
 - privilege escalation through the background agent, its plist or its service;
 - **indexed content leaving the machine.** No document, no search query and no
-  usage data leaves the Mac. Fouine opens four outbound connections, and only
-  one of them does not wait for a gesture: the optional model download, the
-  update check (off by default), licence activation or release, and the silent
-  licence check (at most once every 30 days, and only when a key is present).
-  None of them carries anything about your documents. **Any other connection
+  usage data leaves the Mac. Fouine opens one outbound connection: the update
+  check, off by default, which runs only if the user turns on automatic checks
+  or chooses **Check for updates…**. It carries nothing about your documents. **Any other connection
   observed is a flaw in itself**, and that is exactly what `NetworkSilenceTests`
   holds in continuous integration: a local server listens while a pass indexes
   trapped fixtures (`.doc`, `.rtf`, `.rtfd`, `.html`, `.webarchive`, `.epub`,
   `.docx`, `.pdf`, `.svg`, and two media containers handed to ffprobe then
   ffmpeg), and the assertion is «zero connections». The detailed list, trap by
   trap, is in [`docs/privacy.md`](docs/privacy.md);
-- the permissions of the files the product writes (index, logs, licence file);
+- the permissions of the files the product writes (index, logs);
 - signing, entitlements, and the publication chain.
 
 **Four local surfaces**, and what they expose. None of them speaks to the

@@ -170,6 +170,6 @@ final class WindowLifecycleTests: XCTestCase {
         }
         XCTAssertTrue(checked.contains("statusBar"), "barre d'état introuvable")
         XCTAssertTrue(checked.contains("quorumNotice"), "avis de quorum introuvable")
-        XCTAssertGreaterThanOrEqual(checked.count, 10, "blocs lus : \(checked)")
+        XCTAssertGreaterThanOrEqual(checked.count, 9, "blocs lus : \(checked)")
     }
 }

@@ -71,10 +71,6 @@ Five points that save hours.
   Pointing it at the production base is **refused** by a hard failure, not by a
   skip. Personal fixture paths live in `Tests/Fixtures/paths.json`, which is
   gitignored; the versioned template is `Tests/Fixtures/paths.example.json`.
-- **The tests that need the semantic model** skip cleanly without it, and the
-  suite still passes. To exercise them, install it once with `fouine model
-  download` (or, offline, `FOUINE_MODEL_URL=file:///…/e5-small-v1.zip` into a
-  `FOUINE_MODEL_DIR` of your choice, never the production copy).
 - **The versioned corpus** (`Tests/Fixtures/corpus/`) is enough for the
   essential recipe: indexing, six query forms, OCR, status, diagnosis, moved
   files, a hostile archive, a trapped `.doc`. `make fixtures` regenerates it,
@@ -84,7 +80,7 @@ Five points that save hours.
 
 Continuous integration (`.github/workflows/ci.yml`) runs the unit suites, the
 integration recipe on a disposable base and the versioned corpus, the suites in
-release on `main`, the semantic model on a best-effort basis, and a packaging
+release on `main`, and a packaging
 job that checks the localisation files. A change that turns it red is not
 merged. Everything about the suites, the skips and the fixtures is in
 [`docs/tests.md`](docs/tests.md).
@@ -135,27 +131,23 @@ with the product (`THIRD_PARTY_LICENSES.md`, copied into the bundle and the
 DMG): adding a dependency means adding its notice, and its entry in
 `LicensesCommand.notices`.
 
-**No network access in `Sources/`, except two named exceptions.** Fouine
-talks to nobody while it indexes, reads or searches: that is the central claim
-of the product, and it is checked. Any `URLSession`, any socket, any telemetry
-is a change in the nature of the product rather than an improvement. Two
-exceptions exist, and there is no third:
+**No network access in `Sources/`.** Fouine talks to nobody while it indexes,
+reads or searches: that is the central claim of the product, and it is
+checked. Any `URLSession`, any socket, any telemetry is a change in the nature
+of the product rather than an improvement. One exception exists: **the update
+check** (Sparkle), outside `Sources/`, where the framework makes the call
+rather than our code.
 
-1. **the update check** (Sparkle), outside `Sources/`, where the framework
-   makes the call rather than our code;
-2. **the semantic model download**, in the single file
-   `Sources/FouineEmbed/ModelDownload.swift`.
+It meets three conditions, which are what the rule looks like once software is
+really distributed: **never automatic** (an explicit user gesture, never «on
+first launch»), **an announced address** (in the clear in the repository, and
+told to the user before the connection), and **nothing sent beyond what the
+request itself requires** (no profiling, nothing from the corpus). A
+contribution that adds a second connection is refused until the need has been
+discussed in an issue.
 
-Both meet the same three conditions, which are what the rule looks like
-once software is really distributed: **never automatic** (an explicit user
-gesture, never «on first launch»), **an announced address** (in the clear in
-the repository, and told to the user before the connection), and **nothing sent
-beyond what the request itself requires** (no profiling, nothing from the
-corpus). A contribution that adds a third connection is refused until the need
-has been discussed in an issue.
-
-**The check is not a `grep`.** `URLSession` appears in one file, and that is
-true, but it is not what holds the promise. Fouine hands untrusted files to
+**The check is not a `grep`.** `URLSession` appears nowhere in `Sources/`, and
+that is true, but it is not what holds the promise. Fouine hands untrusted files to
 system components, and some of those components know how to fetch a remote
 resource named **inside the document**: the request then goes through no
 `URLSession`, no constant, no line of `Sources/`, and no static inspection can

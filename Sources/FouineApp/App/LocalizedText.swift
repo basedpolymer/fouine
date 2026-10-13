@@ -24,7 +24,6 @@
 import Foundation
 import FouineCore
 import FouineCrawl
-import FouineEmbed
 
 /// Le nom des phases de l'agent, tel que la barre latérale les affiche.
 ///
@@ -39,10 +38,6 @@ enum AgentPhaseText {
         case .ocr:     return String(localized: "text recognition (OCR)")
         case .waiting: return String(localized: "waiting")
         case .stopped: return String(localized: "stopped")
-        // La MÊME phrase que l'activité de la carte « Index » (AG1) : c'est le
-        // même travail, qu'il vienne de l'application ou de l'arrière-plan.
-        case .preparingMeaning:
-            return String(localized: "Preparing search by meaning")
         }
     }
 }
@@ -157,11 +152,6 @@ enum RootPolicyText {
     }
 }
 
-/// Les étapes de l'installation du modèle sémantique (audit D6).
-///
-/// `ModelDownloadPhase.label` reste le libellé FRANÇAIS du moteur, celui que
-/// `fouine model download` imprime dans son journal de progression ; l'app part
-/// du CAS, comme partout ailleurs depuis le palier 3.2.
 /// Ce que l'agent DIT qu'il fait, dans la langue de l'utilisateur.
 ///
 /// Le `detail` publié par l'agent est un JETON SANS LANGUE
@@ -196,17 +186,6 @@ enum AgentDetailText {
     }
 }
 
-enum ModelPhaseText {
-    static func name(_ phase: ModelDownloadPhase) -> String {
-        switch phase {
-        case .downloading: return String(localized: "downloading")
-        case .verifying:   return String(localized: "checking the fingerprint")
-        case .extracting:  return String(localized: "unpacking")
-        case .installing:  return String(localized: "installing")
-        }
-    }
-}
-
 /// Ce que FAIT le détenteur du verrou, tel que l'écran d'échec d'ouverture le
 /// dit : « background indexing, since 10:32 ». Ni « verrou », ni « pid » : le
 /// public n'est pas technicien, et l'heure suffit à décider d'attendre.
@@ -217,32 +196,6 @@ enum LockActivityText {
         case .cli:   return String(localized: "command line, since \(holder.clockText)")
         case .app:   return String(localized: "this application, since \(holder.clockText)")
         }
-    }
-}
-
-/// La marge sémantique d'une page, DITE et non chiffrée (lot J2).
-///
-/// `HybridInfo.z` vaut `(cos − μ) / σ` : le nombre d'écarts-types qui séparent
-/// cette page de la page moyenne balayée par la requête. C'est la bonne mesure
-/// — le cosinus brut se lisait comme un pourcentage de pertinence (C2-01) —
-/// mais « +2,4 σ » est illisible pour qui ne connaît pas l'écart-type, c'est-à-
-/// dire pour le public de Fouine.
-///
-/// Les paliers sont calibrés sur le corpus de référence, où les marges
-/// s'étalent de +0,3 à +3,5 : au-delà de 2,5 la page est manifestement à part,
-/// en dessous de 0,75 elle n'est qu'un peu au-dessus de la moyenne.
-enum SemanticMarginText {
-    static func describe(_ z: Double) -> String {
-        if z >= 2.5 {
-            return String(localized: "It is far closer to the meaning of your search than the other pages.")
-        }
-        if z >= 1.5 {
-            return String(localized: "It is clearly closer to the meaning of your search than the other pages.")
-        }
-        if z >= 0.75 {
-            return String(localized: "It is closer to the meaning of your search than the other pages.")
-        }
-        return String(localized: "It is a little closer to the meaning of your search than the other pages.")
     }
 }
 
@@ -327,10 +280,9 @@ enum LanguageNames {
 
 /// « Pourquoi ce résultat », en une phrase (lot U1, R-06).
 ///
-/// L'audit A2 le relevait : `HybridInfo.z`, `Hit.fuzzyDistance`, l'insigne
-/// « ≈ » et le pourcentage vivaient dans des infobulles que personne ne
-/// survole. Tout était calculé, rien n'était DIT — et une page trouvée par le
-/// seul canal sémantique restait indiscernable d'une page qui porte les mots.
+/// L'audit A2 le relevait : `Hit.fuzzyDistance`, l'insigne « ≈ » et le
+/// pourcentage vivaient dans des infobulles que personne ne survole. Tout
+/// était calculé, rien n'était DIT.
 ///
 /// LA RÈGLE DE CETTE PHRASE : aucun nombre. Ni la distance, ni la marge, ni un
 /// pourcentage. Le public de Fouine ne sait pas ce qu'est un écart-type, et
@@ -371,10 +323,6 @@ enum HitExplanationText {
             // La DISTANCE ne se dit pas : « 1 lettre d'écart » n'ajoute rien à
             // deux mots mis côte à côte, qui se comparent tout seuls.
             return String(localized: "Found with a close spelling: \(quoted(typed)) → \(quoted(found)).")
-        case .semanticOnly:
-            return String(localized: "None of your words is on this page, but it deals with the same subject.")
-        case .both:
-            return String(localized: "Found by your words and by meaning.")
         }
     }
 }
@@ -408,8 +356,6 @@ enum ErrorText {
         if let e = error as? FouineError { return describe(e) }
         if let e = error as? QueryError { return describe(e) }
         if let e = error as? SettingsError { return describe(e) }
-        if let e = error as? FouineEmbedError { return describe(e) }
-        if let e = error as? ModelDownloadError { return describe(e) }
         // Tout le reste vient du système (Foundation, PDFKit, Vision) : macOS
         // localise déjà `localizedDescription`, il n'y a rien à faire de plus.
         return (error as NSError).localizedDescription
@@ -537,99 +483,6 @@ enum ErrorText {
         }
     }
 
-    // MARK: - FouineEmbedError (§12)
-
-    /// AUCUN MOT DE TECHNICIEN ICI (A2-05, SPEC §5.6 amendé du 03/09/2026 :
-    /// « aucun texte … ne dit “verrou”, “pid”, “vecteur” »). Cette phrase
-    /// s'affiche sous les résultats et dans la barre latérale, entre
-    /// parenthèses de « Recherche sémantique indisponible (…) » : elle disait
-    /// « modèle d'embeddings : aucun vecteur en base — lancez “fouine embed” »,
-    /// soit trois mots que le public ne connaît pas et une commande qu'il ne
-    /// sait pas lancer.
-    static func describe(_ error: FouineEmbedError) -> String {
-        switch error {
-        case .model(let message):
-            // « Aucune page prête » est une phrase COMPLÈTE : elle ne se
-            // préfixe pas, comme le verrou occupé du `databaseFailure`.
-            if message == SemanticService.noVectorsDetail {
-                return String(localized: "no page is ready for meaning search yet — Settings ▸ Search by meaning prepares them")
-            }
-            return String(localized: "meaning-search model: \(localizedEmbedDetail(message))")
-        case .inference(let message):
-            return String(localized: "inference: \(message)")
-        }
-    }
-
-    /// Le seul détail de `.model` restant que l'APP fabrique elle-même
-    /// (`SemanticService.load`) : c'est une phrase, pas un message système, et
-    /// elle se traduit. Tout autre détail vient de CoreML et passe tel quel.
-    private static func localizedEmbedDetail(_ message: String) -> String {
-        switch message {
-        case SemanticService.indexNotLoadedDetail:
-            return String(localized: "the meaning search is not ready yet")
-        default:
-            return message
-        }
-    }
-
-    // MARK: - ModelDownloadError (installation du modèle, audit D6)
-
-    /// Le `description` de `ModelDownloadError` est la phrase FRANÇAISE que
-    /// `fouine model download` imprime. L'app ne la recopie pas : elle refait la
-    /// sienne depuis le cas et ses valeurs — même règle que partout ici.
-    ///
-    /// Les seuls détails laissés tels quels sont ceux qui viennent du SYSTÈME
-    /// (message d'URLSession, sortie de `ditto`, erreur de `FileManager`) :
-    /// aucun catalogue ne les traduit, et ce sont eux qu'on recopie dans un
-    /// rapport de bogue.
-    static func describe(_ error: ModelDownloadError) -> String {
-        switch error {
-        case .badURL(let raw):
-            return String(localized: "unreadable model address: “\(raw)”")
-
-        case .unsupportedScheme(let raw):
-            return String(localized: "model address not supported: “\(raw)” — https:// or file:// only")
-
-        case .notFound:
-            // 404. Le cas ARRIVE en usage normal : l'asset de release est publié
-            // séparément de l'application (RELEASING.md § 5 bis), et une version
-            // peut donc être installée avant que son modèle ne soit en ligne.
-            return String(localized: "the model archive is not published yet for this version of Fouine (404): try again later, or install it from a local copy.")
-
-        case .httpStatus(let code, _):
-            return String(localized: "the server answered \(String(code)) — try again later.")
-
-        case .transport(let message):
-            return String(localized: "download interrupted: \(message)")
-
-        case .cancelled:
-            return String(localized: "download cancelled")
-
-        case .notEnoughSpace(let needed, let available, let path):
-            return String(localized: "not enough space on \(path): \(Format.bytes(Int(needed))) needed, \(Format.bytes(Int(available))) free")
-
-        case .sizeMismatch(let expected, let got):
-            return String(localized: "unexpected size: \(Format.bytes(Int(got))) received, \(Format.bytes(Int(expected))) expected. The transfer stopped early.")
-
-        case .hashMismatch(let expected, let got):
-            return String(localized: "wrong SHA-256 fingerprint: the archive was refused and deleted. Expected \(expected), got \(got).")
-
-        case .extraction(let message):
-            return String(localized: "unpacking failed: \(message)")
-
-        case .badLayout(let message):
-            return String(localized: "malformed archive: \(message)")
-
-        case .badIdentity(let gotID, let gotRevision, let wantID, let wantRevision):
-            return String(localized: "unexpected model: the archive carries \(gotID) r\(String(gotRevision)), this version of Fouine expects \(wantID) r\(String(wantRevision))")
-
-        case .install(let message):
-            return String(localized: "installation failed: \(message)")
-
-        case .alreadyInstalled(let revision):
-            return String(localized: "the model is already installed (revision \(String(revision)))")
-        }
-    }
 }
 
 /// Le bandeau de santé dans la langue de l'utilisateur (audit H4, registre I1).
@@ -637,7 +490,7 @@ enum ErrorText {
 /// Une seule `String(localized:)` par cas : la ligne se rend depuis le CAS de
 /// `HealthRow.Message` et ses valeurs, jamais depuis une clé anglaise relue.
 /// Le public n'est pas technicien : on dit ce qui se passe et le geste à faire,
-/// sans « verrou », « pid » ni « vecteur » (CLAUDE.md).
+/// sans « verrou » ni « pid » (CLAUDE.md).
 extension HealthRow.Message {
     var localizedText: String {
         switch self {
@@ -672,13 +525,6 @@ extension HealthRow.Message {
             case .cli:   return String(localized: "The index is being updated (command line, since \(since))")
             case .app:   return String(localized: "The index is being updated (this application, since \(since))")
             }
-
-        case .semanticReady:
-            return String(localized: "Search by meaning: ready")
-        case .semanticPreparing:
-            return String(localized: "Search by meaning: being prepared")
-        case .semanticNotInstalled:
-            return String(localized: "Search by meaning: not installed")
 
         case .noFolders:
             return String(localized: "No folder to index")
@@ -810,7 +656,6 @@ enum IndexStatusText {
         switch activity {
         case .updating:         return String(localized: "Updating the index")
         case .readingScans:     return String(localized: "Reading scanned pages")
-        case .preparingMeaning: return String(localized: "Preparing search by meaning")
         case .externalWrite:    return String(localized: "The index is being updated")
         }
     }

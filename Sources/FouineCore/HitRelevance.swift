@@ -16,12 +16,10 @@
 // « la réponse ». C'est exactement ce que la CLI affiche, et le nom du champ
 // (`relevance_pct`) comme sa description le disent.
 //
-// DEUX ÉCHELLES, DEUX SIGNES. Le BM25 de FTS5 est NÉGATIF et décroît quand la
-// page est meilleure (le meilleur est le minimum) ; le score RRF de la fusion
-// est POSITIF et décroît quand la page est moins bonne (le meilleur est le
-// maximum). Une seule formule — `score / meilleur` — les couvre tous les deux,
-// à condition de choisir le bon extremum ; d'où deux points d'entrée plutôt
-// qu'un `abs()` qui aurait caché le raisonnement.
+// LE SIGNE. Le BM25 de FTS5 est NÉGATIF et décroît quand la page est meilleure
+// (le meilleur est le minimum) : la formule `score / meilleur` le couvre à
+// condition de prendre le bon extremum, et `percentage(score:best:)` reste
+// écrit pour un extremum quelconque plutôt que de supposer un signe.
 
 import Foundation
 
@@ -47,17 +45,4 @@ public enum HitRelevance {
         return scores.map { percentage(score: $0, best: best) }
     }
 
-    /// Les pourcentages d'une liste de scores RRF (positifs, meilleur = le plus
-    /// grand), dans l'ordre reçu.
-    ///
-    /// TRANCHÉ ICI (lot MC2) : en hybride, la pertinence relative se lit sur le
-    /// score de FUSION et non sur le `bm25`, qui est nul pour une page trouvée
-    /// par le seul canal du sens — la moitié d'une liste hybride aurait sinon
-    /// été sans pourcentage. Le RRF étant un score de RANG, l'écart entre deux
-    /// résultats y est plus resserré qu'en lexical : `1/(60+1)` contre
-    /// `1/(60+10)` fait déjà 87 %.
-    public static func percentages(rrf scores: [Double]) -> [Int] {
-        let best = scores.max() ?? 0
-        return scores.map { percentage(score: $0, best: best) }
-    }
 }

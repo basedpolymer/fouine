@@ -4,8 +4,8 @@
 // Le bogue corrigé ici : `QueryParser.fts()` retire les `.not` de l'expression
 // MATCH (arbitrage T5, l'exclusion porte sur le DOCUMENT), si bien que
 // l'exclusion ne vit plus que dans `plan.negative`. `SearchModel` la calculait
-// puis la jetait partout sauf sur le chemin hybride — éteint par défaut. En
-// mode lexical, `-terme` n'avait donc AUCUN effet, en silence.
+// puis la jetait sur quatre des cinq chemins qui rejouent la requête : en
+// « Charger plus » et dans les facettes, `-terme` n'avait AUCUN effet, en silence.
 //
 // La référence est la CLI (`fouine search`, `CommandsSearch.run`) : elle appelle
 // `store.search(q, excludingDocsMatching: negative)` et
@@ -83,23 +83,13 @@ final class SearchModelExclusionTests: XCTestCase {
                        "T5 : la page 1 de « mixte » part avec son document")
     }
 
-    // MARK: - Le repli du chemin hybride
+    // MARK: - La recherche ordinaire garde les exclusions
 
-    /// Requête dont il ne reste RIEN à encoder une fois les filtres et les
-    /// exclusions retirés : `runHybrid` retombe immédiatement sur `runLexical`.
-    /// C'est l'un des cinq sites de l'audit F1, et le seul atteignable sans
-    /// modèle CoreML.
-    func testRepliLexicalGardeLesExclusions() async throws {
+    /// L'un des cinq sites de l'audit F1 : la requête exécutée porte ses
+    /// exclusions, et le document qui porte le terme écarté ne revient pas.
+    func testLaRechercheGardeLesExclusions() async throws {
         let f = try fixture()
-        // `semanticEnabled` sans disponibilité laisse `useSemantic` faux : on
-        // vérifie donc la branche directement, avec la même entrée que
-        // `runHybrid` lui passerait.
-        XCTAssertEqual(SearchModel.semanticText(of: "-beta alpha"), "alpha")
-        XCTAssertEqual(SearchModel.semanticText(of: "dossier:Essai -beta"), "",
-                       "rien à encoder : le chemin hybride retombe sur le lexical")
-
         await run(f.model, "alpha -beta")
-        XCTAssertFalse(f.model.isHybrid)
         XCTAssertEqual(f.model.hits.map(\.docID), [f.sansBeta])
     }
 

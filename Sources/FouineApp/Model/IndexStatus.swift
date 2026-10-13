@@ -26,8 +26,6 @@ enum IndexActivity: Equatable, Sendable {
     case updating
     /// Reconnaissance du texte des pages scannées (OCR).
     case readingScans
-    /// Préparation de la recherche par le sens (campagne d'embedding).
-    case preparingMeaning
     /// Un autre programme écrit dans l'index (ligne de commande).
     case externalWrite
 }
@@ -303,14 +301,6 @@ enum IndexStatusEvaluator {
                 return .working(activity: .readingScans,
                                 progress: progress(status, remaining: input.agentRemainingSeconds),
                                 detail: detail(status), stoppable: false)
-            // La préparation du sens menée par la mise à jour automatique
-            // (AG1, PR-21) : l'activité est celle que l'app affiche DÉJÀ pour
-            // sa propre campagne, avec « N pages sur M ». On ne l'arrête pas
-            // d'ici — c'est le réglage qui la commande, pas un bouton.
-            case .preparingMeaning:
-                return .working(activity: .preparingMeaning,
-                                progress: progress(status, remaining: input.agentRemainingSeconds),
-                                detail: detail(status), stoppable: false)
             // LE COMPTE LE PLUS FRAIS DES DEUX (PI-05). L'agent ne publie
             // `.waiting` que la file non vide, et son `total` EST cette file ;
             // l'app, elle, peut avoir un compte plus ancien — ou plus récent,
@@ -477,7 +467,6 @@ extension IndexStatus {
             switch activity {
             case .updating, .externalWrite: return "arrow.triangle.2.circlepath"
             case .readingScans:             return "text.viewfinder"
-            case .preparingMeaning:         return "wand.and.stars"
             }
         case .paused:         return "clock"
         case .idle(let automatic, _, _):
@@ -648,9 +637,7 @@ struct AutomaticUpdatesMessage: Equatable {
 /// PUR et à part, comme `SinceLastVisit` : ce qui se décide ici est le SEUIL à
 /// partir duquel on parle, et une erreur de seuil ne se verrait qu'un jour de
 /// disque plein. Trois règles, dans l'ordre :
-/// - la place manque pour FINIR (ce que la préparation du sens doit encore
-///   écrire, `DiskForecast`, ne tient pas dans le reste) ou il reste moins de
-///   1 Go : on le dit, avec le geste ;
+/// - il reste moins de 1 Go : on le dit, avec le geste ;
 /// - il reste moins de 5 Go (le seuil vers lequel macOS commence lui-même à
 ///   prévenir) : on dit le reste et ce que l'index occupe, sans alarme ;
 /// - au-delà, silence — et silence aussi quand le volume ne répond pas
@@ -675,11 +662,10 @@ enum DiskSpaceNotice: Equatable {
     /// - Parameters:
     ///   - freeBytes: la place libre sur le volume de l'index, ou `nil` si
     ///     elle n'a pas pu être lue.
-    ///   - forecast: la base du jour et ce qu'elle doit encore écrire.
+    ///   - forecast: la base du jour.
     static func decide(freeBytes: Int?, forecast: DiskForecast) -> DiskSpaceNotice {
         guard let free = freeBytes else { return .silent }
-        let stillToWrite = max(0, forecast.bytesAtFullVectors - forecast.bytes)
-        if free < tightFreeBytes || free < stillToWrite {
+        if free < tightFreeBytes {
             return .tight(free: free, index: forecast.bytes)
         }
         if free < lowFreeBytes {
@@ -788,41 +774,5 @@ enum SinceLastVisit {
     static func added(previous: Int?, current: Int) -> Int? {
         guard let previous, current > previous else { return nil }
         return current - previous
-    }
-}
-
-// MARK: - Qui prépare la recherche par le sens (constat PR-21, lot AG1)
-
-/// Qui doit s'en charger : vous, ou Fouine toute seule.
-///
-/// POURQUOI C'EST UN CAS ET NON UN `if` DANS LA VUE. Le bouton « Préparer la
-/// recherche par le sens… » ouvre une feuille qui demande un budget et
-/// monopolise la fenêtre pendant des heures. Depuis que la mise à jour
-/// automatique s'en charge par tranches, ce bouton n'est plus un geste utile
-/// mais une façon de refaire à la main ce qui se fait tout seul — et deux
-/// campagnes à la fois sont refusées de toute façon (verrou de campagne).
-/// Trois conditions doivent tenir ENSEMBLE pour qu'on le retire, et une erreur
-/// sur l'une d'elles laisserait un utilisateur sans aucun moyen de préparer
-/// quoi que ce soit : cela se teste.
-enum MeaningPreparation: Equatable {
-    /// Le bouton, comme avant.
-    case byHand
-    /// Fouine s'en occupe : une phrase, pas de bouton.
-    case inBackground
-
-    /// - Parameters:
-    ///   - settingOn: `agent.prepareMeaning`.
-    ///   - modelInstalled: le modèle est là (sans lui, rien ne se prépare).
-    ///   - agent: l'état croisé de la mise à jour automatique. Un agent en
-    ///     attente d'approbation, introuvable ou muet ne prépare rien : le
-    ///     bouton reste.
-    static func decide(settingOn: Bool, modelInstalled: Bool,
-                       agent: AgentOperationalState) -> MeaningPreparation {
-        guard settingOn, modelInstalled else { return .byHand }
-        switch agent {
-        case .active, .waitingFirstReport: return .inBackground
-        case .off, .registeredButSilent, .requiresApproval, .notFound, .unknown:
-            return .byHand
-        }
     }
 }

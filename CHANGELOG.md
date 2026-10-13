@@ -15,75 +15,29 @@ The authoritative version number lives in the `VERSION` file and in
 `Sources/FouineCore/Version.swift`; the two must agree (`make check-version`).
 See `RELEASING.md`.
 
-## [1.0.4] — unreleased
+## [1.1.0] — unreleased
 
 ### Changed
 
-- **Fouine is free.** There is nothing to buy, nothing to activate and nothing
-  that runs out: install Fouine, add your folders, and the index keeps itself
-  up to date, at home and at work, on as many Macs as you use. Updates stay
-  free. If you paid for a key, you have nothing to do — Fouine no longer asks
-  for one, and the file it used to keep about it is simply left alone. The
-  source code keeps the same licence, now in version 1.1, which says plainly
-  that using the application costs nothing. *(GR1)*
-- **The `fouine license` command is gone**, along with the "Licence" tab in the
-  settings, the "Enter licence key…" menu item and exit codes 6, 7 and 8.
-  `fouine licenses`, which prints the notices of the components Fouine ships
-  with, is unchanged. *(GR1)*
+- **Fouine is free.** No trial, no licence key, nothing to activate. If you
+  bought a key, there is nothing to do. *(GR1)*
+- **Search by meaning is gone.** *(SR1)*
+- **Command line and assistants:** `fouine license`, `fouine embed`,
+  `fouine model`, `fouine similar` and the `--hybrid` options of
+  `fouine search` are removed. The assistant server keeps four tools:
+  `fouine_similar_pages` is removed. *(GR1, SR1)*
 
 ### Fixed
 
-- **A second Fouine icon no longer appears in the Dock.** While the index
-  was being kept up to date in the background, a second Fouine icon could
-  show up in the Dock, bounce for a few seconds and then sit there doing
-  nothing. It is gone. *(DK1)*
-- **Opening the settings no longer hides a folder Fouine cannot read.** The
-  Index card said "Fouine is not allowed to read “X”" and offered "Allow
-  access…"; a few seconds after the settings window was opened, the card went
-  back to "Up to date" and the button disappeared, while the orange banner
-  stayed. The card now keeps what the last check found. *(PI1)*
-- **Fouine no longer freezes while macOS takes its time.** Starting up waited
-  for the system to answer a question about opening at login — on some Macs
-  that answer takes more than a minute, and nothing appeared at all, neither
-  window nor menu bar icon. The progress of the index, the "Your index" window
-  and the menu bar icon used to stop moving for the same reason, even though
-  the index itself was working. Both now go on without waiting. *(PI1)*
-- **"Stop" in the "Your index" window answers the first click.** The button
-  stayed lit and could be clicked again and again until the update actually
-  stopped. It now dims straight away, with a spinner beside the sentence that
-  says what Fouine is waiting for — the same as in the Index card. *(PI3)*
-- **The "Updates" settings no longer flicker.** Turning
-  "Check for updates automatically" on or off, or choosing a frequency, redrew
-  the whole page and lost your place in it; a check that finished on its own
-  did the same without you touching anything. *(PI3)*
-- **VoiceOver says what the index is doing.** In the "Your index" window, the
-  progress bar shown while Fouine works without knowing a total announced
-  nothing at all; it now reads out what Fouine is doing. *(PI3)*
-- **"Updated … ago" now says when a document was last indexed.** The Index card
-  read "Updated a moment ago" at all times, even on an index nothing had
-  changed in for weeks: it was timing the background update's own heartbeat,
-  not the index. *(PI2)*
-- **The number of scanned pages waiting to be read is right, window open or
-  closed.** Pages queued while the window was closed were missing from the
-  count, so the card could say "Up to date" and, underneath, "They will be read
-  once the Mac is plugged in." — a reason to wait for work it had just denied.
-  With nothing waiting, the card now says "Up to date" and nothing else. *(PI2)*
-- **The card no longer says "Up to date" when the list of folders cannot be
-  read.** It showed a green "Up to date" while the folder list, two lines below,
-  showed the failure. It now says "Checking…" until the folders can be read
-  again. *(PI2)*
-- **The state is up to date the moment you look at it.** Coming back to Fouine
-  or opening the menu bar panel now reads the state of the index again, instead
-  of showing what was true up to half a minute earlier. Fouine also no longer
-  redraws the window and the menu bar panel every two seconds when nothing has
-  changed, and no longer shows a guessed state — "Manual updates", "Restart
-  automatic updates" — before macOS has answered. *(PI2)*
-
-- **"Last check" in the Updates settings shows the right date after a check
-  that finds a new version.** It kept the date of the check before until you
-  touched something in the settings. And cancelling, or postponing, the
-  installation of a version Fouine has just found no longer says that Fouine
-  could not check whether a newer version exists. *(LC1)*
+- No second Fouine icon bouncing in the Dock any more. *(DK1)*
+- Fouine opens straight away, even when macOS is slow to answer. *(PI1)*
+- The Index card keeps showing a folder Fouine cannot read, says when a
+  document was last indexed, counts the scanned pages waiting correctly, and
+  no longer says "Up to date" when it cannot tell. *(PI1, PI2)*
+- "Stop" answers the first click, the Updates settings no longer flicker, and
+  VoiceOver reads out what the index is doing. *(PI3)*
+- "Last check" shows the right date, and postponing an update is no longer
+  reported as a failure. *(LC1)*
 
 ## [1.0.3] — 2026-09-25
 

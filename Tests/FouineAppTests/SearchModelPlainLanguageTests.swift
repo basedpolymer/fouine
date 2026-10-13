@@ -133,25 +133,4 @@ final class SearchModelPlainLanguageTests: XCTestCase {
         XCTAssertFalse(model.fuzzyFallback,
                        "le montant est trouvé exactement, pas par un repli")
     }
-
-    // MARK: - RK-01 : la ligne « le sens n'est pas consulté »
-
-    /// La ligne ne s'affiche QUE pour qui a armé « Chercher aussi par le sens ».
-    /// Sans modèle, `useSemantic` est faux : une phrase entre guillemets est une
-    /// recherche exacte ordinaire, et annoncer un canal qui n'a jamais servi
-    /// serait une phrase de plus à comprendre pour rien.
-    func testTheDisarmedLineStaysHiddenForALexicalSearch() async throws {
-        let db = try TempAppDB()
-        let doc = try db.addDoc(
-            relPath: "Users/essai/thermo.txt",
-            pages: ["L'énergie libre de Gibbs décide du sens d'une réaction."])
-        let model = SearchModel(service: db.service)
-
-        await run(model, "\"energie libre\"")
-        XCTAssertFalse(model.semanticDisarmed,
-                       "l'interrupteur du sens est éteint : rien à désarmer")
-        XCTAssertEqual(model.hits.map(\.docID), [doc])
-        await run(model, "")
-        XCTAssertFalse(model.semanticDisarmed)
-    }
 }

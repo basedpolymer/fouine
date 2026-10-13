@@ -152,19 +152,6 @@ public struct ParsedQuery: Sendable, Equatable {
         return out
     }
 
-    /// La requête demande-t-elle une PHRASE entre guillemets ?
-    ///
-    /// Le canal sémantique n'a pas de guillemets : il compare des vecteurs, et
-    /// une page qui « parle de la même chose » entre dans la fusion sans porter
-    /// l'expression demandée (constat RK-01, jugé le 09/09/2026 : 4 résultats
-    /// sur 10 sans la phrase). C'est ce champ qui le désarme, du côté de
-    /// l'analyseur plutôt que par une relecture de la chaîne FTS — un montant
-    /// (`1512,50`) et un mot à caractère spécial y sont aussi entre guillemets
-    /// sans être des phrases.
-    public var hasPhrase: Bool {
-        nodes.contains { if case .phrase = $0 { return true } else { return false } }
-    }
-
     /// Chaîne FTS5 des nœuds POSITIFS. `expansions` remplace un mot nu par un
     /// groupe OR de variantes (§5.5.3) ; vide = requête exacte.
     ///
@@ -437,49 +424,6 @@ public enum QueryParser {
         return (query, parsed.negativeFTS)
     }
 
-    /// La requête TELLE QU'ELLE A ÉTÉ TAPÉE demande-t-elle une phrase exacte ?
-    ///
-    /// Point unique des quatre surfaces qui désarment le canal sémantique sur
-    /// ces requêtes (RK-01) : la ligne de commande, l'application, le serveur
-    /// MCP et `HybridSearch.run` lui-même. Une requête que l'analyseur REFUSE
-    /// (préfixe inconnu, opérateur nu) rend `false` : elle ne cherchera rien du
-    /// tout, et la surface la refuse avant d'arriver ici.
-    public static func asksForExactPhrase(_ input: String) -> Bool {
-        (try? parse(input))?.hasPhrase ?? false
-    }
-
-    /// Le texte envoyé au MODÈLE sémantique : la requête sans ses filtres, ses
-    /// exclusions ni ses guillemets — le canal vectoriel n'a pas de syntaxe.
-    ///
-    /// UNE SEULE FONCTION pour les trois surfaces (CLI, application, serveur
-    /// MCP), qui en portaient chacune une copie jusqu'au lot QP1. Sur les
-    /// JETONS de l'analyseur et non sur la chaîne coupée aux espaces : la
-    /// valeur entre guillemets d'un filtre (`dossier:"Mes cours"`) sort en
-    /// entier, et les guillemets courbes sont ceux que `tokenize` normalise.
-    ///
-    /// `texte:rapport` garde « rapport » — c'est un mot de la page ; `nom:` et
-    /// les filtres sortent. Une requête qui ne porte que `nom:` rend donc la
-    /// chaîne vide, et les surfaces restent alors lexicales.
-    public static func semanticText(_ input: String) -> String {
-        var kept: [String] = []
-        for token in tokenize(input) {
-            switch token {
-            case .quoted(let phrase):
-                kept.append(phrase.trimmingCharacters(in: .whitespaces))
-            case .word(let raw):
-                let lower = raw.lowercased()
-                if let prefix = matching(bodyPrefixes, lower) {
-                    kept.append(unquoted(String(raw.dropFirst(prefix.count))))
-                } else if matching(allPrefixes, lower) == nil, !raw.hasPrefix("-") {
-                    kept.append(raw)
-                }
-            }
-        }
-        return kept.filter { !$0.isEmpty }.joined(separator: " ")
-            .replacingOccurrences(of: "\"", with: "")
-            .trimmingCharacters(in: .whitespaces)
-    }
-
     // MARK: - Quorum des mots (lot RK2, RK-04)
 
     /// Longueur MINIMALE d'un mot pour être exigé par le quorum. « la », « par »,
@@ -698,10 +642,9 @@ public enum QueryParser {
     }
 
     /// Tous les préfixes du langage de requête, alias compris. PUBLIC : les
-    /// trois surfaces qui retirent les filtres d'une requête avant de
-    /// l'envoyer au modèle sémantique (CLI, application, serveur MCP) lisaient
-    /// chacune leur propre liste de trois jetons — l'alias `folder:` serait
-    /// resté dans le texte encodé.
+    /// surfaces qui retirent les filtres d'une requête avant d'en faire autre
+    /// chose lisaient chacune leur propre liste de trois jetons — l'alias
+    /// `folder:` serait resté dans le texte.
     public static let allPrefixes = folderPrefixes + extPrefixes + proximityPrefixes
         + namePrefixes + bodyPrefixes + pathPrefixes
 
@@ -873,8 +816,7 @@ public enum QueryParser {
     /// macOS remplace par défaut les guillemets tapés dans un champ de texte
     /// par des guillemets typographiques : `“gaz parfait”` et
     /// `« catalyse »` n'étaient pas des phrases, mais des mots flanqués de
-    /// caractères que personne ne voit — et le canal sémantique, que la phrase
-    /// éteint (RK-01), restait allumé. L'apostrophe n'a pas d'effet sur FTS5
+    /// caractères que personne ne voit. L'apostrophe n'a pas d'effet sur FTS5
     /// (le tokenizer coupe aux deux) ; c'est l'égalité de traitement qui compte,
     /// pour qu'un `l’azote` tapé soit la même requête qu'un `l'azote`.
     ///
@@ -921,8 +863,8 @@ public enum QueryParser {
         /// moindre message : la facette « Dossiers » l'affichait et la requête
         /// rendait zéro résultat.
         var quotingValue = false
-        // Une fois, ici : `parse`, `asksForExactPhrase`, `semanticText` et les
-        // valeurs de filtres voient tous le même texte — GUILLEMETS normalisés
+        // Une fois, ici : `parse` et les valeurs de filtres voient tous le
+        // même texte — GUILLEMETS normalisés
         // et forme NFC (lot MC1). La base est en NFC (`migration_v7_nfc`) et le
         // Finder rend du NFD : sans cette recomposition, `chemin:Polymères`
         // collé depuis `ls` ne trouvait rien, tapé au clavier il trouvait.

@@ -26,13 +26,6 @@ final class LockPathTests: XCTestCase {
                        "ix1.lock")
     }
 
-    func testTheCampaignLockCarriesTheDatabaseNameToo() {
-        XCTAssertEqual(FouinePaths.embedLockURL(for: base("fouine.db")).lastPathComponent,
-                       "fouine-embed.lock")
-        XCTAssertEqual(FouinePaths.embedLockURL(for: base("c2.db")).lastPathComponent,
-                       "c2-embed.lock")
-    }
-
     /// Le verrou reste VOISIN de la base : c'est ce qui fait qu'une copie
     /// emportée ailleurs emmène son propre verrou.
     func testTheLockSitsNextToTheDatabase() {

@@ -23,10 +23,6 @@ import FouineIndex
 struct SidebarView: View {
     @EnvironmentObject private var app: AppModel
     @EnvironmentObject private var search: SearchModel
-    /// Pour lire `agent.prepareMeaning` : le bouton « Préparer… » s'efface
-    /// quand l'agent s'en charge (AG1), et la décision doit être la même
-    /// qu'à l'onglet Indexation.
-    @EnvironmentObject private var settings: SettingsModel
 
     /// UNE seule boîte de dialogue de gestion des racines peut être demandée à
     /// la fois : deux `@State` booléens indépendants, c'est le travers du §A10.6
@@ -126,10 +122,6 @@ struct SidebarView: View {
             for: NSApplication.didBecomeActiveNotification)) { _ in
             guard !app.indexing.running else { return }
             Task { await app.refreshStats() }
-            // Même raison pour le sémantique : la campagne `fouine embed`
-            // remplit `page_vec` en arrière-plan, et l'interrupteur doit
-            // s'activer tout seul dès qu'il y a de quoi chercher (§12).
-            Task { await search.refreshSemanticAvailability() }
             Task { await app.refreshHealth() }
             // ET L'ÉTAT DE L'INDEX LUI-MÊME (PI-08). La sonde décide sa cadence
             // APRÈS avoir rafraîchi : au retour de l'app devant, le premier
@@ -611,22 +603,14 @@ struct SidebarView: View {
         if set.contains(value) { set.remove(value) } else { set.insert(value) }
     }
 
-    // MARK: - Options de recherche (§5.6, §12)
+    // MARK: - Options de recherche (§5.6)
 
-    /// UNE section pour les deux réglages qui changent ce que la recherche
-    /// trouve. Il y en avait deux, « Approximate matching » et « Semantic
-    /// search », dont trois des quatre commandes étaient du vocabulaire de
-    /// spécialiste — et l'une d'elles, la portée du flou (pages scannées
-    /// seulement ou tout l'index), est un arbitrage de performance qui n'a
-    /// rien à faire sous les yeux de quelqu'un qui cherche un document : elle
-    /// est partie dans Réglages ▸ Avancé (X2). La propriété `fuzzyScope` du
-    /// modèle, elle, ne bouge pas.
-    ///
-    /// L'interrupteur du sens n'est actif que si le modèle est présent ET que
-    /// la base contient de quoi chercher ; sa légende ne s'affiche QUE s'il
-    /// est grisé (elle dit alors le geste qui manque) ou si la dernière
-    /// recherche a quelque chose à signaler. Une explication permanente sous
-    /// un interrupteur allumé qui fonctionne n'apprend plus rien à personne.
+    /// LE réglage qui change ce que la recherche trouve. Il y en avait deux
+    /// autres, dont la portée du flou (pages scannées seulement ou tout
+    /// l'index) : c'est un arbitrage de performance qui n'a rien à faire sous
+    /// les yeux de quelqu'un qui cherche un document, et il est parti dans
+    /// Réglages ▸ Avancé (X2). La propriété `fuzzyScope` du modèle, elle, ne
+    /// bouge pas.
     private var searchOptionsSection: some View {
         Section("Search options") {
             // LE SÉLECTEUR SOUS SON ÉTIQUETTE, ET NON À CÔTÉ (BU-05) : posé
@@ -649,62 +633,6 @@ struct SidebarView: View {
                 .accessibilityIdentifier("sidebar.fuzzy")
             }
             .help("Auto: typos are tolerated only when a word gives no result.")
-
-            Toggle(isOn: $search.semanticEnabled) {
-                Label("Also search by meaning", systemImage: "wand.and.stars")
-            }
-            .disabled(!search.semanticAvailability.isReady)
-            .help(search.semanticAvailability.help)
-            // Un interrupteur grisé sans raison énoncée est le pire des cas :
-            // le hint dit POURQUOI (modèle absent, base sans vecteur).
-            .accessibilityHint(search.semanticAvailability.help)
-            .accessibilityIdentifier("sidebar.semantic")
-
-            if !search.semanticAvailability.isReady {
-                Text(verbatim: search.semanticAvailability.help)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                // Le modèle est là et aucune page n'est prête : le geste qui
-                // manque tient en un bouton, ici même (UX-12). Envoyer
-                // quelqu'un dans un onglet de réglages pour un clic est une
-                // façon de ne pas le proposer.
-                if search.semanticAvailability == .noVectors {
-                    // QUAND FOUINE S'EN CHARGE, ON NE PROPOSE PLUS DE LE FAIRE
-                    // À LA MAIN (AG1, PR-21) : même décision que le bouton
-                    // jumeau de l'onglet Indexation, pour que les deux endroits
-                    // disent la même chose. `.noVectors` implique que le
-                    // modèle est installé.
-                    if MeaningPreparation.decide(
-                        settingOn: settings.bool(SettingKeys.agentPrepareMeaning),
-                        modelInstalled: true,
-                        agent: app.agentOperationalState) == .inBackground {
-                        Text("Fouine takes care of it in the background, when the Mac is plugged in and idle.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .accessibilityIdentifier("sidebar.semantic.background")
-                    } else {
-                        Button("Prepare search by meaning…") {
-                            app.sheet = .prepareMeaning
-                        }
-                        .buttonStyle(.link)
-                        .disabled(app.indexing.running)
-                        .accessibilityIdentifier("sidebar.semantic.prepare")
-                    }
-                }
-            }
-
-            if let notice = search.semanticNotice {
-                Label {
-                    Text(verbatim: notice)
-                        .font(.caption)
-                        .fixedSize(horizontal: false, vertical: true)
-                } icon: {
-                    Image(systemName: "exclamationmark.triangle")
-                        .foregroundStyle(.orange)
-                }
-            }
         }
     }
 

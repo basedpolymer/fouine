@@ -201,11 +201,6 @@ struct FouineDesktopApp: App {
     /// que l'élément de menu déclenche. Son initialiseur ne sort JAMAIS sur le
     /// réseau — voir l'en-tête de `Updates.swift`.
     @StateObject private var updates = UpdatesController()
-    /// Installation du modèle sémantique (audit D6). Porté par l'`App` et non
-    /// par l'onglet de réglages : un transfert de 220 Mo ne doit pas mourir
-    /// parce qu'on a fermé la fenêtre ⌘, — et l'état doit être retrouvé intact
-    /// en la rouvrant.
-    @StateObject private var modelDownload = ModelDownloadModel()
     /// Icône dans la barre des menus, ouverture à la session (UX-07, UX-09).
     /// Portée par l'`App` : la scène `MenuBarExtra` en dépend, et la fenêtre de
     /// réglages doit pouvoir la changer sans la recréer.
@@ -248,12 +243,10 @@ struct FouineDesktopApp: App {
         // Le démarrage part du délégué d'application (BU-02), donc AVANT toute
         // fenêtre et quel que soit le chemin de lancement. Les trois gestes
         // sont ceux qui ne dépendent pas d'une fenêtre : ouvrir l'index, lire
-        // si la recherche par le sens est disponible (un `count(*)` sur la
-        // base, §12), et prendre le raccourci global ⌥⌘F — dont l'intérêt est
-        // justement de servir quand Fouine n'est pas devant.
+        // prendre le raccourci global ⌥⌘F — dont l'intérêt est justement de
+        // servir quand Fouine n'est pas devant.
         FouineAppDelegate.launch = {
             await app.start()
-            await search.refreshSemanticAvailability()
             app.globalHotKeyAvailable = GlobalHotKey.registerOptionCommandF {
                 NSApp.activate(ignoringOtherApps: true)
                 NotificationCenter.default.post(name: .fouineFocusSearch,
@@ -303,8 +296,6 @@ struct FouineDesktopApp: App {
                 .environmentObject(app)
                 .environmentObject(search)
                 .environmentObject(preview)
-                // La barre latérale lit `agent.prepareMeaning` (AG1) : le même
-                // objet que l'onglet Indexation, pour la même décision.
                 .environmentObject(settings)
                 // 900 × 560 (audit U6) : 1080 × 620 ne tenait pas sur un 13"
                 // à côté d'une autre fenêtre. Les minimums des trois colonnes
@@ -545,13 +536,12 @@ struct FouineDesktopApp: App {
         //
         // Les mêmes modèles que la fenêtre principale, portés par l'`App` :
         // épingler une racine ici doit se voir dans la barre latérale sans
-        // rechargement, et l'onglet « Sémantique » pilote l'interrupteur réel.
+        // rechargement.
         Settings {
             SettingsView()
                 .environmentObject(app)
                 .environmentObject(search)
                 .environmentObject(settings)
-                .environmentObject(modelDownload)
                 .environmentObject(interface)
                 // Sparkle a son onglet dans la MÊME fenêtre (palier 2.9) : deux
                 // fenêtres de réglages sur macOS, il n'y en a jamais qu'une.

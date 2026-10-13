@@ -17,10 +17,6 @@
 // puis `id`) : une pagination faite en mémoire sur un listage complet
 // recouvrirait ou sauterait des lignes dès qu'une passe d'indexation écrit
 // entre deux appels, et il n'y aurait aucun moyen de s'en apercevoir.
-//
-// `vectorised_pages` PASSE PAR LE POINT UNIQUE. Voir
-// `ReadOnlyStore.vectorisedPageCounts(forDocIDs:)` : c'est là, et nulle part
-// ici, que le fenêtrage v5 interviendra.
 
 import Foundation
 import FouineCore
@@ -121,8 +117,6 @@ public final class ListDocumentsTool: MCPTool {
                                       "description": "Why extraction failed."],
                             "ocr_pages": ["type": "integer",
                                           "description": "Pages whose text came from OCR."],
-                            "vectorised_pages": ["type": "integer",
-                                                 "description": "Pages carrying a vector."],
                         ] as [String: Any],
                     ] as [String: Any],
                 ] as [String: Any],
@@ -163,7 +157,6 @@ public final class ListDocumentsTool: MCPTool {
             let page = Array(rows.prefix(limit))
             let ids = page.map(\.id)
             let ocr = try store.ocrPageCounts(forDocIDs: ids)
-            let vectors = try store.vectorisedPageCounts(forDocIDs: ids)
 
             // Le budget ne raccourcit pas d'extrait ici — il n'y en a pas : un
             // listage trop gros perd des LIGNES, et le curseur les rend.
@@ -204,7 +197,6 @@ public final class ListDocumentsTool: MCPTool {
                             ListDocumentsTool.day($0) as Any
                         } ?? NSNull(),
                         "ocr_pages": ocr[row.id] ?? 0,
-                        "vectorised_pages": vectors[row.id] ?? 0,
                     ]
                 }
                 let more = hasMore || documents.count < page.count
@@ -234,10 +226,9 @@ public final class ListDocumentsTool: MCPTool {
     /// --json`, qui rend le même INSTANT dans le fuseau de la machine.
     ///
     /// Deux raisons. Un client MCP n'est pas forcément sur cette machine, et
-    /// tout ce que ce serveur horodate déjà est en UTC (`write_lock.since`,
-    /// `index_freshness`, `meaning_background.last_batch`) : une seule
-    /// convention par surface, sans quoi un modèle compare des heures qui ne se
-    /// comparent pas. Et un décalage local rendrait les transcriptions
+    /// tout ce que ce serveur horodate déjà est en UTC (`write_lock.since`) :
+    /// une seule convention par surface, sans quoi un modèle compare des
+    /// heures qui ne se comparent pas. Et un décalage local rendrait les transcriptions
     /// « golden » dépendantes du fuseau de la machine qui les rejoue.
     static func instant(_ epoch: Double) -> String {
         isoFormatter.string(from: Date(timeIntervalSince1970: epoch))

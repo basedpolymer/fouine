@@ -75,24 +75,21 @@ final class ReadOnlyTests: XCTestCase {
     /// propres tables d'ombre dès qu'on la laisse faire (`'optimize'`,
     /// `'merge'`, l'auto-merge). C'est cette classe-là qu'on écarte ici, et
     /// elle ne se voit d'aucune autre façon que par l'empreinte du fichier.
-    func testTwoHundredCallsAcrossAllFiveToolsChangeNothingOnDisk() throws {
+    func testTwoHundredCallsAcrossAllFourToolsChangeNothingOnDisk() throws {
         let index = try TempIndex(documents: 5, pagesPerDocument: 8,
-                                  vectorisedPages: 12, pageChars: 900,
+                                  pageChars: 900,
                                   failedDocuments: 2, skippedDocuments: 1)
         let server = try index.makeServer()
 
         // Le répertoire de travail des outils : une première passe COMPLÈTE
         // avant l'instantané, pour que la création du `-shm`, le remplissage
-        // des caches et la construction de l'index vectoriel soient derrière.
+        // des caches soient derrière.
         let calls = [
             #"{"name":"fouine_status","arguments":{"include_agent":false}}"#,
             #"{"name":"fouine_search","arguments":{"query":"electrolyse","limit":5}}"#,
-            #"{"name":"fouine_search","arguments":{"query":"enthalpie","mode":"hybrid"}}"#,
             #"{"name":"fouine_search","arguments":{"query":"chimique","folder":"Livres","snippet_chars":600}}"#,
             #"{"name":"fouine_read_page","arguments":{"doc_id":1,"page":3,"context_pages":2}}"#,
             #"{"name":"fouine_read_page","arguments":{"doc_id":2,"page":1,"max_chars":400,"offset":200}}"#,
-            #"{"name":"fouine_similar_pages","arguments":{"doc_id":1,"page":1,"exclude_same_document":false}}"#,
-            #"{"name":"fouine_similar_pages","arguments":{"doc_id":4,"page":2}}"#,
             #"{"name":"fouine_list_documents","arguments":{"state":"any","limit":100}}"#,
             #"{"name":"fouine_list_documents","arguments":{"state":"failed"}}"#,
         ]
@@ -117,7 +114,7 @@ final class ReadOnlyTests: XCTestCase {
         }
 
         XCTAssertEqual(digest(index.databaseURL), dbBefore,
-                       "le fichier .db a changé après 200 appels sur les cinq outils")
+                       "le fichier .db a changé après 200 appels sur les quatre outils")
         XCTAssertEqual(digest(wal), walBefore, "le -wal a changé")
         XCTAssertEqual(modificationDate(wal), walDateBefore,
                        "le mtime du -wal a changé")
@@ -235,7 +232,7 @@ final class ReadOnlyTests: XCTestCase {
         let tools = ((response["result"] as? [String: Any])?["tools"] as? [[String: Any]]) ?? []
         XCTAssertEqual(tools.compactMap { $0["name"] as? String },
                        ["fouine_status", "fouine_search", "fouine_read_page",
-                        "fouine_similar_pages", "fouine_list_documents"])
+                        "fouine_list_documents"])
     }
 
     /// Le serveur ne prend JAMAIS `fouine.lock` : la campagne d'embedding et

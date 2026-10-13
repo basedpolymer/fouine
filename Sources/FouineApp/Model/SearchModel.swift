@@ -10,7 +10,6 @@
 import Foundation
 import SwiftUI
 import FouineCore
-import FouineEmbed
 
 /// `Codable` pour la fenêtre d'aperçu détachée (UX-17) : une scène
 /// `WindowGroup(id:for:)` transporte sa valeur et la sérialise pour la
@@ -18,26 +17,6 @@ import FouineEmbed
 struct HitKey: Hashable, Codable, Sendable {
     let docID: Int64
     let page: Int
-}
-
-/// Ce que la fusion RRF sait d'une page affichée (§12) : par quel(s) canal
-/// (canaux) elle est arrivée, et à quelle distance sémantique de la requête.
-/// Vide en recherche lexicale — le chemin par défaut n'en fabrique aucune.
-struct HybridInfo: Equatable {
-    let rrf: Double
-    let lexRank: Int?
-    let vecRank: Int?
-    /// Cosinus brut du canal vectoriel. Conservé, mais JAMAIS affiché : sur ce
-    /// corpus tous les cosinus tiennent entre 0,78 et 0,88, et « cos 0,85 » se
-    /// lit comme « 85 % de pertinence » (audit C2-01, C2-13).
-    let cosine: Float?
-    /// Marge du hit dans la population balayée par la requête, `(cos − μ) / σ`.
-    /// C'est CE nombre que l'infobulle montre.
-    let z: Double?
-
-    /// Aucun terme de la requête ne touche cette page : pas de `snippet()`
-    /// possible, elle est présentée par le début de son texte.
-    var semanticOnly: Bool { lexRank == nil }
 }
 
 /// Clé de tri des résultats (audit U4 : « pas de tri, toujours le score »).
@@ -195,12 +174,6 @@ final class SearchModel: ObservableObject {
         }
     }
 
-    // Recherche sémantique (§12). ÉTEINTE par défaut : le chemin lexical reste
-    // celui que l'on paie quand on n'a rien demandé.
-    @Published var semanticEnabled = Prefs.defaults.bool(forKey: Prefs.semantic) {
-        didSet { semanticChanged() }
-    }
-
     // Filtres de facettes
     @Published var selectedFolders: Set<String> = [] { didSet { rerun() } }
     @Published var selectedExts: Set<String> = [] { didSet { rerun() } }
@@ -238,16 +211,9 @@ final class SearchModel: ObservableObject {
     /// Moins de dix pages portaient TOUS les mots et le moteur a montré aussi
     /// celles qui en portent la plupart (lot RK2, RK-04). ARMÉ par défaut dans
     /// le cœur depuis le 11/09/2026 (`SearchQuery.quorum`), que l'application
-    /// ne désarme jamais — ni en plein texte, ni en hybride, où le canal
-    /// lexical de la fusion relâche le ET de la même façon (MN1, lot MN2). Le
-    /// drapeau vient donc des résultats dans les deux chemins, et la ligne
-    /// sous le champ le dit.
+    /// ne désarme jamais. Le
+    /// drapeau vient donc des résultats, et la ligne sous le champ le dit.
     @Published private(set) var quorum = false
-    /// L'interrupteur « Chercher aussi par le sens » est armé, mais la requête
-    /// demande une PHRASE entre guillemets : le sens n'a pas été consulté (lot
-    /// RK1, RK-01). Ce n'est pas une panne — l'interrupteur reste tel quel, et
-    /// une ligne sous le champ le dit.
-    @Published private(set) var semanticDisarmed = false
     /// Documents dont le NOM DE FICHIER répond (lot MP1, PR-02), au plus cinq.
     /// Ce ne sont pas des résultats : ils s'affichent au-dessus, et ne touchent
     /// ni les comptes ni l'ordre des pages.
@@ -297,43 +263,6 @@ final class SearchModel: ObservableObject {
     /// résultats — cf. StoreService.engines(for:).
     @Published private(set) var engines: [HitKey: OCREngineID] = [:]
 
-    // Recherche sémantique — état affiché (§12)
-    @Published private(set) var semanticAvailability: SemanticAvailability = .unknown
-    /// Premier coup : chargement du modèle CoreML et de l'index vectoriel —
-    /// QUELQUES SECONDES, et le chiffre ne se met pas dans l'interface (audit
-    /// A2-04 : « ~3,5 s » y était annoncé, l'audit A1 a mesuré 11,7 s de bout
-    /// en bout sur une machine chargée, ramenés à ~1,1 s par le cache de
-    /// vocabulaire du lot K1 — voir `SemanticService`). L'interface le DIT
-    /// plutôt que de figer la ligne « recherche… ».
-    @Published private(set) var semanticPreparing = false
-    /// Les résultats LEXICAUX sont affichés et le sens cherche encore (ST1).
-    ///
-    /// La recherche hybride ne rendait rien avant la fusion : la ligne des
-    /// comptes disait « recherche… » pendant toute l'attente — quelques
-    /// secondes au premier coup, le temps de charger le modèle — sans qu'on
-    /// sache que c'était le sens qui travaillait. Les deux canaux partent
-    /// désormais l'un après l'autre : le lexical s'affiche, ce fanion dit que
-    /// la liste va encore bouger, et la fusion la remplace en arrivant.
-    @Published private(set) var semanticPending = false
-    /// Repli discret sur le lexical (modèle disparu, base sans vecteur, échec
-    /// d'inférence). Jamais une erreur bloquante : les résultats sont là.
-    @Published private(set) var semanticNotice: String?
-    /// Le jeu affiché vient-il de la fusion RRF ? Il commande le regroupement,
-    /// la pagination et l'habillage des lignes.
-    @Published private(set) var isHybrid = false
-    /// Métadonnées de fusion, par page affichée.
-    @Published private(set) var hybridInfo: [HitKey: HybridInfo] = [:]
-    @Published private(set) var semanticOnlyCount = 0
-    /// Couverture du canal sémantique à la dernière recherche hybride :
-    /// vecteurs balayés et pages indexées. Un résultat hybride se lit
-    /// autrement selon qu'il vient de 16 % ou de 100 % du corpus (audit C2-02).
-    @Published private(set) var semanticVectors = 0
-    @Published private(set) var semanticPagesIndexed = 0
-    /// Totaux du seul canal lexical : le canal vectoriel rend un top-k, il n'a
-    /// pas de total exhaustif à annoncer.
-    @Published private(set) var lexTotalPages = 0
-    @Published private(set) var lexTotalDocs = 0
-
     // Sélection
     @Published var selection: HitKey? {
         didSet {
@@ -353,24 +282,6 @@ final class SearchModel: ObservableObject {
     /// pas de phrase.
     @Published private(set) var selectionExplanation: HitExplanation?
 
-    /// Recherche par le sens dont le canal plein texte n'a RIEN trouvé, alors
-    /// que des résultats sont affichés (R-04). L'interface le dit, en une
-    /// phrase : ces pages ne portent aucun des mots tapés.
-    ///
-    /// Pas de filtre, pas de seuil — c'est une mesure, pas une prudence de
-    /// style : voir `HybridSearch.defaultVectorFloor` et `docs/search.md`
-    /// § 3. Un seuil de cosinus éteindrait d'abord les requêtes que le canal
-    /// sert le mieux.
-    var noLexicalMatch: Bool {
-        isHybrid && lexTotalPages == 0 && !hits.isEmpty && !isSearching
-    }
-
-    /// Ceux des mots tapés qu'au moins une page porte (lot MC1). Vide = aucun,
-    /// et la phrase reste « aucun de vos mots n'apparaît ». Non vide, la
-    /// phrase change : les mots SONT là, mais jamais ensemble sur une page —
-    /// affirmer le contraire ferait conclure à un fonds muet.
-    @Published private(set) var wordsPresentInIndex: [String] = []
-
     static let pageSize = 200
 
     /// Plafond du chargement pour trier (PR-08) : au-delà, on s'arrête et on le
@@ -384,18 +295,14 @@ final class SearchModel: ObservableObject {
     /// `GRDBStore.search(_:excludingDocsMatching:)`.
     ///
     /// Retenue ici parce qu'elle survit à la recherche initiale : « Charger
-    /// plus », le repli du chemin hybride et les facettes rejouent la requête
-    /// bien après, et chacun doit rejouer AUSSI ses exclusions (audit F1).
+    /// plus » et les facettes rejouent la requête bien après, et chacun doit
+    /// rejouer AUSSI ses exclusions (audit F1).
     /// `private(set) internal` : les tests la lisent.
     private(set) var executedNegative: String?
 
     private let service: StoreService
-    private let semantic: any SemanticSearching
     private var debounceTask: Task<Void, Never>?
     private var searchTask: Task<Void, Never>?
-    /// Le canal du SENS, à part du canal lexical depuis ST1 : les deux tournent
-    /// l'un après l'autre et doivent pouvoir être annulés ensemble.
-    private var semanticTask: Task<Void, Never>?
     private var facetTask: Task<Void, Never>?
     /// Chargement différé des moteurs OCR — suivi et annulé comme les autres
     /// (audit A10.8).
@@ -412,15 +319,8 @@ final class SearchModel: ObservableObject {
     /// Chargement des tranches suivantes pour trier (PR-08) : suivi et annulé
     /// comme les autres tâches différées.
     private var sortLoadTask: Task<Void, Never>?
-    /// Génération dont la FUSION a déjà pris la main (ST1) : le canal lexical,
-    /// parti en premier, ne doit pas la défaire s'il répond après elle.
-    private var hybridGeneration: Int?
-
-    /// `semantic` : `nil` en production, où le service est bâti sur le magasin.
-    /// Les tests y passent un double qui répond quand ils le décident (lot MN2).
-    init(service: StoreService, semantic: (any SemanticSearching)? = nil) {
+    init(service: StoreService) {
         self.service = service
-        self.semantic = semantic ?? SemanticService(store: service.store)
         if let raw = Prefs.defaults.string(forKey: Prefs.fuzzyMode),
            let mode = FuzzyMode(rawValue: raw) { fuzzy = mode }
         if let raw = Prefs.defaults.string(forKey: Prefs.fuzzyScope),
@@ -538,7 +438,6 @@ final class SearchModel: ObservableObject {
     func execute(remember: Bool) {
         let input = text.trimmingCharacters(in: .whitespacesAndNewlines)
         searchTask?.cancel()
-        semanticTask?.cancel()
         facetTask?.cancel()
         enginesTask?.cancel()
         explainTask?.cancel()
@@ -567,13 +466,6 @@ final class SearchModel: ObservableObject {
             selectionExplanation = nil
             fuzzyFallback = false; nameMatches = []
             quorum = false
-            semanticDisarmed = false
-            isHybrid = false; hybridInfo = [:]
-            semanticOnlyCount = 0; lexTotalPages = 0; lexTotalDocs = 0
-            semanticVectors = 0; semanticPagesIndexed = 0
-            wordsPresentInIndex = []
-            semanticPreparing = false; semanticNotice = nil
-            semanticPending = false
             return
         }
         if remember {
@@ -603,50 +495,13 @@ final class SearchModel: ObservableObject {
         }
         executedNegative = plan.negative
 
-        // RK-01 : une phrase entre guillemets ne consulte pas le sens. Le canal
-        // sémantique n'a pas de guillemets — il proposait des pages qui ne
-        // portent pas l'expression demandée (quatre sur dix, jugé le
-        // 09/09/2026). Tranché ICI plutôt que dans la fusion : la recherche
-        // rendue est alors la recherche lexicale entière, avec ses facettes, son
-        // « Charger plus » et son repli en flou.
-        semanticDisarmed = useSemantic && QueryParser.asksForExactPhrase(input)
-        // LE LEXICAL D'ABORD, LE SENS ENSUITE (ST1). Les deux canaux partaient
-        // dans la MÊME tâche et rien ne s'affichait avant la fusion : au
-        // premier coup, le temps de charger le modèle, la ligne des comptes
-        // disait « recherche… » pendant plusieurs secondes sur une liste vide.
-        // Le canal lexical est donc joué à part, tout de suite ; la fusion,
-        // qui le rejoue de son côté, remplace la liste en arrivant.
-        //
-        // OUI, LE CANAL LEXICAL EST EXÉCUTÉ DEUX FOIS. `HybridSearch.run` ne
-        // sait pas recevoir des hits déjà calculés, et lui inventer cette API
-        // pour épargner quelques millisecondes (une requête FTS sur l'index du
-        // propriétaire) coûterait plus cher que ce qu'elle rapporte.
-        let raw = useSemantic && !semanticDisarmed ? Self.semanticText(of: input) : ""
-        if !raw.isEmpty {
-            semanticPending = true
-            runLexical(query: plan.query, negative: plan.negative, append: false)
-            runSemantic(query: plan.query, negative: plan.negative,
-                        input: input, raw: raw)
-        } else {
-            // Sens éteint, phrase entre guillemets, ou rien à encoder une fois
-            // les filtres retirés (« dossier:Livres -brouillon ») : le canal
-            // vectoriel n'a pas de syntaxe, on reste lexical — avec les
-            // exclusions, que ce chemin honore comme l'autre (audit F1).
-            semanticPending = false
-            runLexical(query: plan.query, negative: plan.negative, append: false)
-        }
-        // Les facettes restent celles du CANAL LEXICAL, hybride ou non : compter
-        // par dossier / extension / année / provenance / langue suppose un total
-        // exact, et le canal vectoriel ne rend qu'un top-k (§12).
+        runLexical(query: plan.query, negative: plan.negative, append: false)
         loadFacets(input: input)
         rememberSession()
     }
 
     func loadMore() {
-        // En hybride, « charger plus » n'a pas de sens : le RRF fusionne deux
-        // top-k, il ne pagine pas. `canLoadMore` est déjà faux, la garde le dit.
-        guard canLoadMore, !isHybrid, !semanticPending, !isSearching,
-              !executedText.isEmpty else { return }
+        guard canLoadMore, !isSearching, !executedText.isEmpty else { return }
         let offset = hits.count
         // `buildPlan` et non `buildQuery` : la tranche suivante doit porter les
         // MÊMES exclusions que la première, sinon « Charger plus » réintroduit
@@ -657,10 +512,8 @@ final class SearchModel: ObservableObject {
         runLexical(query: plan.query, negative: plan.negative, append: true)
     }
 
-    /// Recherche lexicale : le chemin d'origine. Il sert aussi de REPLI quand le
-    /// chemin sémantique échoue, et de PREMIER AFFICHAGE quand le sens est armé
-    /// (ST1) — d'où la garde de génération, qui n'existait pas tant qu'il était
-    /// seul en piste.
+    /// La recherche. La garde de génération écarte ce qui revient d'une
+    /// requête plus ancienne.
     private func runLexical(query: SearchQuery, negative: String?, append: Bool) {
         let generation = self.generation
         searchTask = Task { [weak self] in
@@ -671,10 +524,6 @@ final class SearchModel: ObservableObject {
                 if Task.isCancelled || generation != self.generation { return }
                 let rows = try await self.service.docRows(ids: results.hits.map(\.docID))
                 if Task.isCancelled || generation != self.generation { return }
-                // La fusion a déjà pris la main pour CETTE requête (elle peut
-                // répondre la première, modèle chargé) : défaire son classement
-                // avec le seul canal lexical ferait sauter la liste deux fois.
-                if self.hybridGeneration == generation, !append { return }
                 self.apply(results: results, rows: rows, append: append)
             } catch {
                 if Task.isCancelled || generation != self.generation { return }
@@ -688,167 +537,6 @@ final class SearchModel: ObservableObject {
         }
     }
 
-    // MARK: - Chemin hybride (§12)
-
-    /// L'interrupteur est armé ET utilisable : sans modèle ni vecteur, la
-    /// recherche reste lexicale sans rien dire de plus que l'aide de la barre
-    /// latérale.
-    var useSemantic: Bool { semanticEnabled && semanticAvailability.isReady }
-
-    /// Fusion RRF lexical + vectoriel, LANCÉE APRÈS le canal lexical (ST1) :
-    /// quand elle arrive, elle remplace la liste déjà affichée — le RRF
-    /// réordonne, c'est inhérent à la fusion. Mêmes règles que le chemin
-    /// lexical : hors du fil principal, annulable, protégée par la génération
-    /// courante. Tout échec (modèle disparu, base sans vecteur, inférence)
-    /// RETOMBE sur la recherche lexicale avec un message discret — jamais
-    /// d'erreur bloquante.
-    private func runSemantic(query: SearchQuery, negative: String?,
-                             input: String, raw: String) {
-        semanticNotice = nil
-        semanticPreparing = !semantic.isLoaded
-        let generation = self.generation
-        semanticTask = Task { [weak self] in
-            guard let self else { return }
-            do {
-                let results = try await self.semantic.search(
-                    query: query, excludingDocsMatching: negative, rawQuery: raw,
-                    typedQuery: input, limit: Self.pageSize,
-                    depth: HybridSearch.defaultDepth)
-                if Task.isCancelled || generation != self.generation { return }
-                let rows = try await self.service.docRows(
-                    ids: results.hits.map(\.docID))
-                if Task.isCancelled || generation != self.generation { return }
-                // Le canal des noms, que la fusion ne rend pas (lot MP1) : une
-                // lecture de plus sur `docs_fts`, quelques millisecondes.
-                let named = (try? await self.service.documentsMatchingName(query)) ?? []
-                if Task.isCancelled || generation != self.generation { return }
-                self.semanticPreparing = false
-                self.semanticPending = false
-                self.apply(hybrid: results, rows: rows)
-                self.setNameMatches(named)
-                // APRÈS l'affichage : la liste est déjà à l'écran, et cette
-                // lecture ne sert qu'à choisir entre deux phrases.
-                if results.lexTotalPages == 0, !results.hits.isEmpty {
-                    let present = (try? await self.service.wordsPresent(
-                        query, excludingDocsMatching: negative)) ?? []
-                    if Task.isCancelled || generation != self.generation { return }
-                    self.wordsPresentInIndex = present
-                }
-            } catch {
-                if Task.isCancelled || generation != self.generation { return }
-                self.semanticPreparing = false
-                // AVANT le repli : `runLexical` relit ce fanion pour décider si
-                // « Charger plus » a le droit de reparaître.
-                self.semanticPending = false
-                self.semanticNotice = String(localized: "Search by meaning is unavailable (\(ErrorText.describe(error))). Fouine looked for your words only.")
-                // Le modèle a pu disparaître ou la base être purgée : l'état de
-                // l'interrupteur est réévalué, il se désactive de lui-même.
-                Task { [weak self] in await self?.refreshSemanticAvailability() }
-                self.runLexical(query: query, negative: negative, append: false)
-            }
-        }
-    }
-
-    private func apply(hybrid results: HybridResults, rows: [Int64: DocRow]) {
-        var info: [HitKey: HybridInfo] = [:]
-        var converted: [Hit] = []
-        converted.reserveCapacity(results.hits.count)
-        for hybrid in results.hits {
-            let key = HitKey(docID: hybrid.docID, page: hybrid.page)
-            info[key] = HybridInfo(rrf: hybrid.rrf, lexRank: hybrid.lexRank,
-                                   vecRank: hybrid.vecRank, cosine: hybrid.cosine,
-                                   z: hybrid.z)
-            converted.append(Self.hit(from: hybrid))
-        }
-        hybridInfo = info
-        isHybrid = true
-        hybridGeneration = generation
-        // Les mots présents de la recherche PRÉCÉDENTE ne disent rien de
-        // celle-ci : la tâche qui suit les recalcule si la phrase est due.
-        wordsPresentInIndex = []
-        hits = converted
-        docRows = rows
-        // Le repli en flou traverse la fusion depuis le lot RK1 : le canal
-        // lexical de l'hybride passe par le même `GRDBStore.search`, il repliait
-        // donc déjà — sans que ce mode le dise. Les noms, eux, arrivent juste
-        // après par `setNameMatches` — une lecture à part.
-        fuzzyFallback = results.fuzzyFallback
-        // Le canal lexical de la fusion relâche le ET comme le plein texte, et
-        // le drapeau le traverse depuis MC2 (lot MN2) : l'écrire faux en dur
-        // taisait la ligne dans le mode où elle compte le plus.
-        quorum = results.quorum
-        nameMatches = []
-        // `loadEngines` ne s'intéresse qu'aux pages OCR ; les hits sémantiques
-        // purs portent `.native` faute de provenance connue et n'y entrent pas.
-        loadEngines(for: converted, append: false)
-        totalPages = converted.count
-        totalDocs = Set(converted.map(\.docID)).count
-        elapsedMS = results.elapsedMS
-        lexTotalPages = results.lexTotalPages
-        lexTotalDocs = results.lexTotalDocs
-        // `HybridResults` ne porte pas le drapeau de comptage borné, mais il se
-        // retrouve exactement : le compte lexical EST borné au seuil quand il
-        // est approché (`GRDBStore.counts`). Sans cette ligne, le conseil « mot
-        // très courant » restait celui de la recherche PRÉCÉDENTE (A1m-08).
-        totalsApproximate = results.lexTotalPages >= Schema.approximateCountThreshold
-        semanticOnlyCount = results.semanticOnly
-        semanticVectors = results.vectors
-        semanticPagesIndexed = results.pagesIndexed
-        // Pas de pagination : le RRF fusionne deux top-k de profondeur fixe,
-        // pas des pages décalées par un offset.
-        canLoadMore = false
-        autoLoadMore = false
-        errorText = nil
-        isSearching = false
-        regroup()
-        restoreSelection()
-    }
-
-    /// Un `HybridHit` habillé en `Hit` : tout l'affichage (regroupement, aperçu,
-    /// filtres, pictogrammes) continue de parler la même langue.
-    ///
-    /// Deux conventions, faute de mieux :
-    ///   · `score` = −rrf, pour qu'un score « plus petit est meilleur » (bm25)
-    ///     et le score RRF se classent dans le même sens ;
-    ///   · `source` = `.native` pour un hit sémantique pur — sa provenance
-    ///     réelle demanderait un balayage de `page_src` (cf. StoreService), et
-    ///     la ligne n'affiche de toute façon PAS le pictogramme de provenance
-    ///     dans ce cas, mais l'insigne « ≈ sém. ». Le panneau d'aperçu, lui,
-    ///     relit la vraie provenance à la sélection.
-    private static func hit(from hybrid: HybridHit) -> Hit {
-        let snippet = hybrid.lexical?.snippet
-            ?? hybrid.preview.replacingOccurrences(of: "\n", with: " ")
-        return Hit(docID: hybrid.docID, path: hybrid.path, page: hybrid.page,
-                   score: -hybrid.rrf, snippet: snippet,
-                   source: hybrid.lexical?.source ?? .native,
-                   fuzzyDistance: hybrid.lexical?.fuzzyDistance ?? 0)
-    }
-
-    /// Texte envoyé au modèle : la requête débarrassée des jetons de filtre
-    /// (dossier:, ext:, pres:), des exclusions et des guillemets — même règle
-    /// que `fouine search --hybrid` (CommandsSearch.semanticText).
-    /// `nonisolated` : fonction pure, appelée aussi depuis l'autotest headless,
-    /// qui n'a pas de fil principal isolé.
-    nonisolated static func semanticText(of input: String) -> String {
-        QueryParser.semanticText(input)
-    }
-
-    /// Présence du modèle et compte de vecteurs. Appelée au démarrage, à chaque
-    /// bascule de l'interrupteur et au retour de la fenêtre au premier plan : la
-    /// campagne `fouine embed` remplit `page_vec` pendant que l'app tourne.
-    func refreshSemanticAvailability() async {
-        semanticAvailability = await semantic.availability()
-    }
-
-    private func semanticChanged() {
-        Prefs.defaults.set(semanticEnabled, forKey: Prefs.semantic)
-        semanticNotice = nil
-        Task { [weak self] in
-            await self?.refreshSemanticAvailability()
-            self?.rerun()
-        }
-    }
-
     private func apply(results: SearchResults, rows: [Int64: DocRow], append: Bool) {
         // Combien de hits le filtre client laissait passer AVANT ce chargement :
         // c'est la référence qui dit si celui-ci a apporté quelque chose de
@@ -856,12 +544,6 @@ final class SearchModel: ObservableObject {
         // `regroup()` — inutile de refiltrer, ce qui coûterait un `DateFormatter`
         // par hit quand un filtre d'année est actif (A10.11).
         let visibleBefore = append ? groups.reduce(0) { $0 + $1.hits.count } : 0
-        // Le jeu vient du canal lexical seul : plus rien à dire de la fusion.
-        isHybrid = false
-        hybridInfo = [:]
-        semanticOnlyCount = 0
-        semanticVectors = 0
-        semanticPagesIndexed = 0
         hits = append ? hits + results.hits : results.hits
         docRows = append ? docRows.merging(rows) { _, new in new } : rows
         loadEngines(for: results.hits, append: append)
@@ -875,11 +557,7 @@ final class SearchModel: ObservableObject {
         totalDocs = results.totalDocs
         totalsApproximate = results.totalsApproximate
         elapsedMS = results.elapsedMS
-        // « Charger plus » et le chargement pour trier attendent que le sens
-        // ait répondu (ST1) : une tranche de plus arriverait dans une liste que
-        // la fusion va remplacer, et la ligne sauterait deux fois.
         canLoadMore = hits.count < results.totalPages && !results.hits.isEmpty
-            && !semanticPending
         isSearching = false
         regroup()
         let visibleAfter = groups.reduce(0) { $0 + $1.hits.count }
@@ -890,12 +568,6 @@ final class SearchModel: ObservableObject {
         // le chargement repart tout seul. Sans cela, il faudrait quitter le tri
         // puis y revenir pour retrouver un classement complet.
         if !append { startSortLoad() }
-    }
-
-    /// Le bandeau des noms, posé après un jeu HYBRIDE (voir `runHybrid`) : le
-    /// chemin lexical, lui, les reçoit avec ses résultats.
-    private func setNameMatches(_ documents: [DocumentListing]) {
-        nameMatches = documents
     }
 
     /// Pourquoi la page sélectionnée est là. Rien ne bloque : la phrase paraît
@@ -912,14 +584,12 @@ final class SearchModel: ObservableObject {
         guard let hit = hits.first(where: {
             HitKey(docID: $0.docID, page: $0.page) == key
         }) else { return }
-        let info = hybridInfo[key]
         let generation = self.generation
         explainTask = Task { [weak self] in
             guard let self else { return }
             let explanation = try? await self.service.explanation(
                 docID: key.docID, page: key.page, words: words,
                 fuzzyDistance: hit.fuzzyDistance,
-                lexRank: info?.lexRank, vecRank: info?.vecRank,
                 fallbackText: hit.snippet)
             if Task.isCancelled || generation != self.generation
                 || self.selection != key { return }
@@ -958,12 +628,7 @@ final class SearchModel: ObservableObject {
 
     func regroup() {
         let visible = filteredHits
-        // En hybride, `ResultGrouping.group` trierait les documents par leur
-        // agrégat lexical (D-R5) — un classement étranger au RRF,
-        // qui remonterait un document lexicalement dense devant celui que la
-        // fusion a jugé le meilleur. On préserve donc l'ordre de fusion (§12).
-        var built = isHybrid ? Self.groupPreservingOrder(visible)
-                             : ResultGrouping.group(visible)
+        var built = ResultGrouping.group(visible)
         // Le vrai compte de pages touchées, quand il est arrivé (audit A12).
         if !matchedPageCounts.isEmpty {
             built = built.map { group in
@@ -984,10 +649,9 @@ final class SearchModel: ObservableObject {
     ///
     /// Trier les groupes et non les pages : le regroupement par document est la
     /// forme d'affichage (§5.1), et trier les pages en travers des documents
-    /// casserait les groupes. Les pages d'un document restent dans leur ordre —
-    /// numérique hors hybride, de fusion en hybride. `.score` ne réordonne
-    /// rien : `ResultGrouping.group` a déjà classé par score D-R5, et le RRF
-    /// par rang fusionné.
+    /// casserait les groupes. Les pages d'un document restent dans leur ordre
+    /// numérique. `.score` ne réordonne rien : `ResultGrouping.group` a déjà
+    /// classé par score D-R5.
     private func sorted(_ groups: [DocGroup]) -> [DocGroup] {
         switch sortOrder {
         case .score:
@@ -1031,14 +695,11 @@ final class SearchModel: ObservableObject {
     /// Charge les tranches suivantes jusqu'à épuisement ou jusqu'au plafond,
     /// puis laisse `apply` retrier (PR-08).
     ///
-    /// Hors hybride : le RRF fusionne deux top-k et ne pagine pas — il n'y a
-    /// rien de plus à charger, et `canLoadMore` est déjà faux.
-    ///
     /// Le coût sur le chemin normal est NUL : tant que le tri est « pertinence »,
     /// cette fonction sort à la première ligne et pas une tranche de plus n'est
     /// demandée au moteur.
     private func startSortLoad() {
-        guard sortOrder != .score, canLoadMore, !isHybrid, !isLoadingForSort,
+        guard sortOrder != .score, canLoadMore, !isLoadingForSort,
               !executedText.isEmpty, hits.count < Self.sortLoadCap else { return }
         isLoadingForSort = true
         let generation = self.generation
@@ -1068,31 +729,6 @@ final class SearchModel: ObservableObject {
         sortLoadTask?.cancel()
         sortLoadTask = nil
         isLoadingForSort = false
-    }
-
-    /// Regroupement par document qui PRÉSERVE l'ordre reçu (§12).
-    ///
-    /// Les hits arrivent dans l'ordre RRF décroissant : grouper à la première
-    /// apparition suffit à sortir les documents dans l'ordre de leur MEILLEURE
-    /// page, et les pages d'un document dans leur ordre de fusion — celui qui
-    /// porte l'information, la page 3 pouvant être bien plus pertinente que la
-    /// page 2. `score` reçoit le meilleur score du groupe pour rester cohérent
-    /// avec le champ (plus petit = meilleur), il ne sert pas au tri ici.
-    private static func groupPreservingOrder(_ hits: [Hit]) -> [DocGroup] {
-        var order: [Int64] = []
-        var byDoc: [Int64: [Hit]] = [:]
-        for hit in hits {
-            if byDoc[hit.docID] == nil { order.append(hit.docID) }
-            byDoc[hit.docID, default: []].append(hit)
-        }
-        return order.map { docID in
-            let pages = byDoc[docID] ?? []
-            return DocGroup(docID: docID, path: pages.first?.path ?? "",
-                            score: pages.map(\.score).min() ?? 0,
-                            pageCount: pages.count,
-                            firstPage: pages.map(\.page).min() ?? 0,
-                            hits: pages)
-        }
     }
 
     /// Charge en différé le moteur (natif / Vision / importé) de chaque page OCR.
@@ -1201,9 +837,7 @@ final class SearchModel: ObservableObject {
                       applyingSourceFilter: applyingSourceFilter).query
     }
 
-    /// `buildQuery` + l'expression des exclusions par document (arbitrage T5),
-    /// que `HybridSearch.run` applique aux DEUX canaux — le canal vectoriel n'a
-    /// pas de syntaxe et ne saurait pas exclure tout seul.
+    /// `buildQuery` + l'expression des exclusions par document (arbitrage T5).
     private func buildPlan(input: String, offset: Int,
                            applyingFolderFilter: Bool = true,
                            applyingExtFilter: Bool = true,
@@ -1513,7 +1147,7 @@ final class SearchModel: ObservableObject {
     var exportSummary: String {
         let lignes = groups.reduce(0) { $0 + $1.hits.count }
         var phrase = String(localized: "\(lignes) line(s) — the results currently loaded")
-        if !isHybrid, totalPages > hits.count {
+        if totalPages > hits.count {
             phrase = String(localized: "\(phrase), out of \(totalPages) page(s) found")
         }
         if hasDisplayFilters {

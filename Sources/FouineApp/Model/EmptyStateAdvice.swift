@@ -30,7 +30,6 @@ enum EmptyStateGesture: String, Hashable, Identifiable, CaseIterable {
     /// Passe « Fautes de frappe » à « toujours » et relance.
     case tolerateTypos
     /// Allume « Chercher aussi par le sens » et relance.
-    case searchByMeaning
     /// Retire filtres, facettes et portée.
     case removeFilters
 
@@ -39,7 +38,6 @@ enum EmptyStateGesture: String, Hashable, Identifiable, CaseIterable {
     var label: String {
         switch self {
         case .tolerateTypos:   return String(localized: "Tolerate typos")
-        case .searchByMeaning: return String(localized: "Search by meaning too")
         case .removeFilters:   return String(localized: "Remove the filters")
         }
     }
@@ -54,13 +52,11 @@ enum EmptyStateAdvice {
     /// L'ordre n'est pas indifférent : la faute de frappe est la cause la plus
     /// fréquente d'une liste vide, le filtre oublié la plus facile à défaire,
     /// et le sens la plus lente — il charge un modèle.
-    static func gestures(fuzzy: FuzzyMode, semanticReady: Bool,
-                         semanticOn: Bool, filtersActive: Bool)
+    static func gestures(fuzzy: FuzzyMode, filtersActive: Bool)
         -> [EmptyStateGesture] {
         var out: [EmptyStateGesture] = []
         if fuzzy == .off { out.append(.tolerateTypos) }
         if filtersActive { out.append(.removeFilters) }
-        if semanticReady, !semanticOn { out.append(.searchByMeaning) }
         return out
     }
 

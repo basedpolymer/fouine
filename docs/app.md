@@ -1,8 +1,8 @@
 # The Fouine guide
 
 Fouine is a search app for macOS. It goes through the folders you give it,
-extracts the text of every document, and lets you find a page again by its words
-or by its meaning. Nothing leaves your Mac.
+extracts the text of every document, and lets you find a page again by its
+words, even with a typing mistake. Nothing leaves your Mac.
 
 - [1. The main window](#1-the-main-window)
 - [2. The preview](#2-the-preview)
@@ -100,9 +100,7 @@ Under "No result for “…”", the window offers the buttons that can still br
 something back, and only those:
 
 - **Tolerate typos**, if **Typos** is set to "off";
-- **Remove the filters**, if a filter, a facet or a scope is active;
-- **Search by meaning too**, if the model is ready and the **Also search by
-  meaning** switch is off.
+- **Remove the filters**, if a filter, a facet or a scope is active.
 
 Then comes the sentence "Try fewer words, or check the spelling." Each button
 changes the setting it names and runs the search again. No setting changes
@@ -129,16 +127,6 @@ them all.
 
 Above the list, a line gives what was found and how long it took ("29 037 pages
 in 776 documents · 120 ms").
-
-When **Also search by meaning** is on, the two searches don't start together.
-The search by words runs first and its results appear; the search by meaning
-runs next. Meanwhile the counts stay readable, with a spinner beside them and
-"searching by meaning…", or, the very first time, "preparing the meaning search:
-the first one takes a few seconds…". When the search by meaning returns, the
-list is re-ranked: the two searches are merged, the order changes, and pages
-that contain none of the words you typed can appear. Until then, "Load more"
-waits, since one more slice would land in a list that is about to be rebuilt.
-Typing again cancels both searches.
 
 Each document found shows, to the right of its name, how many of its pages are
 in the list. The best pages of each document come first, so that a single
@@ -322,9 +310,6 @@ Beyond that, a line gives the real extent of the sort: "Sorted by date ↓ over
 the first 2 000 results, out of 29 037 pages found." When everything fits under
 the limit, the line disappears. A new search stops the loading.
 
-Search by meaning does not paginate: it returns a complete set, so its sort
-always covers everything.
-
 ### Saved searches
 
 The history (the clock icon, to the right of the field) keeps the last forty
@@ -377,7 +362,7 @@ reading in progress stops between two pages (PDF, DjVu) or while a recording is
 being written down, without running to the end. A document stopped this way is
 neither read nor failed: it stays to be done, and the next update starts it from
 the beginning. Nothing is lost and nothing is half written. Reading scanned pages
-and preparing search by meaning stop the same way, with their own sentences.
+stops the same way, with its own sentence.
 
 ### States of the card
 
@@ -385,13 +370,12 @@ The card shows one state at a time, chosen in this order: checking, no folder, a
 pass started from the app, folders that could not be read, an action expected
 from you, another program writing, automatic updates, up to date.
 
-| Title | Second line | Meaning | Button |
+| Title | Second line | What is happening | Button |
 |---|---|---|---|
 | Checking… | none | the state of the index is being read at launch, or the list of folders could not be read | none |
 | No folder to index | none | no folder has been added | Add a folder… |
 | Updating the index | the time left when known | going through the folders, extracting text | Stop *(pass started from the app)* |
 | Reading scanned pages | "about 2 h left" | recognising the text of scanned pages | Stop *(idem)* |
-| Preparing search by meaning | the time left when known | preparing the pages for search by meaning | Stop *(idem)* |
 | The index is being updated | "Another program is writing to the index; searching still works." | the command line is updating the index | none |
 | Up to date — N scanned pages to read | "They will be read once the Mac is plugged in." (or: once Low Power Mode is off, once the Mac has cooled down, once the other program has finished, once every folder can be read again) | the text is current; reading scanned pages waits for the Mac | none *("Read scanned pages…" is in the "Your index" window)* |
 | Fouine is not allowed to read “…” | "Its documents stay searchable. Allow Fouine in System Settings ▸ Privacy & Security ▸ Files and Folders…" | macOS refuses to read the folder | Allow access… |
@@ -468,10 +452,10 @@ take a "planned" number for a limit.
 |---|---|---|
 | more than 5 GB free | *no line* | nowhere |
 | less than 5 GB free | "Your disk has 3.2 GB left; your index uses 2.15 GB" | the "Your index" window |
-| less than 1 GB free, or less than what preparing search by meaning still has to write | "Your disk has only 800 MB left and your index uses 2.15 GB: Fouine may run out of room to finish it. Free up some space, or remove a folder you no longer need" | the window and the Index card |
+| less than 1 GB free | "Your disk has only 800 MB left and your index uses 2.15 GB: Fouine may run out of room to finish it. Free up some space, or remove a folder you no longer need" | the window and the Index card |
 
-Nothing ever stops because of that line: indexing, reading scanned pages and
-preparing search by meaning all continue. It is a warning, and the system will
+Nothing ever stops because of that line: indexing and reading scanned pages
+both continue. It is a warning, and the system will
 refuse to write on the day the disk is actually full. There is no button either,
 because the fix is to free space or remove a folder, which the sentence says.
 The free space shown is the one macOS promises for a large write, the Finder's
@@ -581,7 +565,7 @@ is doing, and has three shapes:
 | Icon | When | What the panel's state line says |
 |---|---|---|
 | Magnifier | nothing running: up to date, manual updates, paused, no folder, checking | "Up to date", "Manual updates", "No folder to index" |
-| Circular arrows | the index is working | "Updating the index", "Reading scanned pages", "Preparing search by meaning" |
+| Circular arrows | the index is working | "Updating the index", "Reading scanned pages" |
 | Triangle | an action is expected from you | "Fouine is not allowed to read “…”", "Automatic updates are waiting for your approval"… |
 
 A change of shape tells you something is happening; the panel's state line says
@@ -605,9 +589,7 @@ can type straight away.
   selected, ↩ sends the query to the main window.
 - Escape closes the panel. ⌘Q quits Fouine.
 
-This panel searches only the words of your documents. Search by meaning needs a
-model to load, so it stays in the window: a panel has to answer at once. The
-panel leaves the main window alone, and its filters, selection and query stay as
+The panel leaves the main window alone, and its filters, selection and query stay as
 they are. The global shortcut ⌥⌘F always opens the window.
 
 Under the results come a state line and two buttons, nothing else. The line is
@@ -638,14 +620,6 @@ tolerated:
 | off | strict word-for-word search |
 | auto (default) | tolerance only when a word gives no exact result |
 | always | search always widened to close variants |
-
-### Also search by meaning
-
-Search by meaning finds passages whose subject matches your query, even when they
-share no words with it. The **Also search by meaning** switch merges the pages
-found by your words with the pages found by meaning. If your documents have not
-been prepared for it yet, a button starts the preparation. How it works, and how
-well: the "Searching" page of the documentation.
 
 ### Filters
 
@@ -689,9 +663,7 @@ removes them all.
 
 Under the snippet of the selected result, and only that one, a grey line gives
 the reason the page is there: "Found because this page contains “kinetics” and
-“chemistry”.", "Found with a close spelling: “converslon” → “conversion”.",
-"None of your words is on this page, but it deals with the same subject.",
-"Found by your words and by meaning."
+“chemistry”." or "Found with a close spelling: “converslon” → “conversion”."
 
 The line shows no number. The words quoted are yours, and a term you excluded is
 never named, since that would show exactly what you asked to leave out.
@@ -762,7 +734,7 @@ a page of your documents in a way you can check.
 
 ## 11. Settings
 
-Settings open with ⌘, and have six tabs.
+Settings open with ⌘, and have five tabs.
 
 ### General
 
@@ -875,11 +847,6 @@ page exported from Notion reopens in Notion from the preview.
 
 - **When to update automatically**: three conditions you can tick (only when the
   Mac is plugged in, not in Low Power Mode, not when the Mac is hot).
-- **Also prepare search by meaning in the background**, unticked by default.
-  When it is ticked, Fouine prepares what search by meaning needs, in short
-  stretches and under the same three conditions, once every scanned page has
-  been read. A sentence under the box says when that will happen, or, if the
-  model is not downloaded yet, where to get it.
 - **Languages of the scanned documents**: the languages expected on scanned
   pages, most likely first. They are also the languages used to write down
   recordings. Each language appears under its name, in alphabetical order, with
@@ -902,15 +869,6 @@ page exported from Notion reopens in Notion from the preview.
   **Longest recording to write down (minutes)** limits the effort (120 by
   default; beyond it, only the metadata is indexed). One page is ten minutes of
   recording, each paragraph headed by its `[mm:ss]` timestamp.
-
-### Search by meaning
-
-This tab holds the switch that turns search by meaning on, the state of the model
-(a single 220 MB download, stored on your Mac), the number of pages prepared and
-a **Prepare search by meaning…** button. When the preparation runs in the
-background (the box above ticked, the model installed, automatic updates on), the
-button is replaced by "Fouine takes care of it in the background, when the Mac
-is plugged in and idle.": the work goes on, and there is nothing to click.
 
 ### Updates
 
@@ -1017,9 +975,7 @@ list of choices known in advance.
 
 These actions read the index only, never the original file: "Get the text of a
 page" returns the text Fouine extracted or recognised, not the PDF. They index
-nothing and change nothing. Like the window's search by words, they search the
-text without search by meaning, whose model takes two seconds to load, which is
-too long for a shortcut. Only "Open in Fouine" brings the app to the front; the
+nothing and change nothing. Only "Open in Fouine" brings the app to the front; the
 other two run without disturbing anything, even when Fouine was not open.
 
 If nothing has been indexed yet, the action returns a message ("Fouine has not

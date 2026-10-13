@@ -187,26 +187,23 @@ final class SearchParametersTests: XCTestCase {
     /// params » : beaucoup de clients ne rendent au modèle que le second.
     func testLeMessageDUneEnumerationDitSesValeurs() throws {
         let object = try call(try TempIndex(),
-                              #"{"query":"electrolyse","mode":"semantic"}"#)
+                              #"{"query":"electrolyse","source":"scanne"}"#)
         let error = try XCTUnwrap(object["error"] as? [String: Any])
         XCTAssertEqual(error["message"] as? String,
-                       "Invalid params: fouine_search.mode must be one of "
-                       + "auto, lexical, hybrid")
+                       "Invalid params: fouine_search.source must be one of "
+                       + "native, ocr, transcript")
         XCTAssertEqual((error["data"] as? [String: String])?["reason"],
-                       "fouine_search.mode must be one of auto, lexical, hybrid")
+                       "fouine_search.source must be one of native, ocr, transcript")
     }
 
     /// Toute énumération du schéma porte `"type": "string"` à côté de son
     /// `enum` : c'est ce qui manquait aux clients qui valident de leur côté.
     func testChaqueEnumerationDitSonType() throws {
-        let tool = SearchTool(store: ReadOnlyStore(path: URL(fileURLWithPath: "/x")),
-                              semantic: SemanticEngine(
-                                store: ReadOnlyStore(path: URL(fileURLWithPath: "/x")),
-                                modelDirectory: URL(fileURLWithPath: "/x")))
+        let tool = SearchTool(store: ReadOnlyStore(path: URL(fileURLWithPath: "/x")))
         let properties = try XCTUnwrap(
             tool.inputSchema["properties"] as? [String: [String: Any]])
         let enums = properties.filter { $0.value["enum"] != nil }
-        XCTAssertEqual(Set(enums.keys), ["mode", "source", "fuzzy", "facet", "marks"])
+        XCTAssertEqual(Set(enums.keys), ["source", "fuzzy", "facet", "marks"])
         // `doc_year` en TÊTE, et le nom du cœur (`year`) n'est pas exposé :
         // l'année du fichier s'appelle `modified_year` pour le modèle.
         let facet = try XCTUnwrap(properties["facet"]?["enum"] as? [String])

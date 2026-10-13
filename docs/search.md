@@ -6,10 +6,9 @@ syntax.
 - [1. Query syntax](#1-query-syntax)
 - [2. What moves a page up](#2-what-moves-a-page-up)
 - [3. Typing mistakes](#3-typing-mistakes)
-- [4. Search by meaning](#4-search-by-meaning)
-- [5. Filters](#5-filters)
-- [6. Reading a result](#6-reading-a-result)
-- [7. The bench, in numbers](#7-the-bench-in-numbers)
+- [4. Filters](#4-filters)
+- [5. Reading a result](#5-reading-a-result)
+- [6. The bench, in numbers](#6-the-bench-in-numbers)
 
 ---
 
@@ -84,17 +83,14 @@ and `-`, `name:"analysis JB"` finds `IP2022__Analysis_JB_DELIVERABLE`. Several
   `name:` returns the documents themselves: one line per document, opened at its
   first page that carries text. The snippet is the file name, the totals count
   documents, and the order is name relevance, then most recent. The name banner
-  does not appear, since it would repeat the list. There is nothing to encode for
-  meaning, so the search stays lexical.
+  does not appear, since it would repeat the list.
 - With words (`name:report nitrogen`), it restricts the documents the words are
   searched in: the pages that contain "nitrogen" among the documents whose name
-  contains "report". In hybrid mode, meaning is restricted to the same
-  documents.
+  contains "report".
 
 `text:` switches the file name off. Without it, a word that also appears in a
 file's name pushes that file forward and shows the name banner. `text:report` is
-an ordinary page word (same pages, same totals, same text sent to meaning), but a
-single `text:` removes the name bonus and the banner for the whole query.
+an ordinary page word (same pages, same totals), but a single `text:` removes the name bonus and the banner for the whole query.
 `text:"ideal gas"` is an exact phrase.
 
 Curly quotes count as straight quotes. macOS replaces typed quotes with
@@ -159,7 +155,7 @@ Error: prefix too short, give at least 4 letters
 
 `AND`, `OR` and `NOT` in capitals are refused the same way, and case matters.
 They are FTS5 keywords: passed through, they would produce an SQL error and an
-exit code meaning "database corrupted" for what is only a typo.
+exit code that reads "database corrupted" for what is only a typo.
 
 ```
 $ fouine search 'polymer OR catalysis' ; echo $?
@@ -247,18 +243,17 @@ moved down.
 most of them.** Fouine requires every word on the same page, function words
 included, and that costs recall: `how to measure the heat released by a
 reaction` returns 0 pages where `the heat released by a reaction` returns 10,
-and the difference is "how" and "measure", not meaning. So when the strict search
+and the difference is "how" and "measure", not the subject. So when the strict search
 returns fewer than ten pages and the query has at least three bare words, the
 search runs again, requiring only 60 % of the words longer than three letters.
 Pages that contain every word keep the lead; the others follow, ranked as usual,
 and a line explains it: *"Few pages carry all your words: here are also the
 pages that carry most of them."*
 
-Words that carry no meaning are never required, whatever their length: about
-eighty French and English function words ("dans", "avec", "pour", "cette",
-"with", "that", "which"…) are left out of the count, on top of the three-letter
-rule. And a question with more than six meaningful words keeps the six longest
-instead of giving up: a question in plain language often has seven or eight, and
+Function words are never required, whatever their length: about eighty French
+and English ones ("dans", "avec", "pour", "cette", "with", "that", "which"…)
+are left out of the count, on top of the three-letter rule. And a question with
+more than six remaining words keeps the six longest instead of giving up: a question in plain language often has seven or eight, and
 that is exactly where the strict AND fails.
 
 Some queries stay strict: a quoted phrase, a `near:`, a `*` prefix, a `-word`
@@ -271,13 +266,6 @@ must contain. When the strict search returns ten pages or more, nothing changes,
 not even one extra query. There is no setting in the app; `--no-quorum` disarms
 it.
 
-Search by meaning does not disarm it either. The merge uses the same lexical
-channel, so `fouine search --hybrid` reports the quorum like a full-text search:
-`quorum: true` in JSON, and the same line on standard error. `--no-quorum`
-covers both modes. The quorum was judged on full-text results (see the bench
-below); in hybrid mode it still has to be judged on a fully vectorised corpus,
-which is why this convention can be reversed.
-
 A result that comes from the loosened pass is not presented as exact: its "why
 this result" says *partial* and lists the words the excerpt shows, without
 concluding that the others are missing, since an excerpt proves no absence.
@@ -286,7 +274,7 @@ A bench of 42 queries and 963 human relevance judgements settles which of these
 rules earn their place. The quorum gains 0.031 nDCG@10 with no query made worse.
 The contents-page demotion gains 0.021, and 0.101 on prefix queries. Diversity
 costs 0.010 on pages and gains 0.065 on documents, which is the number the app
-shows. Morphology is the clearest win of full-text search, 0.744 against 0.703.
+shows. Morphology is the clearest win, 0.744 against 0.703.
 The typed-form rule is inside the noise, and is kept because it is defensible,
 not because it was measured. Every figure, its paired test and the reservations
 that go with it are in "the bench, in numbers", at the end of this page.
@@ -352,226 +340,11 @@ spelling, and the command line prints *"some results carry a close spelling of
 your word, not the word itself — see why.found"*.
 
 Results from the fallback all carry a distance, so they are close spellings
-rather than the words you asked for. In hybrid mode the fallback applies to the
-lexical channel and the flag travels through the merge, so all three surfaces
-report the same thing in both modes.
+rather than the words you asked for.
 
 ---
 
-## 4. Search by meaning
-
-Besides exact and fuzzy matching, Fouine can search by meaning: "catalyst
-selectivity" finds a page about *regioselectivity* that shares not one word with
-it.
-
-Each page is cut into windows of 1 400 characters, and each window is summarised
-as a 384-dimension vector by a local multilingual model (`multilingual-e5-small`,
-converted to CoreML; nothing leaves the machine), quantised to 384 bytes. A
-`--hybrid` query then merges two rankings by RRF (reciprocal rank fusion): the
-usual FTS5 lexical ranking, and the pages closest to the query's vector. The
-`folder:`, `ext:` and exclusion filters apply to both channels, and a purely
-semantic result is marked as such.
-
-A page has up to three windows, at characters `[0, 1400)`, `[1300, 2700)` and
-`[2600, 4000)`, with 100 characters of overlap so that no sentence is cut in both
-windows at once. On the reference corpus this covers 97.4 % of the text for 2.13
-inferences per page; beyond 4 000 characters (4.9 % of pages) the rest is not
-vectorised. A page never takes three places in the ranking: the index folds its
-windows back onto the page and keeps the best one.
-
-In the app, words come first and meaning second. The lexical channel runs alone
-and its results appear, then the merge starts. In between, the count line shows a
-spinner and "searching by meaning…", and "Load more" is unavailable. When the
-merge arrives, it replaces the list: RRF re-ranks, which is its purpose. The
-lexical channel therefore runs twice, once for the immediate display and once
-inside the merge. That is one more FTS5 query, a few milliseconds, against
-several seconds in front of an empty screen. The command line and the assistant
-server have nothing to show in between, so they work as before.
-
-A quoted phrase does not use meaning. The semantic channel has no quotes: it
-compares vectors, and a page about the same subject entered the ranking without
-containing the phrase, four results out of ten on the bench's exact-phrase
-queries. `"ideal gas"` therefore returns exactly what full-text search returns,
-and each surface says so: `meaning search not used: the query asks for an exact
-phrase` on the command line, with `hybrid: false` and `hybrid_disarmed:
-"exact_phrase"` in JSON; "Meaning is not used when you ask for an exact
-phrase." under the field in the app, where the switch stays as it is.
-
-Semantic ranks are scaled back to the whole corpus. Until a `fouine embed`
-campaign has vectorised everything, the semantic channel compares only part of
-the pages. A page ranked first among a sixth of the corpus is not first among all
-of them, so the merge multiplies its rank by `indexed pages / vectors` before
-combining. The scale is 1 once everything is vectorised. `--raw-semantic-ranks`
-disarms it, and the JSON publishes `semantic_rank_scale`. Judged on the bench,
-the scale helps: 0.587 nDCG@10 against 0.560 without it, and it helps most where
-full-text search was already enough, which is what it is for.
-
-### What hybrid search is worth
-
-Judged on 42 queries and 790 relevance ratings, against full-text search:
-
-| | queries | full text | hybrid | difference |
-|---|---:|---:|---:|---:|
-| full text returned **ten** results | 32 | **0.693** | 0.656 | **−0.037** |
-| it returned **fewer than ten**, absurd queries aside | 5 | 0.104 | **0.603** | **+0.499** |
-| the five **absurd** queries | 5 | 0.000 | 0.126 | +0.126 (noise) |
-
-The overall gain of hybrid search comes from five queries, the ones where
-full-text search returned nothing or almost nothing. **Everywhere else it makes
-things worse.** Of the 420 results hybrid search returned, the 72 that contain no
-word of the query are rated irrelevant 93 % of the time, and none of them is
-rated "what I needed". A page that answers without sharing a single word with
-the query does not exist in that corpus.
-
-That is why "Also search by meaning" is off by default, and why `--hybrid` is
-explicit on the command line. The semantic channel is most dangerous where
-full-text search is safest: on a technical term outside the small model's
-vocabulary, it offers pages about a similarly spelled subject.
-
-### What the cosine does not say
-
-A semantic result is shown with a margin, not with a cosine:
-
-```
-• [318] …/Wade.pdf p.261 — rrf 0.0164 · sem#1 z+4.7
-```
-
-`z+4.7` means: *this page is 4.7 standard deviations above the average page of
-the corpus, for this query*. The raw cosine stays in the JSON (`cosine`) and is
-shown nowhere, because it misleads. Measured on 64 872 vectors, every cosine of
-this model falls between 0.78 and 0.88, and the position inside that band
-follows the *shape* of the query more than its subject. A "cos 0.85" badge reads
-as "85 % relevant", and it does not mean that.
-
-Every search publishes the statistics of its own population in the JSON
-(`semantic_stats`: `mu`, `sigma`, `cos_max`, `z_max`, `z_at_10`, `z_at_200`,
-`scanned`, `zero_vectors`), so calibration needs no guessing.
-
-> **There is no threshold, and that is a measurement result.** The obvious idea
-> is to keep a semantic result only above a margin. Twelve control queries, six
-> out of domain and six relevant, were replayed on a real index: the margin
-> separates them backwards. An out-of-domain query is far from everything, so its
-> mean is low and its best neighbour stands out by +4.5 to +7.7 σ; a relevant
-> query is close to the whole corpus, so the mean is high and its best neighbour
-> exceeds it by only +3.9 to +4.7 σ. A floor would first cut into the queries the
-> channel serves best. The mechanism exists (`--vec-floor <z>`, 0 by default,
-> disarmed) until a statistic separates the two. Judged on the bench, a +4 σ
-> floor changes six queries out of 42 for a net −0.008, and on the one query
-> where the semantic channel really helped, it truncated the list and cut the two
-> pages that answered.
-
-> So a sentence replaces the filter. The next idea was to drop
-> "hallucinated" results on the raw cosine: above 0.82 with no lexical anchor,
-> hide them. The measurements rule it out. The five absurd queries spread from
-> 0.7975 to 0.8517, and perfectly relevant queries fall in the same band. A
-> threshold at 0.82 would remove one and let three absurd ones through. One thing
-> does hold: the five absurd queries have no lexical page, though two legitimate
-> paraphrases have none either. So when the full-text channel found nothing and
-> results come out anyway, the app shows "None of your words appears in your
-> documents: these results are suggested by meaning only", and the command line
-> and the assistant server put the same sentence in `note`. You judge; nothing
-> is hidden.
->
-> There are two sentences, not one. "No lexical page" means "no page contains
-> them all", which is not the same as "none of your words exists". A nine-word
-> question restricted to one folder can have one of its words in 22 documents of
-> that very folder. So the search checks which of the typed words the index
-> contains, and in that case shows "Your words are in your documents, but never
-> together on the same page" instead; the command line and the assistant server
-> name them: `(words present: reactor, residence)`. The first sentence is kept
-> for the case it describes, where nothing you typed exists at all.
-
-### Coverage
-
-The `fouine embed` campaign is incremental, so the semantic channel often sees
-only part of the corpus. Search reports it, because a hybrid result drawn from
-16 % of the pages does not mean the same as one drawn from all of them:
-
-```
-$ fouine search 'catalysis' --hybrid
-fouine: warning — semantic channel covers 16.6 % of the pages (64872 / 390114) — hybrid results are drawn from that subset; `fouine embed` extends it
-```
-
-The warning appears only under 50 % coverage. The JSON carries the same numbers
-(`vectors`, `pages_indexed`, `semantic_coverage_pct`), and the app shows "·
-meaning search sees only 64 872 pages out of 390 114" next to its counts.
-
-Coverage follows the filter. A campaign fills the index in the order it found the
-documents, so one folder can be fully vectorised while another has nothing at
-all. Measured on a real index: 73 % on one root, 0 % on a second. A global
-percentage then describes the corpus and not the search: a hybrid search
-restricted to the second folder would compare no vector at all while announcing
-68 % coverage. The assistant server (`fouine_search`) and the command line
-(`fouine search --hybrid`, `--hybrid-auto`) therefore compute coverage for the
-scope actually searched (`semantic_scope`: pages in scope, how many are
-vectorised, and whether a filter narrowed it). A scope without a single vector
-does not even load the model: the answer comes back as full-text, says so, and
-names the command that would prepare that folder. Counting costs a few
-milliseconds, and nothing at all when no document filter applies.
-
-### Getting started
-
-Install the model once:
-
-```sh
-fouine model download
-```
-
-The model is 220 MB, downloaded only when you ask, from the project's releases
-page, and checked against its SHA-256 before installation. The command states
-what it will contact before it connects. `fouine model status` shows what is
-installed, and `fouine model remove` deletes it. See [privacy](privacy.md).
-
-The app does the same without a terminal: ⌘, ▸ **Search by meaning** ▸
-**Download the model (220 MB)…**. A sheet first lists what will be contacted,
-what will be sent and what will be checked, and nothing happens until you click
-Download.
-
-> **Mac offline?** Copy the `e5-small-v1.zip` archive from another machine,
-> then run
-> `FOUINE_MODEL_URL=file:///Volumes/USB/e5-small-v1.zip fouine model download`.
-> No connection is opened.
-
-Then produce the vectors. Run the command as many times as needed, since the
-campaign is incremental and can resume:
-
-```sh
-fouine embed                    # until done; Ctrl-C stops cleanly
-fouine embed --budget-minutes 60
-fouine embed --status           # vector coverage
-fouine search 'catalysis' --hybrid
-```
-
-The background agent can also do it, ten minutes at a time, when the Mac is
-plugged in and idle, if **Also prepare search by meaning in the background** is
-ticked in Settings ▸ Indexing (it is unticked by default; see
-[the agent](agent.md)). Vectors follow the life of the index: a page that is
-extracted or recognised again is vectorised again at the next `embed` pass.
-
-### Limits worth knowing
-
-- The model is 220 MB and has to be downloaded. It is not bundled, because
-  everyone would pay for its size, including people who never search by meaning.
-- The scan is exhaustive, with no vector index. That is fast at the measured
-  scale (about 6 ms over 363 058 vectors), but it is linear: on a corpus ten
-  times larger it will show.
-- The window is the unit that is vectorised, and the page is the unit that is
-  shown. Beyond 4 000 characters the rest of the page is not vectorised at all,
-  and a page that covers several subjects is poorly served by a window: the cut
-  is mechanical, and follows neither paragraphs nor sections.
-- The semantic channel always returns results. It returns its best pages even
-  when the query has nothing to do with the corpus. The lexical channel returns
-  zero when nothing matches, which is worth keeping: in hybrid mode, `lexical: 0
-  page(s)` in the header means that everything that follows comes from vector
-  proximity alone.
-- Command line against resident server: hybrid search on the command line loads
-  the engine at every call, while the assistant server and the app keep the
-  model and the index in memory. Measured, that is about 1.1 s per call against
-  0.39 s for the second call in a server.
-
----
-
-## 5. Filters
+## 4. Filters
 
 The app computes five facets, plus Dated when results carry a date of their own,
 and shows the first twelve values of each. Two of them, Modified in and Dated,
@@ -633,15 +406,14 @@ removes them all.
 
 ---
 
-## 6. Reading a result
+## 5. Reading a result
 
 The percentage in front of a line is relative. `fouine search` prints `100 %`,
 `86 %`, `81 %`: each result's score as a share of the best one in that answer.
 It means nothing absolute. 100 % means "nothing here scores higher", never "this
 is the answer", and the same page can be 100 % for one query and 40 % for
 another. The assistant server and `search --json` return the same number
-(`relevance_pct`), from one shared computation, on the fused score in hybrid mode
-so that a page found by meaning alone has one too. When the quorum has widened a
+(`relevance_pct`), from one shared computation. When the quorum has widened a
 search, the pages that contain every word stay at the top of the list even if
 another scores higher.
 
@@ -681,12 +453,9 @@ the reason the page is there:
 | all your words are on the page | "Found because this page contains “kinetics” and “chemistry”." |
 | only some of them | "Found because this page contains “energy”; “free” is not on it." |
 | a close spelling | "Found with a close spelling: “converslon” → “conversion”." |
-| none of your words, meaning alone | "None of your words is on this page, but it deals with the same subject." |
-| both channels | "Found by your words and by meaning." |
 
-The line shows no number: neither the distance of the variant nor the margin in
-standard deviations. Most people do not read standard deviations, and "≈2" says
-no more than "a close spelling"; the tooltips of the `≈` badge keep the figures
+The line shows no number: "≈2" says no more than "a close spelling", and the
+tooltips of the `≈` badge keep the figures
 for anyone who wants them. The words quoted are yours, inside the quotation
 marks of your language, and an excluded term is never named, since that would
 show exactly what you asked to leave out.
@@ -717,11 +486,10 @@ without it.
 
 ---
 
-## 7. The bench, in numbers
+## 6. The bench, in numbers
 
-None of the settings above (a floor, a weight, a depth) can be decided without
-human judgements. The tooling lives in
-[`Tools/ranking/`](../Tools/ranking/README.md). `pool.py` runs a set of queries
+None of the ranking rules above can be decided without human judgements. The
+tooling lives in [`Tools/ranking/`](../Tools/ranking/README.md). `pool.py` runs a set of queries
 against several configurations and pools the results into a sheet to annotate.
 `annotate.py` collects the ratings at the terminal (one keystroke per page, with
 the text of the page in front of you). `evaluate.py` computes nDCG@10, P@10 and
@@ -736,44 +504,6 @@ multi-word questions, OCR typos, and five deliberately absurd ones), rated 0
 contents-page demotion were read on 11/09/2026. **A candidate nobody has judged
 counts as 0**, which is why a new ranking has to be pooled and judged again
 before its figures can be trusted.
-
-### Hybrid against full text (09/09/2026, 790 judgements)
-
-| | queries | full text | hybrid | difference |
-|---|---:|---:|---:|---:|
-| full text returned **ten** results | 32 | **0.693** | 0.656 | **−0.037** (13 gains, 18 losses) |
-| it returned **fewer than ten**, absurd aside | 5 | 0.104 | **0.603** | **+0.499** |
-| the five **absurd** queries | 5 | 0.000 | 0.126 | +0.126 (noise) |
-
-Page by page, hybrid search brings in 236 pages (123 of them rated 0) and pushes
-out 147 (42 of them rated 2): 99 more off-topic pages than it removes, for 17
-more pages rated "what I needed". That is why meaning is off by default. Since
-these figures were measured, the fuzzy fallback has made full-text search answer
-more often, and the five queries that carried the whole gain are exactly those
-where the lexical channel returned nothing. The comparison therefore has to be
-run again on a newer pool.
-
-### Putting semantic ranks back on the corpus scale
-
-| | nDCG@10 | per document | MRR | exact phrases | single terms | paraphrases | multi-word |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| `hybrid` (scaled, shipped) | **0.587** | **0.624** | **0.779** | **0.574** | **0.585** | 0.489 | 0.726 |
-| `hybrid-raw` (no scaling) | 0.560 | 0.593 | 0.689 | 0.441 | 0.503 | **0.507** | **0.744** |
-
-The scaling helps, and helps most where full text was already enough, which is
-what it is for. One nuance: `hybrid-raw` is better on paraphrases and on
-multi-word questions. The shipped setting is defensible, not dominant.
-`--raw-semantic-ranks` gives the other one back.
-
-### A margin floor cuts the wrong queries
-
-A +4 σ floor changes 6 queries out of 42 for a net −0.008, and on the one query
-where meaning really helped, it truncated the list and cut the two pages that
-answered. Twelve control queries explain why: an out-of-domain query is far from
-everything, so its best neighbour stands out by +4.5 to +7.7 σ, while a relevant
-query is close to the whole corpus and its best neighbour exceeds the mean by
-only +3.9 to +4.7 σ. The mechanism stays (`--vec-floor`, 0 by default,
-disarmed) until a statistic separates the two.
 
 ### The two ranking rules, judged then armed (11/09/2026)
 
@@ -791,10 +521,3 @@ The demotion pays off most on prefix queries, +0.101, the clearest case being
 ten, and the four pages about the subject move up. Its one real loss is
 `chromato*` (−0.103): the IUPAC Compendium glossary, with short entries,
 cross-references and trailing page numbers, has the shape of an index.
-
-Also measured on 11/09/2026: on prefix queries, hybrid search is well below
-lexical search (0.441 against 0.618) because bibliography pages attract the
-semantic channel. They concentrate the vocabulary of a field without saying
-anything about it (for `chromato*`, the first four ranks are reference lists
-where "J. Chromatogr." recurs). A demotion for reference pages, of the same kind
-as the one for contents pages, has not been evaluated yet.

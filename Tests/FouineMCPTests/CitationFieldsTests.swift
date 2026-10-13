@@ -1,6 +1,6 @@
 // CitationFieldsTests.swift — ce qu'une citation doit dire (lot MC2) :
-// `time_seconds`, `slide`, `embedded_image`, `relevance_pct`, `semantic_scope`,
-// et la description qui pose la réserve.
+// `time_seconds`, `slide`, `embedded_image`, `relevance_pct`, et la
+// description qui pose la réserve.
 // SPDX-License-Identifier: LicenseRef-Fouine-Source-Available
 //
 // TROIS CORPUS RENDAIENT LA PHRASE DE CITATION FAUSSE (PM-30) : « page 170 »
@@ -12,7 +12,6 @@ import Foundation
 import XCTest
 import GRDB
 import FouineCore
-import FouineEmbed
 import FouineMCPKit
 @testable import FouineMCP
 
@@ -105,7 +104,7 @@ final class CitationFieldsTests: XCTestCase {
     func testUnDiaporamaDistingueSesDiapositivesDeSesImages() throws {
         let fixture = try mixedIndex()
         let hits = try hits(try payload(fixture.index,
-            #"{"query":"reacteur","limit":10,"mode":"lexical"}"#))
+            #"{"query":"reacteur","limit":10}"#))
         var byPage: [Int: [String: Any]] = [:]
         for hit in hits where (hit["doc_id"] as? Int64) == fixture.deck {
             byPage[hit["page"] as? Int ?? -1] = hit
@@ -129,7 +128,7 @@ final class CitationFieldsTests: XCTestCase {
     func testChaqueHitPorteSaPertinenceRelative() throws {
         let fixture = try mixedIndex()
         let hits = try hits(try payload(fixture.index,
-            #"{"query":"reacteur","limit":10,"mode":"lexical"}"#))
+            #"{"query":"reacteur","limit":10}"#))
         XCTAssertEqual(hits.compactMap { $0["relevance_pct"] as? Int }.max(), 100,
                        "le mieux classé de la réponse est la référence")
         XCTAssertTrue(hits.allSatisfy {
@@ -138,77 +137,10 @@ final class CitationFieldsTests: XCTestCase {
         })
     }
 
-    // MARK: - Périmètre du sens (PM-06)
-
-    /// Sans vecteur ni filtre, le périmètre est l'index entier — et la clé est
-    /// là quand même : c'est ce qui permet à un modèle de savoir que la
-    /// couverture qu'il lit décrit bien ce qu'il a cherché.
-    func testLePerimetreEstToujoursPublie() throws {
-        let payload = try payload(try TempIndex(vectorisedPages: 2),
-                                  #"{"query":"electrolyse","limit":1}"#)
-        let scope = try XCTUnwrap(payload["semantic_scope"] as? [String: Any])
-        XCTAssertEqual(scope["pages"] as? Int, 6)
-        XCTAssertEqual(scope["vectorised"] as? Int, 2)
-        XCTAssertEqual(scope["filtered"] as? Bool, false)
-        XCTAssertEqual((payload["semantic_coverage_pct"] as? NSNumber)?.doubleValue,
-                       33.33)
-    }
-
-    /// LE CAS DU CONSTAT : le dossier demandé n'a aucun vecteur. La couverture
-    /// rendue est la SIENNE (0 %), pas la globale, et `filtered` le dit.
-    func testUnPerimetreSansVecteurRendSaProprePart() throws {
-        let index = try TempIndex(vectorisedPages: 2, roots: ["Livres", "M2SU"])
-        let store = GRDBStore()
-        try store.open(at: index.databaseURL)
-        let cours = try store.upsertDoc(DocRecord(
-            volUUID: "TEST-VOL", relPath: "Users/essai/M2SU/cours.pdf",
-            ext: "pdf", topFolder: "M2SU", size: 1_000, mtime: 1_700_000_000))
-        try store.setPageCount(cours, 1)
-        try store.replacePages(docID: cours, pages: [
-            PageText(page: 1, text: "electrolyse et enthalpie du cours",
-                     source: .native),
-        ])
-        try store.setDocState(cours, .extracted, err: nil)
-        store.releaseWriteLock()
-
-        let payload = try payload(index,
-            #"{"query":"electrolyse","folder":"M2SU","limit":5}"#)
-        let scope = try XCTUnwrap(payload["semantic_scope"] as? [String: Any])
-        XCTAssertEqual(scope["filtered"] as? Bool, true)
-        XCTAssertEqual(scope["vectorised"] as? Int, 0)
-        XCTAssertEqual(scope["pages"] as? Int, 1)
-        XCTAssertEqual((payload["semantic_coverage_pct"] as? NSNumber)?.doubleValue, 0,
-                       "et non 33,33 % : la couverture globale ne décrit pas "
-                       + "ce dossier")
-    }
-
-    /// La phrase et la raison publiée quand le périmètre n'a pas un vecteur.
-    /// Le modèle n'est PAS chargé — c'est tout l'intérêt — donc la base de ce
-    /// test n'en a pas besoin pour éprouver le texte.
-    func testLaPhraseDuPerimetreSansVecteurNommeLeGeste() throws {
-        let scope = SemanticScope(vectors: 0, pagesIndexed: 31_986, filtered: true)
-        let note = try XCTUnwrap(SearchTool.noVectorsInScopeNote(
-            scope, disarmed: .noVectorsInScope, folders: ["M2SU"]))
-        XCTAssertEqual(note, "no vectorised page in this scope (folder M2SU: 0 of "
-                       + "31986) — `fouine embed --folder M2SU` prepares it")
-        XCTAssertNil(SearchTool.noVectorsInScopeNote(scope, disarmed: nil,
-                                                     folders: ["M2SU"]),
-                     "aucune phrase quand le sens a bien servi")
-        // MÊME TEXTE QUE LA LIGNE DE COMMANDE, et c'est la même fonction depuis
-        // le lot MN1 : le serveur n'en garde que la garde.
-        XCTAssertEqual(note, SemanticDisarmReason.noVectorsInScopeNote(
-            scope, folders: ["M2SU"]))
-        XCTAssertEqual(SemanticDisarmReason.noVectorsInScope.rawValue,
-                       "no_vectors_in_scope")
-    }
-
     // MARK: - La description (PM-29, PM-30)
 
     func testLaDescriptionDitToutTeLaSyntaxeEtLaReserveDeCitation() throws {
-        let tool = SearchTool(store: ReadOnlyStore(path: URL(fileURLWithPath: "/x")),
-                              semantic: SemanticEngine(
-                                store: ReadOnlyStore(path: URL(fileURLWithPath: "/x")),
-                                modelDirectory: URL(fileURLWithPath: "/x")))
+        let tool = SearchTool(store: ReadOnlyStore(path: URL(fileURLWithPath: "/x")))
         for fragment in ["nom:X", "texte:X", "chemin:X", "-dossier:", "-ext:",
                          "-nom:", "-chemin:", "pres:5", "slide", "time_seconds"] {
             XCTAssertTrue(tool.description.contains(fragment),

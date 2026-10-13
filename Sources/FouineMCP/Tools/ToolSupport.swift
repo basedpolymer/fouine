@@ -96,14 +96,6 @@ enum ToolSupport {
         NSDecimalNumber(string: String(format: "%.\(places)f", value))
     }
 
-    /// Pourcentage de couverture sémantique. Passe par le POINT UNIQUE des
-    /// pages vectorisées (`ReadOnlyStore.vectorisedPageCount`).
-    static func coveragePercentage(vectorisedPages: Int,
-                                   indexedPages: Int) -> NSDecimalNumber {
-        decimal(indexedPages > 0
-                ? Double(vectorisedPages) * 100 / Double(indexedPages) : 0)
-    }
-
     // MARK: - Étiquettes
 
     static func source(_ value: PageSource) -> String {

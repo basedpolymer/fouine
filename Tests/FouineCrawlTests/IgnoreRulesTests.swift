@@ -289,17 +289,15 @@ final class IgnoreRulesCrawlTests: XCTestCase {
         try real.replacePages(docID: doc.id,
                               pages: [PageText(page: 0, text: "azote et catalyse",
                                                source: .native)])
-        let pageRowID = Schema.ftsRowID(docID: doc.id, page: 0)
-        try real.upsertVectors([(rowid: Schema.vecRowID(pageRowID: pageRowID, chunk: 0),
-                                 vec: Data(repeating: 1, count: 384))])
-        XCTAssertEqual(try real.vectorCount(), 1)
+        XCTAssertEqual(try real.indexedPageCount(), 1)
 
         try Data("*.txt\n".utf8)
             .write(to: corpus.appendingPathComponent(IgnoreRules.fileName))
         let second = try crawler.crawl(rootID: rootID, mode: .delta, store: real)
         XCTAssertEqual(second.removed, 1)
         XCTAssertTrue(try real.docs(underRoot: rootID).isEmpty)
-        XCTAssertEqual(try real.vectorCount(), 0)
+        XCTAssertEqual(try real.indexedPageCount(), 0,
+                       "le texte de la page part avec le document")
     }
 }
 

@@ -14,14 +14,14 @@
 //     touchées par aucune passe d'indexation : la sérialisation de SQLite (WAL
 //     + `busy_timeout` 5 000 ms, §5.1) suffit, et c'est ce qu'elle sait faire.
 //
-//     Vérifié contre `EmbedRun` : sa boucle `patiently` ne réessaie que sur
+//     Vérifié contre les boucles de reprise : `patiently` ne réessaie que sur
 //     `WriteLock.isBusy`, c'est-à-dire sur le message exact de `flock`
 //     (`ExclusiveLock.acquire`). Une écriture d'état d'agent ne produit jamais
 //     ce message — elle ne touche pas `fouine.lock` —, elle ne peut donc pas
 //     entrer dans cette boucle d'attente. Reste la contention SQLite pure : une
 //     transaction de quelques centaines de microsecondes toutes les 2 s, contre
-//     un `busy_timeout` de 5 s ; le cas où elle ferait attendre la pompe à
-//     vecteurs plus d'un battement de cil n'existe pas.
+//     un `busy_timeout` de 5 s ; le cas où elle ferait attendre une passe
+//     d'indexation plus d'un battement de cil n'existe pas.
 //
 //   · `repriorizeOCRQueue`, elle, PREND le verrou : c'est un `UPDATE ocr_queue`,
 //     donc une écriture d'indexation au sens plein, sur la table que la pompe
@@ -57,10 +57,6 @@ public struct AgentStatusRecord: Sendable, Equatable {
     /// vol jusqu'à l'expiration des cinq minutes.
     public enum Phase: String, Sendable, CaseIterable {
         case idle, crawl, extract, ocr, waiting, stopped
-        /// La campagne de vecteurs menée par l'agent (lot AG1, PR-21). Elle
-        /// vient APRÈS l'OCR : une page vectorisée avant sa reconnaissance le
-        /// serait deux fois (`completeOCR` invalide ses vecteurs).
-        case preparingMeaning = "preparing_meaning"
 
         /// Ce que le journal de l'agent et `fouine status` impriment. La barre
         /// latérale de l'app, elle, part du CAS (`AgentPhaseText`).
@@ -72,7 +68,6 @@ public struct AgentStatusRecord: Sendable, Equatable {
             case .ocr:     return "text recognition (OCR)"
             case .waiting: return "waiting"
             case .stopped: return "stopped"
-            case .preparingMeaning: return "preparing search by meaning"
             }
         }
     }

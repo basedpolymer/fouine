@@ -21,7 +21,6 @@ struct SheetHost: View {
         switch app.sheet {
         case .some(.indexing): IndexingSheet()
         case .some(.ocrPrompt): OCRPromptSheet()
-        case .some(.prepareMeaning): PrepareMeaningSheet()
         case .some(.uninstall): UninstallSheet()
         case .some(.unknownDocument(let path, let canOpen)):
             UnknownDocumentSheet(path: path, canOpen: canOpen)
@@ -57,11 +56,7 @@ struct IndexingSheet: View {
                     ProgressView { Text(app.indexing.phase) }
                         .progressViewStyle(.linear)
                 }
-                // Les compteurs sont ceux d'une passe d'extraction : « 0
-                // extrait · 0 page · 0 page scannée à lire » sous une
-                // préparation ne dit rien, et fait douter que quelque chose
-                // avance.
-                if app.indexing.activity != .preparingMeaning { countersRow }
+                countersRow
             } else {
                 if let summary = app.indexing.summary {
                     Label(summary, systemImage: app.indexing.cancelled
@@ -210,69 +205,3 @@ struct OCRPromptSheet: View {
     }
 }
 
-/// « Préparer la recherche par le sens » (UX-12) : ce que ça fait, où on en
-/// est, ce que ça coûte, et combien de temps on y consacre.
-///
-/// Le pendant exact d'`OCRPromptSheet`, et pour la même raison : un travail de
-/// plusieurs heures qui monopolise la machine ne se lance pas d'un bouton sans
-/// que rien n'ait été dit. Les deux phrases qui comptent sont « rien ne quitte
-/// ce Mac » — c'est la question que pose un traitement nommé « par le sens » —
-/// et « vous pouvez arrêter et reprendre », qui est ce qui rend le geste sans
-/// risque.
-struct PrepareMeaningSheet: View {
-    @EnvironmentObject private var app: AppModel
-
-    /// 30 minutes par défaut, comme l'OCR (A2-07) : la campagne complète se
-    /// compte en dizaines d'heures sur un corpus réel, et un bouton radio
-    /// pré-sélectionné n'a pas à décider de bloquer la machine pour la nuit.
-    static let defaultBudgetMinutes = 30
-
-    @State private var budget: Int = PrepareMeaningSheet.defaultBudgetMinutes
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Label("Prepare search by meaning", systemImage: "wand.and.stars")
-                .font(.title3.weight(.semibold))
-
-            Text("Fouine reads every page once more to make search by meaning possible. Nothing leaves this Mac.")
-                .font(.callout)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if let meaning = app.meaning {
-                Text("\(Format.integer(meaning.ready)) of \(Format.integer(meaning.total)) pages are ready")
-                    .font(.callout)
-                    .monospacedDigit()
-                if let hours = meaning.remainingHours {
-                    Text(verbatim: IndexStatusText.workload(hours: hours))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Text("It keeps the Mac busy for a while: plug it in. You can stop at any time and resume later.")
-                .font(.callout)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Picker("Stop after", selection: $budget) {
-                Text("30 minutes").tag(30)
-                Text("2 hours").tag(120)
-                Text("when everything is ready").tag(0)
-            }
-            .pickerStyle(.radioGroup)
-
-            HStack {
-                Spacer()
-                Button("Later", role: .cancel) { app.sheet = nil }
-                Button("Prepare") {
-                    app.startPrepareMeaning(budgetMinutes: budget == 0 ? nil : budget)
-                }
-                .keyboardShortcut(.defaultAction)
-            }
-        }
-        .padding(20)
-        .frame(width: 460)
-        // Les comptes affichés ici décident de ce que l'utilisateur lance : ils
-        // doivent être frais, pas hérités du démarrage (audit A10.5).
-        .task { await app.refreshMeaningReadiness() }
-    }
-}

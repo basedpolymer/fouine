@@ -35,11 +35,11 @@ final class GoldenTranscriptTests: XCTestCase {
     /// explicite — un fichier ajouté et jamais nommé ici ne serait jamais
     /// rejoué, et le second test le vérifie dans les deux sens.
     ///
-    /// La base fait partie du contrat : `search-hybrid-fallback` n'a de sens
-    /// que sur une base qui porte des VECTEURS sans modèle installé, et
-    /// `read-page-offset` que sur des pages assez longues pour être coupées.
-    /// Les nommer ici plutôt que dans le fichier `.jsonl` garde la
-    /// transcription lisible comme une séance, ce qu'elle est.
+    /// La base fait partie du contrat : `read-page-offset` n'a de sens que sur
+    /// des pages assez longues pour être coupées, `list-documents-failed` que
+    /// sur une base qui porte un échec. Les nommer ici plutôt que dans le
+    /// fichier `.jsonl` garde la transcription lisible comme une séance, ce
+    /// qu'elle est.
     private static let transcripts: [(name: String, index: () throws -> TempIndex)] = [
         ("initialize", { try TempIndex() }),
         ("discover", { try TempIndex() }),
@@ -48,10 +48,8 @@ final class GoldenTranscriptTests: XCTestCase {
         ("bad-json", { try TempIndex() }),
         ("bad-version", { try TempIndex() }),
         ("search-lexical", { try TempIndex() }),
-        ("search-hybrid-fallback", { try TempIndex(vectorisedPages: 2) }),
         ("read-page", { try TempIndex() }),
         ("read-page-offset", { try TempIndex(pageChars: 600) }),
-        ("similar-no-vector", { try TempIndex(vectorisedPages: 2) }),
         ("list-documents", { try TempIndex() }),
         ("list-documents-failed",
          { try TempIndex(failedDocuments: 1, skippedDocuments: 1) }),
@@ -116,25 +114,21 @@ final class GoldenTranscriptTests: XCTestCase {
     /// n'est pas cosmétique — le modèle recopie ce nombre tel quel dans sa
     /// phrase à l'utilisateur. Relevé sur la base de production avant
     /// correction, d'où ce test.
-    func testCoverageIsWrittenAsAReadableDecimal() throws {
-        // 2 vecteurs sur 6 pages = 33,333… %, la valeur la plus hostile qui soit.
-        let index = try TempIndex(vectorisedPages: 2)
+    func testADecimalIsWrittenAsAReadableNumber() throws {
+        let index = try TempIndex()
         let server = try index.makeServer()
         let response = try XCTUnwrap(server.handle(Data(
             #"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"fouine_status","arguments":{"include_agent":false}}}"#.utf8)))
         let text = String(decoding: response, as: UTF8.self)
-
-        XCTAssertTrue(text.contains(#""vector_coverage_pct":33.33"#),
-                      "pourcentage illisible dans la réponse : \(text)")
-        XCTAssertFalse(text.contains("33.329999"), "dix-sept chiffres significatifs")
-        // Et la valeur reste un NOMBRE JSON, pas une chaîne : `outputSchema`
-        // annonce `"type": "number"`.
+        XCTAssertFalse(text.contains("9999999"),
+                       "dix-sept chiffres significatifs dans la réponse : \(text)")
+        // Et le ratio du budget reste un NOMBRE JSON, pas une chaîne :
+        // `outputSchema` annonce `"type": "number"`.
         let payload = try JSONMatch.object(response)
         let structured = ((payload["result"] as? [String: Any])?["structuredContent"]
                            as? [String: Any]) ?? [:]
-        let coverage = try XCTUnwrap(structured["vector_coverage_pct"] as? NSNumber)
-        XCTAssertEqual(coverage.doubleValue, 33.33, accuracy: 0.001)
-        XCTAssertEqual(structured["vectors"] as? Int, 2)
+        let budget = try XCTUnwrap(structured["disk_budget"] as? [String: Any])
+        XCTAssertNotNil(budget["ratio_now"] as? NSNumber)
     }
 
     // MARK: - Lecture des fichiers

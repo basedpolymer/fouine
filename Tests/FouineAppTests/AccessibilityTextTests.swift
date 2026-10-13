@@ -113,31 +113,21 @@ final class AccessibilityTextTests: XCTestCase {
     // MARK: - Lignes de résultat
 
     /// L'insigne « ≈ » et le pictogramme de provenance étaient purement
-    /// visuels : ce sont ces trois phrases qui les remplacent.
+    /// visuels : ce sont ces deux phrases qui les remplacent.
     func testLibelleDeResultatSelonLeCanal() {
         let exact = AccessibilityText.hitLabel(
             fileName: "Clayden.pdf", page: 247, source: .native, engine: .none,
-            semanticOnly: false, fuzzyDistance: 0)
+            fuzzyDistance: 0)
         XCTAssertEqual(exact,
                        "Clayden.pdf, page 247, typed text, "
                        + "found by exact search")
 
         let flou = AccessibilityText.hitLabel(
             fileName: "scan.pdf", page: 12, source: .ocrAccurate,
-            engine: .vision, semanticOnly: false, fuzzyDistance: 2)
+            engine: .vision, fuzzyDistance: 2)
         XCTAssertEqual(flou,
                        "scan.pdf, page 12, scanned, recognised by Fouine, "
                        + "approximate result, close spelling, 2 letters apart")
-
-        // Sémantique pur : la provenance n'est PAS connue sans un balayage de
-        // page_src — on ne l'invente pas, exactement comme la vue qui affiche
-        // l'insigne du canal à la place du pictogramme.
-        let semantique = AccessibilityText.hitLabel(
-            fileName: "notes.md", page: 3, source: .native, engine: .none,
-            semanticOnly: true, fuzzyDistance: 0)
-        XCTAssertEqual(semantique,
-                       "notes.md, page 3, approximate result, "
-                       + "found by meaning")
     }
 
     // MARK: - AP-03 : une seule table des provenances
@@ -188,11 +178,10 @@ final class AccessibilityTextTests: XCTestCase {
 
     func testCompteursDeLaLigneDEtat() {
         XCTAssertEqual(
-            AccessibilityText.resultCounts(pages: 1_203, docs: 12, hybrid: false),
+            AccessibilityText.resultCounts(pages: 1_203, docs: 12),
             "1203 pages found in 12 documents")
-        XCTAssertEqual(
-            AccessibilityText.resultCounts(pages: 4, docs: 2, hybrid: true),
-            "4 merged pages in 2 documents")
+        XCTAssertEqual(AccessibilityText.resultCounts(pages: 4, docs: 2),
+                       "4 pages found in 2 documents")
     }
 }
 

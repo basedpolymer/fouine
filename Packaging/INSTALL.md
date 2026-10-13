@@ -206,25 +206,6 @@ with "database locked by another process — …" (exit 3), naming the holder.
 the lock and always work. For a large manual pass, **turn the switch off**
 first, then back on.
 
-### Search by meaning: a model to install
-
-Search by meaning (`fouine search --hybrid`, or Settings ▸ Search by meaning ▸
-"Download the model…" in the app) needs a 220 MB model that is not bundled with
-the app:
-
-```sh
-fouine model download        # announces what it contacts, checks the SHA-256
-fouine embed                 # produces the vectors (long: several hours)
-```
-
-That is one of the four connections Fouine can ever make, and it never goes on
-its own: no document, no search, no usage data leaves the Mac, which the
-`NetworkSilenceTests` test verifies in continuous integration on every change.
-On an offline machine, copy the archive and set
-`FOUINE_MODEL_URL=file:///path/e5-small-v1.zip`. Full-text search and text
-recognition need none of it. See [`../docs/search.md`](../docs/search.md) and
-[`../docs/privacy.md`](../docs/privacy.md).
-
 ---
 
 ## 8. Uninstalling
@@ -256,8 +237,7 @@ often being hours of reading.
    rm -rf ~/Library/Saved\ Application\ State/io.github.basedpolymer.fouine.savedState
    ```
 
-   The first holds the index **and** the meaning model: deleting it erases hours
-   of text recognition and means downloading 220 MB again.
+   The first holds the index: deleting it erases hours of text recognition.
 
 **Through Homebrew**, once the cask is published: `brew uninstall --cask fouine`
 leaves the data in place, `brew uninstall --zap --cask fouine` takes the seven

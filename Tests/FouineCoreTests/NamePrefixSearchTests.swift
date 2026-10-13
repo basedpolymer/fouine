@@ -72,9 +72,6 @@ final class NamePrefixSearchTests: XCTestCase {
         let results = try db.store.search(try query("nom:rapport azote"))
         XCTAssertEqual(Set(results.hits.map(\.docID)), [annuel, cours])
         XCTAssertEqual(results.totalPages, 2)
-        XCTAssertEqual(try db.store.docIDsMatchingName(try query("nom:rapport azote")),
-                       [annuel, cours], "le même jeu pour le canal du sens")
-        XCTAssertNil(try db.store.docIDsMatchingName(try query("azote")))
     }
 
     /// `texte:` : pas de CTE `dn` dans le SQL, pas de bandeau des noms.

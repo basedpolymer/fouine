@@ -75,8 +75,8 @@ extension GRDBStore {
     /// rien.
     public func unknownDocIDs(_ ids: [Int64]) throws -> [Int64] {
         guard !ids.isEmpty else { return [] }
-        // Des `Int64` interpolés, comme `ocrPageCounts` et `vectorisedPageCounts`
-        // le font juste à côté : ce sont des entiers, pas du texte, et la liste
+        // Des `Int64` interpolés, comme `ocrPageCounts` le fait juste à
+        // côté : ce sont des entiers, pas du texte, et la liste
         // est bornée par le schéma d'entrée de l'outil (50 éléments).
         let list = ids.map(String.init).joined(separator: ",")
         let known = try read { db in

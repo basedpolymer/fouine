@@ -1,8 +1,8 @@
-// HealthBannerModel.swift — état de santé visible à quatre lignes (audit H4, registre I1).
+// HealthBannerModel.swift — état de santé visible à trois lignes (audit H4, registre I1).
 // Propriété : A-App. SPEC §5.6.
 //
-// Quatre lignes : indexation en arrière-plan (agent), index (verrou
-// d'écriture), recherche sémantique, dossiers. RÈGLE DE SÉVÉRITÉ (lot I1,
+// Trois lignes : indexation en arrière-plan (agent), index (verrou
+// d'écriture), dossiers. RÈGLE DE SÉVÉRITÉ (lot I1,
 // amendement du 03/09/2026 au §5.6) :
 //   · ORANGE seulement si l'utilisateur doit faire un geste pour retrouver une
 //     fonction promise ;
@@ -19,7 +19,7 @@
 //
 // Le public n'est pas technicien : la ligne se rend depuis le CAS de
 // `HealthRow.Message` (`localizedText`, dans LocalizedText.swift), et aucune
-// phrase ne dit « verrou », « pid » ou « vecteur ».
+// phrase ne dit « verrou » ou « pid ».
 
 import Foundation
 import FouineCore
@@ -60,7 +60,6 @@ struct HealthRow: Sendable, Equatable {
     enum Kind: String, Sendable, Equatable {
         case agent
         case writeLock
-        case semantic
         case roots
     }
 
@@ -84,10 +83,6 @@ struct HealthRow: Sendable, Equatable {
         /// `ownProcess` : c'est CETTE application qui écrit — sa propre passe
         /// de lecture des pages scannées, par exemple (BU-31).
         case indexUpdating(by: LockRole, since: String, ownProcess: Bool)
-        // Recherche sémantique
-        case semanticReady
-        case semanticPreparing
-        case semanticNotInstalled
         // Dossiers
         case noFolders
         case diskNotPluggedIn(folder: String)
@@ -118,25 +113,24 @@ struct HealthRow: Sendable, Equatable {
 struct HealthBannerReport: Sendable, Equatable {
     let agentRow: HealthRow
     let writeLockRow: HealthRow
-    let semanticRow: HealthRow
     let rootsRow: HealthRow
 
     var rows: [HealthRow] {
-        [agentRow, writeLockRow, semanticRow, rootsRow]
+        [agentRow, writeLockRow, rootsRow]
     }
 
-    /// Vrai si les quatre lignes sont au vert ET qu'aucune ne propose de
+    /// Vrai si les trois lignes sont au vert ET qu'aucune ne propose de
     /// geste : la barre latérale ne montre alors que la pastille « Tout
     /// fonctionne ».
     ///
     /// La seconde condition n'est pas une coquetterie (A2-13). Sans racine,
-    /// les quatre lignes sont vertes — l'agent est éteint, le verrou libre, le
-    /// modèle absent, les dossiers « aucun » — et la pastille masquait la
-    /// ligne « Aucun dossier à indexer » avec son bouton « Ajouter un
-    /// dossier… », que le §5.6 amendé exige NOMMÉMENT comme la seule exception
-    /// à « une ligne verte ne porte pas de bouton ». Le cas s'atteint dès que
-    /// `rootsError != nil` : la barre latérale s'affiche, annonce que tout va
-    /// bien, et le seul geste utile n'est nulle part.
+    /// les trois lignes sont vertes — l'agent est éteint, le verrou libre, les
+    /// dossiers « aucun » — et la pastille masquait la ligne « Aucun dossier à
+    /// indexer » avec son bouton « Ajouter un dossier… », que le §5.6 amendé
+    /// exige NOMMÉMENT comme la seule exception à « une ligne verte ne porte
+    /// pas de bouton ». Le cas s'atteint dès que `rootsError != nil` : la
+    /// barre latérale s'affiche, annonce que tout va bien, et le seul geste
+    /// utile n'est nulle part.
     var isAllGreen: Bool {
         rows.allSatisfy { $0.severity == .green && $0.action == nil }
     }
@@ -144,8 +138,8 @@ struct HealthBannerReport: Sendable, Equatable {
     /// Les lignes que la barre latérale rend quand la pastille ne suffit pas.
     ///
     /// Tout est vert mais un geste reste proposé : on ne montre QUE la ligne
-    /// actionnable — les trois autres n'ont rien à dire, et les afficher
-    /// ferait un bandeau de quatre lignes pour une seule information.
+    /// actionnable — les autres n'ont rien à dire, et les afficher ferait un
+    /// bandeau de trois lignes pour une seule information.
     var rowsToDisplay: [HealthRow] {
         maxSeverity == .green ? rows.filter { $0.action != nil } : rows
     }
@@ -162,8 +156,6 @@ enum HealthBannerEvaluator {
         agentState: AgentOperationalState,
         appCopies: AppCopiesReport.Verdict = .ok,
         lockStatus: WriteLock.LockStatus,
-        semanticInstalled: Bool,
-        hasVectors: Bool,
         roots: [RootStatus],
         /// Le processus courant, DONNÉ et non lu ici : l'évaluation reste pure,
         /// et le test peut jouer « c'est moi » comme « c'est un autre » (BU-31).
@@ -172,7 +164,6 @@ enum HealthBannerEvaluator {
         HealthBannerReport(
             agentRow: evaluateAgent(agentState, appCopies: appCopies),
             writeLockRow: evaluateLock(lockStatus, currentPID: currentPID),
-            semanticRow: evaluateSemantic(installed: semanticInstalled, hasVectors: hasVectors),
             rootsRow: evaluateRoots(roots)
         )
     }
@@ -250,24 +241,7 @@ enum HealthBannerEvaluator {
         }
     }
 
-    // MARK: - 3. Recherche sémantique
-
-    /// Une option absente n'est pas un avertissement : le téléchargement se
-    /// propose déjà dans Réglages ▸ Sémantique et sur l'écran d'accueil.
-    /// `hasVectors` est un BOOLÉEN, pas un compte (A2-08) : la ligne n'a
-    /// jamais eu besoin d'autre chose, et le compte exact coûtait un balayage
-    /// complet de `page_vec` toutes les 30 secondes.
-    private static func evaluateSemantic(installed: Bool, hasVectors: Bool) -> HealthRow {
-        guard installed else {
-            return HealthRow(kind: .semantic, severity: .green, message: .semanticNotInstalled)
-        }
-        if hasVectors {
-            return HealthRow(kind: .semantic, severity: .green, message: .semanticReady)
-        }
-        return HealthRow(kind: .semantic, severity: .green, message: .semanticPreparing)
-    }
-
-    // MARK: - 4. Dossiers
+    // MARK: - 3. Dossiers
 
     /// Seules les racines ACTIVES comptent : un dossier que l'utilisateur a
     /// désactivé — un disque externe rangé, par exemple — n'est plus une

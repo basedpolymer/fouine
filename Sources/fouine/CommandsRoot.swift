@@ -13,17 +13,17 @@ struct FouineCLI: ParsableCommand {
         version: FouineVersion.string,
         subcommands: [RootCommand.self, VolumeCommand.self, CrawlCommand.self,
                       ExtractCommand.self, OCRCommand.self, IndexCommand.self,
-                      EmbedCommand.self, ModelCommand.self, SearchCommand.self,
+                      SearchCommand.self,
                       // AJOUT au §4.3 (lot BR1, constat PR-06) : PARCOURIR
                       // l'index. Rangé juste après `search`, dont il est le
                       // pendant — chercher un mot / voir ce qu'il y a.
                       ListCommand.self,
                       // AJOUT au §4.3 (lot MC3, constat PM-18) : LIRE une page
-                      // trouvée, et voir ce qui lui ressemble. Rangés après
-                      // `list` parce qu'ils prolongent le même geste —
-                      // chercher, parcourir, puis lire. Le serveur MCP savait
-                      // le faire depuis le palier 4 ; le terminal, non.
-                      ReadCommand.self, SimilarCommand.self,
+                      // trouvée. Rangé après `list` parce qu'il prolonge le
+                      // même geste — chercher, parcourir, puis lire. Le
+                      // serveur MCP savait le faire depuis le palier 4 ; le
+                      // terminal, non.
+                      ReadCommand.self,
                       ConfigCommand.self, StatusCommand.self, DoctorCommand.self,
                       // Lot INT-F4 : les notes des applications (Apple Notes,
                       // Bear). AJOUT au §4.3, comme `licenses` et `mcp`.

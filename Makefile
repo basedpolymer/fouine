@@ -663,10 +663,6 @@ ci-corpus: release-cli
 # (palier 4). Le filtre porte sur <cible>.<classe>/<test> : le préfixe de cible
 # suffit à prendre la suite entière.
 #
-# FouineEmbedTests en fait partie : ses trois tests de parité avec le modèle e5
-# se sautent d'eux-mêmes quand il est absent, ce qui est le cas d'un runner sans
-# cache. Aucun filtre par nom n'est nécessaire.
-#
 # `CONFIG` permet de rejouer les MÊMES suites en release :
 #     make ci-unit CONFIG="-c release"
 # C'est ce que fait le job `release-tests` de la CI, sur `main` seulement.
@@ -687,17 +683,15 @@ ci-unit:
 	    --filter FouineExtractTests \
 	    --filter FouineOCRTests \
 	    --filter FouineIndexTests \
-	    --filter FouineEmbedTests \
 	    --filter FouineAppTests \
 	    --filter FouineAgentTests \
 	    --filter FouineMCPTests
 
 # Le serveur MCP seul. COMMODITÉ, comme `ci-corpus` : aucun workflow ne lance
 # cette cible, et ce n'est pas une perte de couverture — `ci-unit` prend déjà la
-# suite. Elle existe pour rejouer les treize transcriptions « golden » en une
+# suite. Elle existe pour rejouer les transcriptions « golden » en une
 # vingtaine de secondes quand on touche au routeur ou au schéma d'un outil —
-# dont trois secondes de silence réseau et, si le modèle e5 est installé, une
-# trentaine pour l'hybride réel (sautée sans lui).
+# dont trois secondes de silence réseau.
 .PHONY: ci-mcp
 ci-mcp:
 	$(SWIFT) test $(CONFIG) --filter FouineMCPTests

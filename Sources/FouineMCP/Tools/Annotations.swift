@@ -1,7 +1,7 @@
 // Annotations.swift — ce qu'un client lit AVANT d'appeler (CM-10).
 // SPDX-License-Identifier: LicenseRef-Fouine-Source-Available
 //
-// LES CINQ ENSEMBLE, ET PAS À CÔTÉ DE CHAQUE SCHÉMA : ils disent exactement la
+// LES QUATRE ENSEMBLE, ET PAS À CÔTÉ DE CHAQUE SCHÉMA : ils disent exactement la
 // même chose — ce serveur ne peut rien casser —, et c'est cette UNIFORMITÉ qui
 // est le contrat. Un outil ajouté un jour sans sa ligne ici serait le seul du
 // catalogue à faire demander une confirmation, et personne ne le verrait :
@@ -32,10 +32,6 @@ extension SearchTool {
 }
 
 extension ReadPageTool {
-    public var annotations: [String: Any] { ToolAnnotations.readOnly(title: title) }
-}
-
-extension SimilarPagesTool {
     public var annotations: [String: Any] { ToolAnnotations.readOnly(title: title) }
 }
 

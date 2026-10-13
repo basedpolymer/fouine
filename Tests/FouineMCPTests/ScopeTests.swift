@@ -76,15 +76,12 @@ final class ScopeTests: XCTestCase {
         deinit { try? FileManager.default.removeItem(at: directory) }
 
         func makeServer(folders: [String]?) -> MCPServer {
-            let model = directory.appendingPathComponent("no-model", isDirectory: true)
-            return MCPServer(
+            MCPServer(
                 options: .init(databaseURL: databaseURL, logLevel: .quiet,
                                folders: folders),
                 version: "1.0.0-test",
-                makeSemanticEngine: { SemanticEngine(store: $0, modelDirectory: model) },
-                makeStatusTool: { store, semantic in
-                    StatusTool(store: store, semantic: semantic, modelDirectory: model,
-                               launchdProbe: { .notRegistered })
+                makeStatusTool: { store in
+                    StatusTool(store: store, launchdProbe: { .notRegistered })
                 })
         }
     }

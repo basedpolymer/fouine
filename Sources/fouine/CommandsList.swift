@@ -14,10 +14,9 @@
 // `total`, `has_more`, `truncated`, et par document `doc_id`, `path`, `link`,
 // `folder`, `ext`, `pages`, `state`. Un script qui lit l'un lit l'autre. Les
 // deux surfaces portent désormais les MÊMES clés : `modified` est arrivée ici
-// d'abord et l'outil MCP l'a gagnée au lot MC4, `ocr_pages` et
-// `vectorised_pages` sont arrivées là-bas d'abord et la ligne de commande les a
-// gagnées aux lots MC3 et MN1. `abs_path` reste la seule différence, et c'est
-// le lien qui la porte ici.
+// d'abord et l'outil MCP l'a gagnée au lot MC4, `ocr_pages` est arrivée là-bas
+// d'abord et la ligne de commande l'a gagnée au lot MN1. `abs_path` reste la
+// seule différence, et c'est le lien qui la porte ici.
 //
 // LECTURE SEULE. `openStoreReadOnly` : parcourir son index ne doit ni créer une
 // base, ni prendre `fouine.lock` — sans quoi lister pendant une passe
@@ -165,17 +164,10 @@ struct ListCommand: ParsableCommand {
                 var mounts: [String: URL?] = [:]
                 var documents: [[String: Any]] = []
                 documents.reserveCapacity(page.count)
-                // Les pages vectorisées, EN UNE requête pour toute la page de
-                // résultats (lot MC3, constat PM-16a) : c'est la même méthode
-                // que `fouine_list_documents` appelle, le POINT UNIQUE où des
-                // vecteurs deviennent des pages (fenêtrage v5).
-                let vectors = try store.vectorisedPageCounts(
-                    forDocIDs: page.map(\.id))
-                // Les pages LUES SUR L'IMAGE, en une requête comme les
-                // vecteurs (lot MN1, reste du constat PM-16a) : PM-16a
-                // demandait trois clés côté ligne de commande, MC3 en avait
-                // livré deux. Même méthode, donc même définition que
-                // `fouine_list_documents` — une transcription n'y compte pas.
+                // Les pages LUES SUR L'IMAGE, EN UNE requête pour toute la
+                // page de résultats (lot MN1, constat PM-16a) : c'est la même
+                // méthode que `fouine_list_documents` appelle, donc la même
+                // définition — une transcription n'y compte pas.
                 let ocr = try store.ocrPageCounts(forDocIDs: page.map(\.id))
                 for row in page {
                     let mount = mounts[row.volUUID]
@@ -183,8 +175,7 @@ struct ListCommand: ParsableCommand {
                     mounts[row.volUUID] = mount
                     documents.append(Self.documentJSON(
                         row, mountPoint: mount,
-                        ocrPages: ocr[row.id] ?? 0,
-                        vectorisedPages: vectors[row.id] ?? 0))
+                        ocrPages: ocr[row.id] ?? 0))
                 }
                 try CLI.printJSON([
                     "documents": documents,
@@ -233,8 +224,7 @@ struct ListCommand: ParsableCommand {
     }
 
     static func documentJSON(_ row: DocumentListing, mountPoint: URL?,
-                             ocrPages: Int = 0,
-                             vectorisedPages: Int = 0) -> [String: Any] {
+                             ocrPages: Int = 0) -> [String: Any] {
         [
             "doc_id": row.id,
             "path": row.relPath,
@@ -258,11 +248,6 @@ struct ListCommand: ParsableCommand {
             // depuis un son n'y compte pas (elle a sa propre provenance), et
             // c'est ce nombre qui dit qu'un document est un scan.
             "ocr_pages": ocrPages,
-            // Pages que la recherche par le sens VOIT dans ce document. Même
-            // clé, même compte que `fouine_list_documents` : c'est ce qui
-            // permet de voir qu'un dossier entier est à zéro alors que la
-            // couverture globale annonce deux tiers (constat PM-05).
-            "vectorised_pages": vectorisedPages,
         ]
     }
 

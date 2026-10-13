@@ -54,8 +54,8 @@ enum BundledDoctor {
         // Environnement FIGÉ, comme pour tout sous-processus (audit S1), plus la
         // base de CETTE app : sans `FOUINE_DB`, la CLI regarderait l'emplacement
         // standard, qui n'est pas forcément celui que l'app n'arrive pas à
-        // ouvrir. `HOME` pour le modèle sémantique et les journaux, que la CLI
-        // cherche sous ~/Library.
+        // ouvrir. `HOME` pour les journaux, que la CLI cherche sous
+        // ~/Library.
         process.environment = [
             "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
             "LANG": "C.UTF-8",

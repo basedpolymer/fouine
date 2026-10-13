@@ -43,12 +43,6 @@ public enum FouinePaths {
         lockURL(for: databaseURL, suffix: ".lock")
     }
 
-    /// Le verrou de campagne de vectorisation (`fouine embed`) : `<nom sans
-    /// extension>-embed.lock`. Même règle et même raison que `lockURL`.
-    public static func embedLockURL(for databaseURL: URL = databaseURL()) -> URL {
-        lockURL(for: databaseURL, suffix: "-embed.lock")
-    }
-
     /// Un nom de base VIDE (chemin qui finit par `/`) retomberait sur un
     /// fichier caché `.lock` partagé par tout le dossier : le défaut qu'on
     /// répare. On garde alors le nom historique.

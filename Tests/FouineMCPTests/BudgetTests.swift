@@ -115,15 +115,13 @@ final class BudgetTests: XCTestCase {
     /// budget ferait rougir ce test-ci, pas la fenêtre d'un utilisateur.
     func testNoToolEverExceedsTheCeiling() throws {
         let index = try TempIndex(documents: 20, pagesPerDocument: 20,
-                                  vectorisedPages: 40, pageChars: 6_000,
+                                  pageChars: 6_000,
                                   failedDocuments: 5, skippedDocuments: 5)
         let server = try index.makeServer()
         let calls = [
             #"{"name":"fouine_status","arguments":{"include_agent":false}}"#,
             #"{"name":"fouine_search","arguments":{"query":"electrolyse","limit":50,"snippet_chars":800}}"#,
-            #"{"name":"fouine_search","arguments":{"query":"enthalpie","mode":"hybrid","limit":50,"snippet_chars":800}}"#,
             #"{"name":"fouine_read_page","arguments":{"doc_id":1,"page":10,"max_chars":40000,"context_pages":2}}"#,
-            #"{"name":"fouine_similar_pages","arguments":{"doc_id":1,"page":1,"limit":50,"preview_chars":600,"exclude_same_document":false}}"#,
             #"{"name":"fouine_list_documents","arguments":{"state":"any","limit":200}}"#,
         ]
         for (offset, call) in calls.enumerated() {

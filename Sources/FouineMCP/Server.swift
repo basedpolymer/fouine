@@ -100,20 +100,15 @@ public final class MCPServer {
     private let store: ReadOnlyStore
     private let router: Router
     private let statusTool: StatusTool
-    private let semantic: SemanticEngine
 
     private let schemaMutex = NSLock()
     private var schemaCache: (version: Int?, at: Date)?
 
     /// - Parameter makeStatusTool: point d'injection des TESTS, et d'eux seuls.
-    ///   Une transcription « golden » ne peut dépendre ni de `launchctl` ni de
-    ///   la présence d'un modèle de 220 Mo sur la machine qui la rejoue.
+    ///   Une transcription « golden » ne peut pas dépendre de `launchctl`.
     public init(options: Options, version: String,
-                makeSemanticEngine: (ReadOnlyStore) -> SemanticEngine = {
-                    SemanticEngine(store: $0)
-                },
-                makeStatusTool: (ReadOnlyStore, SemanticEngine) -> StatusTool = {
-                    StatusTool(store: $0, semantic: $1)
+                makeStatusTool: (ReadOnlyStore) -> StatusTool = {
+                    StatusTool(store: $0)
                 }) {
         self.options = options
         self.log = StderrLog(level: options.logLevel)
@@ -124,18 +119,15 @@ public final class MCPServer {
                                   retryInterval: options.schemaCacheTTL,
                                   folders: options.folders)
         self.store = store
-        let semantic = makeSemanticEngine(store)
-        self.semantic = semantic
-        self.statusTool = makeStatusTool(store, semantic)
+        self.statusTool = makeStatusTool(store)
         // L'ORDRE EST CELUI DE `tools/list`, et il est celui du parcours qu'un
-        // agent doit faire : savoir ce qu'il y a (status), chercher, lire,
-        // rebondir de proche en proche, et lister quand il ne trouve rien.
+        // agent doit faire : savoir ce qu'il y a (status), chercher, lire, et
+        // lister quand il ne trouve rien.
         self.router = Router(
             registry: ToolRegistry([
                 statusTool,
-                SearchTool(store: store, semantic: semantic),
+                SearchTool(store: store),
                 ReadPageTool(store: store),
-                SimilarPagesTool(store: store, semantic: semantic),
                 ListDocumentsTool(store: store),
             ]),
             serverInfo: Self.serverInfo(version: version),
@@ -221,7 +213,11 @@ public final class MCPServer {
                 + "(no schema_version in meta)"
         }
         guard version != Schema.version else { return nil }
-        return GRDBStore.schemaMismatch(found: version)
+        // Même partage des deux cas que `openReadOnly` (lot SR1) : une base à
+        // la version qui précède se met à jour, elle ne se refait pas.
+        return version == Schema.previousVersion
+            ? GRDBStore.schemaNeedsUpgrade
+            : GRDBStore.schemaMismatch(found: version)
     }
 
     // MARK: - Signaux

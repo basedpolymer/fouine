@@ -357,40 +357,6 @@ final class CorpusSearchTests: XCTestCase {
         }
     }
 
-    func testPaginationHybridDisjointPages() throws {
-        let modelDir = ("~/Library/Application Support/Fouine/models" as NSString)
-            .expandingTildeInPath
-        guard FileManager.default.fileExists(atPath: modelDir) else {
-            throw XCTSkip("modèle sémantique absent")
-        }
-        let fixture = try Recette.requireFixture("T1")
-        let res1 = try Recette.run(
-            ["search", fixture.query, "--hybrid", "--offset", "0", "--limit", "2", "--json"],
-            database: database)
-        guard res1.status == 0, let data1 = res1.stdout.data(using: .utf8),
-              let json1 = try? JSONSerialization.jsonObject(with: data1) as? [String: Any],
-              let hits1 = json1["hits"] as? [[String: Any]],
-              let hasMore1 = json1["has_more"] as? Bool
-        else {
-            throw XCTSkip("recherche hybride indisponible")
-        }
-        XCTAssertEqual(json1["offset"] as? Int, 0)
-        if hasMore1 {
-            let res2 = try Recette.run(
-                ["search", fixture.query, "--hybrid", "--offset", "2", "--limit", "2", "--json"],
-                database: database)
-            XCTAssertEqual(res2.status, 0)
-            if let data2 = res2.stdout.data(using: .utf8),
-               let json2 = try? JSONSerialization.jsonObject(with: data2) as? [String: Any],
-               let hits2 = json2["hits"] as? [[String: Any]] {
-                XCTAssertEqual(json2["offset"] as? Int, 2)
-                let keys1 = Set(hits1.map { "\($0["doc_id"] ?? ""):\($0["page"] ?? "")" })
-                let keys2 = Set(hits2.map { "\($0["doc_id"] ?? ""):\($0["page"] ?? "")" })
-                XCTAssertTrue(keys1.isDisjoint(with: keys2))
-            }
-        }
-    }
-
     func testOffsetNegativeOrNonIntegerExits64() throws {
         let neg = try Recette.run(["search", "test", "--offset", "-1"], database: database)
         XCTAssertEqual(neg.status, 64)

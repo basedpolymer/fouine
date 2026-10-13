@@ -50,17 +50,6 @@ final class HitExplanationAppTests: XCTestCase {
         XCTAssertFalse(sentence.contains(where: \.isNumber), sentence)
     }
 
-    func testSemanticSentenceSaysNoneOfYourWords() {
-        XCTAssertEqual(
-            HitExplanationText.sentence(.semanticOnly),
-            "None of your words is on this page, but it deals with the same subject.")
-    }
-
-    func testBothChannelsSentence() {
-        XCTAssertEqual(HitExplanationText.sentence(.both(terms: ["catalyse"])),
-                       "Found by your words and by meaning.")
-    }
-
     func testNoSentenceCarriesANumberOrJargon() {
         // La règle de la ligne : aucun nombre (ni distance, ni marge, ni
         // pourcentage), aucun mot d'informaticien. Les infobulles gardent les
@@ -69,8 +58,6 @@ final class HitExplanationAppTests: XCTestCase {
             HitExplanationText.sentence(.exact(terms: ["a"])),
             HitExplanationText.sentence(.partial(found: ["a"], missing: ["b"])),
             HitExplanationText.sentence(.fuzzy(typed: "a", found: "b", distance: 2)),
-            HitExplanationText.sentence(.semanticOnly),
-            HitExplanationText.sentence(.both(terms: ["a"])),
         ]
         for sentence in sentences {
             XCTAssertFalse(sentence.contains(where: \.isNumber), sentence)
@@ -83,7 +70,7 @@ final class HitExplanationAppTests: XCTestCase {
     }
 
     func testVoiceOverReadsTheSentenceWithTheSnippet() {
-        let why = HitExplanationText.sentence(.semanticOnly)
+        let why = HitExplanationText.sentence(.exact(terms: ["catalyse"]))
         let value = AccessibilityText.hitValue(snippet: "un extrait", why: why)
         XCTAssertTrue(value.contains("un extrait"), value)
         XCTAssertTrue(value.contains(why), value)
@@ -141,30 +128,6 @@ final class HitExplanationAppTests: XCTestCase {
         await settle(model)
         XCTAssertNil(model.selection)
         XCTAssertNil(model.selectionExplanation)
-    }
-
-    // MARK: - La phrase honnête (R-04)
-
-    func testNoLexicalMatchIsFalseOnAnOrdinarySearch() async throws {
-        let db = try TempAppDB()
-        try db.addDoc(relPath: "a.txt", pages: ["La cinetique des gaz."])
-        let model = SearchModel(service: db.service)
-        await run(model, "cinetique")
-        XCTAssertFalse(model.hits.isEmpty)
-        // Recherche plein texte : la question ne se pose pas, les résultats
-        // portent les mots par construction.
-        XCTAssertFalse(model.noLexicalMatch)
-    }
-
-    func testNoLexicalMatchNeedsResultsToBeWorthSaying() async throws {
-        let db = try TempAppDB()
-        try db.addDoc(relPath: "a.txt", pages: ["La cinetique des gaz."])
-        let model = SearchModel(service: db.service)
-        await run(model, "introuvable")
-        XCTAssertTrue(model.hits.isEmpty)
-        // Zéro résultat n'a rien à expliquer : la ligne « aucun de vos mots »
-        // ferait croire qu'il y a quelque chose à lire.
-        XCTAssertFalse(model.noLexicalMatch)
     }
 
     // MARK: - Outillage
