@@ -18,8 +18,7 @@ third-party tool.
 | 8 | [Tag, and let CI publish](#8-tag-and-let-ci-publish) | `git push origin main --follow-tags` |
 | 9 | [The end-to-end update test](#9-the-end-to-end-update-test) | once, before the first public release |
 | 10 | [The Homebrew cask](#10-the-homebrew-cask) | `Packaging/cask.sh` |
-| 11 | [Publishing the semantic model](#11-publishing-the-semantic-model) | its own cycle, not every release |
-| 12 | [The website](#12-the-website) | another repository |
+| 11 | [The website](#11-the-website) | another repository |
 
 Order matters in three places: notarising comes **after** signing, the appcast
 comes **after** stapling (stapling modifies the file, and the appcast publishes
@@ -367,7 +366,7 @@ to the release next to the DMG, `SHA256SUMS` and the appcast.
 `privacy_policies` key, and the submission documentation makes that an
 immediate rejection. It is not an oversight: the key expects a **public privacy
 policy address**, therefore the website. Add it in the same commit as the URL.
-The other condition, the `annotations` of the five tools, is already met. None
+The other condition, the `annotations` of the four tools, is already met. None
 of this blocks direct distribution: the `.mcpb` attached to the release
 installs on a double click, directory or no directory.
 
@@ -472,7 +471,7 @@ location TCC indexes; `binary` puts `fouine` in the `PATH`; `uninstall
 launchctl:` **unregisters the background agent**, without which `brew
 uninstall` would leave a launchd agent pointing at a deleted app; `uninstall
 quit:` closes Fouine first; `zap trash:` removes the index, logs, preferences,
-CoreML caches and saved window state, and **no indexed folder**, since Fouine
+caches and saved window state, and **no indexed folder**, since Fouine
 never wrote there; `caveats` names the authorisations to grant and links to
 [`docs/permissions.md`](docs/permissions.md). Privacy authorisations (TCC)
 **survive** a `--zap`: macOS keeps them and only the user can remove them in
@@ -486,83 +485,7 @@ users, stars and issues, which their contribution guide states explicitly.
 Until then, the `basedpolymer/fouine` tap is the normal route and gives exactly
 the same experience, one character apart in the install command.
 
-## 11. Publishing the semantic model
-
-**This is not part of every release**: the model has its own cycle. It is
-published ONCE per revision, under a tag of its own, and every version of
-Fouine that can read it points at that tag.
-
-Current state: tag **`e5-small-v1`**, archive **`e5-small-v1.zip`**,
-220 236 056 bytes, SHA-256
-`fa8ead627aa5cab20575e049d082bc4492cfc839414a3dba808fed549afa1484`. Those three
-values are constants in `Sources/FouineEmbed/ModelDownload.swift`
-(`defaultURLString`, `expectedBytes`, `expectedSHA256`) and **must match what is
-published exactly**, or `fouine model download` refuses the archive, which is
-the intended behaviour but not in that direction.
-
-```sh
-Tools/package_model.sh ~/Library/Application\ Support/Fouine/models/e5-small dist/e5-small-v1.zip
-```
-
-The script writes the archive and its `.sha256` beside it, using `ditto -c -k
---keepParent`, so the leading `e5-small/` folder is kept: that exact layout is
-what the installer expects. Then create a **separate** release, never the
-application's, so that nobody has to re-download 220 MB for a command-line fix:
-
-```sh
-gh release create e5-small-v1 \
-  --prerelease --latest=false \
-  --target main \
-  --title "Semantic model multilingual-e5-small (revision 1)" \
-  --notes "multilingual-e5-small converted to CoreML (upstream MIT licence). Installed by \`fouine model download\`." \
-  dist/e5-small-v1.zip dist/e5-small-v1.zip.sha256
-```
-
-**`--prerelease --latest=false` is not optional.** `SUFeedURL` points at
-`releases/latest/download/appcast.xml`, and GitHub calls «latest» the most
-recent non-draft release. A model release published after `v1.0.x` would become
-the latest release, would carry no `appcast.xml`, and «Check for updates…»
-would answer «up to date» to everyone until the next application version.
-`--latest=false` alone has been observed not to be enough; a prerelease is never
-«latest». The `releases/download/<tag>/<asset>` link works identically for a
-prerelease.
-
-While the repository is private, GitHub answers `404` to any unauthenticated
-download: `fouine model download` fails cleanly for everyone, and only `gh
-release download` (with a token) sees the archive. The asset becomes usable
-when the repository is made public, or if it is hosted in a dedicated public
-repository. Check that the address answers:
-
-```sh
-curl -sIL https://github.com/basedpolymer/fouine/releases/download/e5-small-v1/e5-small-v1.zip \
-  | grep -i '^location\|^HTTP'
-```
-
-Expected: a `302` to `release-assets.githubusercontent.com`, then a `200`. A
-`404` means the asset is not published, which is exactly what the command tells
-the user in that case. Then the test that counts, on a machine where the model
-is **not** installed:
-
-```sh
-FOUINE_MODEL_DIR=/tmp/model-test fouine model download
-FOUINE_MODEL_DIR=/tmp/model-test fouine model status
-rm -rf /tmp/model-test
-```
-
-**Publishing a later revision.** The installed model carries its identity in
-`meta.json` (`model_id`, `revision`), and the installer **refuses** an archive
-whose identity is not the one it expects. Revision 2 therefore takes, in this
-order: convert the new model (`Tools/convert_e5.py`) with `revision: 2` in
-`meta.json`; `Tools/package_model.sh <folder> dist/e5-small-v2.zip`; update the
-FOUR constants of `ModelDownload.swift` (`defaultURLString` with the new tag,
-`expectedBytes`, `expectedSHA256`, `expectedRevision`); create the
-`e5-small-v2` release with the archive and its `.sha256`; and add a
-`CHANGELOG.md` entry, because changing revision **invalidates every existing
-vector** (`vec_meta`) and the `fouine embed` campaign has to be redone from
-scratch. The old tag stays online: earlier versions of Fouine keep installing
-it.
-
-## 12. The website
+## 11. The website
 
 The site lives in another repository, `basedpolymer/website` (branch `v5`,
 deployed by Vercel on push), and is served at `basedpolymer.eu/fouine`.

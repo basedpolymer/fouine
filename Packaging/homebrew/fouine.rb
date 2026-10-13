@@ -80,10 +80,6 @@ cask "fouine" do
     read with the per-folder permission above, background agent included.
     See https://github.com/basedpolymer/fouine/blob/main/docs/permissions.md
 
-    Semantic search needs a 220 MB model, downloaded on demand and never
-    automatically: run `fouine model download`, or use Settings > Search by
-    meaning.
-
     To remove the index and the settings as well as the application:
       brew uninstall --zap --cask fouine
   EOS

@@ -2,7 +2,7 @@
 
 Fouine est une application de recherche pour macOS. Vous lui indiquez des
 dossiers ; Fouine extrait le texte de chacun de leurs documents et retrouve une
-page par ses mots ou par son sens. Rien ne quitte votre Mac.
+page par ses mots, même tapés avec une faute. Rien ne quitte votre Mac.
 
 - [1. La fenêtre principale](#1-la-fenêtre-principale)
 - [2. Aperçu](#2-aperçu)
@@ -105,8 +105,7 @@ encore ramener quelque chose, et eux seuls :
 
 - **Tolérer les fautes de frappe**, si **Fautes de frappe** est sur
   « jamais » ;
-- **Retirer les filtres**, si un filtre, une facette ou une portée est actif ;
-- **Chercher aussi par le sens**, si le modèle est prêt et l'interrupteur éteint.
+- **Retirer les filtres**, si un filtre, une facette ou une portée est actif.
 
 Vient ensuite la phrase « Essayez moins de mots, ou vérifiez l'orthographe. »
 Chaque bouton change le réglage qu'il nomme et relance la recherche. Aucun
@@ -137,17 +136,6 @@ macOS tant que Réglages Système ▸ Clavier ▸ « Accès clavier complet » e
 Au-dessus de la liste, une ligne indique ce qui a été trouvé et en combien de
 temps (« 29 037 pages dans 776 documents · 120 ms »).
 
-Quand **Chercher aussi par le sens** est allumé, les deux recherches ne partent
-pas ensemble. La recherche par les mots passe d'abord et ses résultats
-s'affichent ; la recherche par le sens suit. Pendant ce temps, les comptes
-restent lisibles, avec un tourniquet à côté et « recherche par le sens… », ou,
-la toute première fois, « préparation de la recherche par le sens : la première
-prend quelques secondes… ». Quand la recherche par le sens répond, la liste est
-reclassée : les deux recherches sont fusionnées, l'ordre change, et des pages qui
-ne contiennent aucun des mots tapés peuvent apparaître. D'ici là, « Charger
-plus » attend, car une tranche de plus arriverait dans une liste sur le point
-d'être refaite. Une nouvelle frappe annule les deux recherches.
-
 Chaque document trouvé indique, à droite de son nom, combien de ses pages sont
 dans la liste. Les meilleures pages de chaque document passent d'abord, pour
 qu'un seul ouvrage de six cents pages ne remplisse pas l'écran. Un livre dont
@@ -166,8 +154,8 @@ plus. Quand tout est à l'écran, il affiche un seul nombre, sans lien.
 
 Les lignes ne portent aucun pourcentage du type « pertinence : 47 % ». Ce
 chiffre rapporterait le score d'une page au meilleur score de la tranche
-chargée : il changerait à chaque « Charger plus » et n'aurait pas le même sens
-d'une recherche à l'autre. La liste montre à la place l'ordre des documents, et
+chargée : il changerait à chaque « Charger plus » et ne voudrait pas dire la
+même chose d'une recherche à l'autre. La liste montre à la place l'ordre des documents, et
 la ligne « Trouvé parce que… » sous le résultat sélectionné.
 
 ---
@@ -339,9 +327,6 @@ sur les 2 000 premiers résultats, sur 29 037 pages trouvées. » Quand tout tie
 sous la limite, la ligne disparaît. Une nouvelle recherche arrête le chargement
 en cours.
 
-La recherche par le sens ne pagine pas : elle rend un jeu déjà complet, et son
-tri porte donc toujours sur l'ensemble.
-
 ### Recherches enregistrées
 
 L'historique (le pictogramme d'horloge, à droite du champ) garde les quarante
@@ -399,8 +384,7 @@ lecture en cours s'interrompt entre deux pages (PDF, DjVu) ou pendant la mise pa
 écrit d'un enregistrement, sans aller jusqu'au bout. Un document interrompu ainsi
 n'est ni lu ni en échec : il reste à faire, et la prochaine mise à jour le
 reprend depuis le début. Rien n'est perdu, rien n'est à moitié écrit. La lecture
-des pages scannées et la préparation de la recherche par le sens s'arrêtent de
-la même façon, avec leurs propres phrases.
+des pages scannées s'arrête de la même façon, avec sa propre phrase.
 
 ### États de la carte
 
@@ -414,7 +398,6 @@ attendue de vous, autre programme qui écrit, mise à jour automatique, à jour.
 | Aucun dossier à indexer | aucune | aucun dossier n'a été ajouté | Ajouter un dossier… |
 | Mise à jour de l'index | le temps restant quand il est connu | parcours des dossiers, extraction du texte | Arrêter *(passe lancée depuis l'application)* |
 | Lecture des pages scannées | « Environ 2 h restantes » | reconnaissance du texte des pages scannées | Arrêter *(idem)* |
-| Préparation de la recherche par le sens | le temps restant quand il est connu | préparation des pages pour la recherche par le sens | Arrêter *(idem)* |
 | L'index se met à jour | « Un autre programme écrit dans l'index ; la recherche fonctionne quand même. » | la ligne de commande met l'index à jour | aucun |
 | À jour — N pages scannées à lire | « Elles seront lues dès que le Mac sera branché sur le secteur. » (ou : dès que le mode Économie d'énergie sera désactivé, dès que le Mac aura refroidi, dès que l'autre programme aura terminé, dès que tous les dossiers pourront être lus) | le texte est à jour ; la lecture des pages scannées attend le Mac | aucun *(« Lire les pages scannées… » est dans la fenêtre « Votre index »)* |
 | Fouine n'a pas le droit de lire « … » | « Ses documents restent consultables. Autorisez Fouine dans Réglages Système ▸ Confidentialité et sécurité ▸ Fichiers et dossiers… » | macOS refuse la lecture du dossier | Autoriser l'accès… |
@@ -496,11 +479,10 @@ prendrait un nombre « prévu » pour une limite.
 |---|---|---|
 | plus de 5 Go libres | *aucune ligne* | nulle part |
 | moins de 5 Go libres | « Il reste 3,2 Go libres sur votre disque ; votre index en occupe 2,15 Go » | la fenêtre « Votre index » |
-| moins de 1 Go libre, ou moins que ce que la préparation du sens doit encore écrire | « Il ne reste que 800 Mo libres sur votre disque et votre index en occupe 2,15 Go : Fouine risque de manquer de place pour le finir. Libérez de l'espace, ou retirez un dossier dont vous n'avez plus besoin » | la fenêtre et la carte « Index » |
+| moins de 1 Go libre | « Il ne reste que 800 Mo libres sur votre disque et votre index en occupe 2,15 Go : Fouine risque de manquer de place pour le finir. Libérez de l'espace, ou retirez un dossier dont vous n'avez plus besoin » | la fenêtre et la carte « Index » |
 
-Cette ligne n'arrête jamais rien : l'indexation, la lecture des pages scannées
-et la préparation de la recherche par le sens continuent. C'est un
-avertissement, et le système refusera d'écrire le jour où le disque sera
+Cette ligne n'arrête jamais rien : l'indexation et la lecture des pages
+scannées continuent. C'est un avertissement, et le système refusera d'écrire le jour où le disque sera
 vraiment plein. Il n'y a pas non plus de bouton, car la solution est de libérer
 de l'espace ou de retirer un dossier, ce que la phrase indique. La place libre
 affichée est celle que macOS garantit pour une écriture importante, le chiffre
@@ -615,7 +597,7 @@ fait l'index, et prend trois formes :
 | Icône | Quand | Ce que dit la ligne d'état du panneau |
 |---|---|---|
 | Loupe | rien en cours : à jour, mises à jour manuelles, en pause, aucun dossier, contrôle en cours | « À jour », « Mise à jour manuelle », « Aucun dossier à indexer » |
-| Flèches circulaires | l'index travaille | « Mise à jour de l'index », « Lecture des pages scannées », « Préparation de la recherche par le sens » |
+| Flèches circulaires | l'index travaille | « Mise à jour de l'index », « Lecture des pages scannées » |
 | Triangle | une action est attendue de vous | « Fouine n'a pas le droit de lire “…” », « La mise à jour automatique attend votre accord »… |
 
 Un changement de forme signale qu'il se passe quelque chose ; la ligne d'état du
@@ -641,9 +623,7 @@ champ : vous pouvez taper tout de suite.
   ligne sélectionnée, ⏎ envoie la requête à la fenêtre principale.
 - Échap ferme le panneau. ⌘Q quitte Fouine.
 
-Ce panneau ne cherche que dans les mots de vos documents. La recherche par le
-sens demande de charger un modèle : elle reste dans la fenêtre, car un panneau
-doit répondre tout de suite. Le panneau ne touche pas à la fenêtre principale :
+Le panneau ne touche pas à la fenêtre principale :
 ses filtres, sa sélection et sa requête restent en place. Le raccourci global
 ⌥⌘F ouvre toujours la fenêtre.
 
@@ -678,15 +658,6 @@ erreurs de reconnaissance :
 | jamais | recherche stricte mot à mot |
 | auto (défaut) | tolérance seulement si un mot ne donne aucun résultat exact |
 | toujours | recherche élargie systématiquement aux variantes proches |
-
-### Chercher aussi par le sens
-
-La recherche par le sens trouve les passages dont le sujet correspond à votre
-requête, même sans mot en commun. L'interrupteur **Chercher aussi par le sens**
-réunit les pages trouvées par vos mots et celles trouvées par le sens. Si vos
-documents n'ont pas encore été préparés, un bouton lance la préparation. Le
-fonctionnement et ce qu'il vaut : la page « Searching » de la documentation (en
-anglais).
 
 ### Filtres
 
@@ -731,9 +702,8 @@ toutes.
 
 Sous l'extrait du résultat sélectionné, et de lui seul, une ligne en gris donne
 la raison de la présence de cette page : « Trouvé parce que cette page contient
-“cinétique” et “chimie”. », « Trouvé par une orthographe proche : “converslon” →
-“conversion”. », « Aucun de vos mots n'est sur cette page, mais elle parle du
-même sujet. », « Trouvé par vos mots et par le sens. »
+“cinétique” et “chimie”. » ou « Trouvé par une orthographe proche : “converslon”
+→ “conversion”. »
 
 La ligne n'affiche aucun nombre. Les mots cités sont les vôtres, et un terme
 exclu n'est jamais nommé : ce serait montrer exactement ce que vous avez demandé
@@ -810,7 +780,7 @@ vérifier.
 
 ## 11. Les réglages
 
-Les réglages s'ouvrent par ⌘, et comptent six onglets.
+Les réglages s'ouvrent par ⌘, et comptent cinq onglets.
 
 ### Général
 
@@ -939,11 +909,6 @@ l'aperçu.
 - **Quand mettre à jour automatiquement** : trois conditions à cocher (seulement
   quand le Mac est branché, pas en mode Économie d'énergie, pas quand le Mac
   chauffe).
-- **Préparer aussi la recherche par le sens en arrière-plan**, décochée par
-  défaut. Quand elle est cochée, Fouine prépare ce dont la recherche par le sens
-  a besoin, par courtes tranches et sous les mêmes trois conditions, une fois
-  toutes les pages scannées lues. Une phrase sous la case indique quand cela se
-  fera, ou, si le modèle n'est pas encore téléchargé, où l'obtenir.
 - **Langues des documents scannés** : les langues attendues sur les pages
   scannées, la plus probable d'abord. Ce sont aussi les langues utilisées pour
   mettre les enregistrements par écrit. Chaque langue apparaît sous son nom, par
@@ -968,16 +933,6 @@ l'aperçu.
   (minutes)** limite l'effort (120 par défaut ; au-delà, seules les métadonnées
   sont indexées). Une page correspond à dix minutes d'enregistrement, chaque
   paragraphe précédé de son horodatage `[mm:ss]`.
-
-### Recherche par le sens
-
-Cet onglet contient l'interrupteur qui active la recherche par le sens, l'état du
-modèle (un téléchargement unique de 220 Mo, stocké sur votre Mac), le nombre de
-pages préparées et un bouton **Préparer la recherche par le sens…**. Quand la
-préparation se fait en arrière-plan (la case ci-dessus cochée, le modèle
-installé, la mise à jour automatique active), le bouton est remplacé par
-« Fouine s'en occupe toute seule, quand l'ordinateur est branché et au
-repos. » : le travail se fait, il n'y a rien à cliquer.
 
 ### Mises à jour
 
@@ -1094,10 +1049,7 @@ mot libre, seulement une liste de choix connue d'avance.
 
 Ces actions ne lisent que l'index, jamais le fichier d'origine : « Obtenir le
 texte d'une page » rend le texte extrait ou reconnu par Fouine, pas le PDF. Elles
-n'indexent rien et ne modifient rien. Comme la recherche par les mots de la
-fenêtre, elles cherchent dans le texte sans la recherche par le sens, dont le
-modèle met deux secondes à se charger, ce qui est trop long pour un raccourci.
-Seule « Ouvrir dans Fouine » met l'application au premier plan ; les deux autres
+n'indexent rien et ne modifient rien. Seule « Ouvrir dans Fouine » met l'application au premier plan ; les deux autres
 travaillent sans rien déranger, même si Fouine n'était pas ouverte.
 
 Si rien n'a encore été indexé, l'action renvoie un message (« Fouine n'a encore

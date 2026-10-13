@@ -22,8 +22,7 @@ OR](#two-words-that-decline-into-each-other-an-and-that-became-an-or)
 **Formats** — [`.xls` and `.ppt`](#xls-and-ppt-are-read-but-never-by-nsattributedstring)
 · [`.djvu` and djvulibre](#djvu-files-need-djvulibre) · [what is not
 walked](#what-is-not-walked) · [a very long page](#a-very-long-page-is-truncated)
-· [the semantic model](#semantic-search-needs-a-downloaded-model) · [nothing
-blocks a pass](#a-document-no-longer-blocks-a-pass) · [iWork and
+· [nothing blocks a pass](#a-document-no-longer-blocks-a-pass) · [iWork and
 QuickLook](#iwork-documents-and-the-quicklook-preview) · [a recognition that
 returns one minute](#a-recognition-that-returns-only-its-last-minute) · [a
 callback that never comes](#a-callback-that-never-comes-the-sfspeechrecognizer-queue)
@@ -52,7 +51,7 @@ sub-seconds](#a-date-that-round-trips-through-json-loses-its-sub-seconds)
 
 Every write goes through an exclusive `flock` on `fouine.lock`, taken at the
 first write and **released at every resting point**: end of pass, end of an OCR
-or embedding batch. While the background agent is writing, `fouine index`,
+batch. While the background agent is writing, `fouine index`,
 `crawl`, `extract` and `ocr` fail with **exit 3**, «database locked by another
 process — the database is being written by the agent (pid 1234) since 10:32»;
 between two batches they go through. `search`, `status` and `doctor` never take
@@ -70,41 +69,23 @@ automatically», then turn it back on.
 
 ## A binary from another schema wrote into the base
 
-Back when a `fouine` binary would open any base, one from before semantic
-windowing wrote about 11 000 rows into `page_vec` with the rowids of the old
-formula (`doc × 100000 + page` instead of `page × 8 + window`). Those rows are
-not inert: semantic search folds them back onto page `rowid / 8`, and when that
-page exists it returns a perfectly credible snippet for a page that has nothing
-to do with the query.
+Back when a `fouine` binary would open any base, an older one wrote about
+11 000 rows into a newer base with the row numbering of its own schema. Those
+rows were not inert: search read them back onto real pages, and returned a
+perfectly credible snippet for a page that had nothing to do with the query.
 
 The scenario cannot happen again: a binary refuses any base whose
-`schema_version` is not exactly its own, in either direction, and does not
-modify it. What remains is a `FOUINE_DB` that names a base you did not mean,
-and cleaning up rows already written:
-
-```sh
-fouine backup ~/fouine-before-repair.db   # always first
-fouine doctor --deep                      # counts and names the bad rows
-fouine maintain --repair                  # removes them
-fouine embed                              # rebuilds what is missing
-```
-
-`--repair` removes only what is **provable**. A row in slot `≥ 3`, or one whose
-page does not exist, can only come from elsewhere. A row of the old formula
-that happens to land on slot `< 3` of a real page is **indistinguishable** from
-a legitimate window and stays: on the production index that was 615 rows over
-206 pages, against 11 051 removed without ambiguity. Settle the doubt by
-throwing away rather than guessing: delete **all** the windows of the suspect
-pages and let `fouine embed` redo them, which it does by itself as soon as the
-completeness sentinel is gone. Do not try to «fix» the rowids: two formulas do
-not translate into each other without knowing which one wrote each row, and
-that is exactly what is unknown.
+`schema_version` is not its own, and does not modify it (the one exception
+follows). What remains is a
+`FOUINE_DB` that names a base you did not mean, which `fouine doctor` shows on
+its `database` line.
 
 **The corollary, at every schema change.** A changed `Schema.version` makes the
-existing index unreadable in both directions: the new binary says «predates
+existing index unreadable to the other binary: the new one says «predates
 1.0.0 … delete it and index again», the old one «written by a newer version —
-update the fouine binary». There is no recovery path, on purpose. Two
-consequences: two versions never share a base (after an update, the app, the
+update the fouine binary». There is no recovery path, on purpose; the one step
+from version 9 to 10 is described in
+[architecture](architecture.md#4-the-sqlite-schema). Two consequences: two versions never share a base (after an update, the app, the
 CLI and the agent all come from the same build), and changing the schema costs
 the user a full reindex, which is decided rather than slipped in.
 
@@ -125,7 +106,7 @@ and install path stops macOS asking again after every rebuild. Detail:
 ## A wrong `FOUINE_DB` no longer builds a ghost index
 
 If `FOUINE_DB` names a path that does not exist, a read command (`search`,
-`status`, `doctor`, `root list`, `config list`, `embed --status`) **refuses**,
+`status`, `doctor`, `root list`, `config list`) **refuses**,
 with exit 3, the path and the gesture. It creates neither the base, nor the
 folder, nor `fouine.lock`, nor the `-wal`. It was not always so: a typo used to
 build an empty index and the command answered «0 results» forever, on a ghost
@@ -184,27 +165,25 @@ Count about twenty hours for a queue of 46 000 pages on a 2019 Intel machine.
 Work **on mains power** (the agent refuses to OCR on battery, but the CLI has
 no such guard and will drain it) and under `caffeinate -i` so the machine does
 not fall asleep halfway. `--budget-minutes` cuts the work into slices: exit 4
-signals a clean stop, the queue stays coherent and the resumption is exact. The
-`fouine embed` campaign follows the same logic and has no energy guard either.
+signals a clean stop, the queue stays coherent and the resumption is exact.
 
 ## The index size is the tight budget
 
 On the reference corpus, the index weighs about 1,65 GB before OCR and reaches
 1,9 to 1,95 GB once the OCR queue is fully processed. It is the only criterion
 that **tightens** as OCR advances. The dominant cost is the text itself, by
-far: on a 2,151 GB production index (1 527 documents, 408 951 pages, semantic
-preparation at 67 %), `page_fts_content` is 58,0 %, `page_fts_data` 19,2 %,
-`page_vec` 11,4 %, the fuzzy machinery 5,8 %, `ocr_layout` 4,5 %. The fuzzy
-apparatus is not the problem; the text and its index are 77 % of the file.
+far: on a production index of 1 527 documents and 408 951 pages,
+`page_fts_content` is 65,5 % of the file, `page_fts_data` 21,6 %, the fuzzy
+machinery 6,6 %, `ocr_layout` 5,1 %. The fuzzy apparatus is not the problem;
+the text and its index are 87 % of the file.
 
-At full vector coverage of that same corpus the index reaches about **2,27 GB,
-or 91 % of the 2,5 GB budget**, without a single new document. At 5,5 KiB per
-page the budget is crossed around **451 000 pages**, about 42 000 pages of
-headroom. `fouine status` (the `database` line), `fouine doctor` and the Index
+At about 4,5 KiB per page, the 2,5 GB budget is crossed around **540 000
+pages** (detail in [architecture](architecture.md#8-orders-of-magnitude)).
+`fouine status` (the `database` line), `fouine doctor` and the Index
 card all say so; **nothing stops** at 100 %, and the gesture is `fouine
 maintain --vacuum` or removing a folder. A collection of letters and invoices
-costs 8,3 KiB per page but only 3 pages per document, so it reaches the ceiling
-at about 100 000 documents.
+costs at most 8,3 KiB per page but only 3 pages per document, so it reaches the
+ceiling beyond 100 000 documents.
 
 ## Time Machine backs up the index, and the index changes constantly
 
@@ -252,15 +231,11 @@ hop per matching page, not a scan. `energie` (29 005 pages) went from 263 ms to
 81 ms under «scanned pages» and to 273 ms under «typed text»; with no filter
 the join is not written at all.
 
-Three implementation traps, each held by a test. The join alias cannot be `s`
+Two implementation traps, each held by a test. The join alias cannot be `s`
 (the fuzzy branch already joins `page_src s` in the same query in `ocr` scope;
 the provenance filter uses `pf`). The native case needs a LEFT JOIN, because a
 page ABSENT from `page_src` is native text and an inner join would make it
-vanish from a «typed text» filter. And the vector channel cannot take this
-filter as a document list: `VectorIndex.topK(allowedDocs:)` knows only
-documents, and on a MIXED document it would let the wrong pages through, so the
-vector list is sieved after the scan by `pageMeta`, over at most `depth * 2`
-rowids.
+vanish from a «typed text» filter.
 
 ## A plural is not a typo: fuzzy fixtures
 
@@ -372,21 +347,6 @@ For **unpaginated** formats (plain text, HTML, RTF), text is cut into pages of
 4 000 characters. The other limits: 2 GiB per file, 50 MiB of text per
 document, 99 999 pages per document. Past those the document is refused with a
 readable reason rather than silently truncated.
-
-## Semantic search needs a downloaded model
-
-`fouine search --hybrid` and `fouine embed` need a 220 MB model that is **not**
-embedded in the application: `fouine model download` installs it, `fouine
-doctor` says whether it is there. Without it, `embed` refuses to start and says
-so, and `--hybrid` falls back to full-text search, which never needed it.
-
-Together with the update check, it is one of the two things in Fouine that
-opens a connection. It contacts **two** hosts, `github.com` then
-`release-assets.githubusercontent.com`, because GitHub serves release assets by
-redirection: an outbound firewall sees two requests, and that is normal.
-Nothing is installed if the SHA-256 does not match. On an offline machine, copy
-the archive and set `FOUINE_MODEL_URL=file:///path/e5-small-v1.zip`: no
-connection is opened at all. Detail: [`privacy.md`](privacy.md).
 
 ## A document no longer blocks a pass
 

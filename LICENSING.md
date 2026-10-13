@@ -21,7 +21,7 @@ home and at work alike, on as many computers as you use, updates included: the
 licence asks for no payment, no registration and no activation.
 
 This covers `Sources/FouineCore`, `FouineCrawl`, `FouineExtract`, `FouineOCR`,
-`FouineIndex`, `FouineEmbed`, `FouineMCP`, `FouineApp`, `FouineAgent` and
+`FouineIndex`, `FouineMCP`, `FouineApp`, `FouineAgent` and
 `fouine`, therefore `Fouine.app` and everything it embeds, therefore the
 published DMG.
 
@@ -43,14 +43,6 @@ software and nothing more, and they impose neither opening nor redistributing
 the combined work. The only obligation that follows is the one
 `THIRD_PARTY_LICENSES.md` fulfils.
 
-## The semantic model
-
-[`multilingual-e5-small`](https://huggingface.co/intfloat/multilingual-e5-small),
-**MIT, Microsoft Corporation**. It is **not** redistributed inside the
-application: it is an optional 220 MB download, requested explicitly by the
-user (Settings ▸ Semantic search, or `fouine model download`). The archive the
-project publishes carries its own copy of the MIT notice.
-
 ## The MCP server, and why «MIT» does not mean what it looks like
 
 Two targets, and the split is not cosmetic.
@@ -67,7 +59,7 @@ the test frame to plug a different engine underneath, and it is **all** the MIT
 buys.
 
 **`Sources/FouineMCP` is under the Fouine licence**: the read-only store, the
-server lifecycle and the tools, which link `FouineCore` and `FouineEmbed`.
+server lifecycle and the tools, which link `FouineCore`.
 
 **The shipped executable falls under the Fouine licence**, whatever the headers
 of its files say: it links the core, and the MIT of `FouineMCPKit` does not

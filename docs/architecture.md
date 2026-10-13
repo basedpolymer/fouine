@@ -43,7 +43,6 @@ stored, and what it costs.
         │
         ▼
    search: exact (FTS5) + fuzzy (trigrams then Levenshtein)
-           + semantic (page_vec, windows, RRF fusion)
         │
         ├──►  Fouine.app     three-column window, highlighted PDF preview
         └──►  fouine search  text or JSON
@@ -57,7 +56,7 @@ only: a document scores as the sum of its five best pages.
 
 **Writes take an exclusive lock, reads never do.** One process indexes at a
 time, and the lock is released at every resting point (end of pass, end of an
-OCR or embedding batch), so search answers while indexing runs. This is the
+OCR batch), so search answers while indexing runs. This is the
 first entry in [`pitfalls.md`](pitfalls.md).
 
 **Document language is decided on the text, and caught up later.** `docs.lang`
@@ -102,9 +101,9 @@ on the way in: crawler, `root add`, and every lookup by path.
 file identifier. In a delta crawl, a path that disappeared and a path that
 appeared carrying the same inode, size and mtime are the same file: the `docs`
 row changes `rel_path` and nothing else moves, since `page_fts`, `page_src`,
-`ocr_layout`, `ocr_queue` and `page_vec` are keyed by `doc_id`. A folder of a
-thousand documents moves in one transaction. Before that, a plain `mv` was a
-deletion followed by a rediscovery, destroying hours of OCR and vectorisation.
+`ocr_layout` and `ocr_queue` are keyed by `doc_id`. A folder of a thousand
+documents moves in one transaction. Before that, a plain `mv` was a deletion
+followed by a rediscovery, destroying hours of OCR.
 
 **OCR is non-destructive.** Nothing is ever written into the user's files, and
 the highlights in the PDF preview are `PDFAnnotation` objects added in memory.
@@ -247,7 +246,7 @@ application launched from the Finder and a launchd agent both have a minimal
 Letting source code in would let whole project trees in. A `dist`, `build`,
 `out`, `target`, `.next`, `coverage`, `vendor`, `node_modules`,
 `site-packages` or `__snapshots__` folder is therefore excluded **under a
-software project**, meaning a folder carrying `package.json`, `Cargo.toml`,
+software project**, that is a folder carrying `package.json`, `Cargo.toml`,
 `pyproject.toml`, `go.mod`, `Package.swift`, `Gemfile` or `.git`, and only
 there: `~/Documents/House/build` is an ordinary folder of documents.
 
@@ -256,7 +255,7 @@ characters per page for unpaginated formats, **5 000 pages** at most for those
 same formats (`ExtractLimits.maxSplitPages`), and **under 100 useful characters
 on a page means queued for OCR**. The page ceiling is what text alone did not
 provide: an 80 KiB `.docx` whose body is 80 MiB of «A» produced 13 108 pages of
-noise, and as many identical vector windows. It applies only to the formats
+noise. It applies only to the formats
 Fouine re-paginates itself; PDF, DjVu, comics, images and media have the
 schema's ceiling (`Schema.maxPage`). Past it, pages 1 to 5 000 are kept and
 `docs.meta` carries `truncated = "pages beyond 5000 dropped (N pages)"`.
@@ -292,19 +291,24 @@ The deadlines are deliberately wide (120 s for a Vision page that measures 2 to
 
 ## 4. The SQLite schema
 
-Version **9** (`Schema.version`), written in `meta.schema_version`. It is the
-only version the binary creates, and the **only one it opens**. The schema is
-laid down in one go at creation by `GRDBStore.createSchema`, in one transaction
-and under the named lock; a base already at the right version opens without
-taking any lock, which is the case for every read.
+Version **10** (`Schema.version`), written in `meta.schema_version`. It is the
+only version the binary creates. The schema is laid down in one go at creation
+by `GRDBStore.createSchema`, in one transaction and under the named lock; a base
+already at the right version opens without taking any lock, which is the case
+for every read.
 
-**There is no migration chain.** Fouine was never distributed, and a recovery
-path that no real index exercises is a risk with nothing on the other side.
-Three cases on opening, and three only:
+**There is no migration chain.** A recovery path that no real index exercises is
+a risk with nothing on the other side. Four cases on opening, and four only:
 
 - no `meta.schema_version`, so the base is absent or empty: it is **created**
   at the current schema, under the named lock, in one transaction;
 - `schema_version` equal to the current version: it **opens**, without a lock;
+- `schema_version` 9: the single step `Schema.v9ToV10` drops the `page_vec` and
+  `vec_meta` tables and writes version 10, in one transaction under the named
+  lock, touching no document and no page. It runs no `VACUUM`: the freed pages
+  stay in the file for later writes, and `fouine maintain --vacuum` gives them
+  back to the disk. A read-only command cannot run the step, and says to open
+  the app or run `fouine maintain` once;
 - any other value: it is **refused**, untouched. Older, the message carries the
   gesture *delete it and index again*; newer, *update the fouine binary*.
 
@@ -326,8 +330,7 @@ into a batch of work.
 | `ocr_queue` | OCR queue, priority, attempt counter, shortest-remaining-first ordering |
 | `ocr_layout` | geometry of recognised lines, zlib-compressed; this is what allows highlighting on a scanned page |
 | `vocab_tri`, `vocab_seen` | FTS5 trigram vocabulary for fuzzy expansion, and what has already been poured into it |
-| `page_vec`, `vec_meta` | 384-byte semantic vectors per page window, rowid `page * 8 + chunk`, plus the model that produced them and the windowing geometry |
-| `settings` | the eleven typed settings, read by the three executables; environment variables still win |
+| `settings` | the typed settings, read by the three executables; environment variables still win |
 | `agent_status` | what the background agent publishes: phase, current document, done/total, timestamp, pid |
 
 **Where the exclusion rules live.** Two sources, applied together by the crawl
@@ -335,11 +338,11 @@ into a batch of work.
 
 - `roots.ignore_rules`, a JSON array of rule texts (`["Santé/","*.md"]`) or
   NULL, written by the app's **What Fouine skips…** sheet and by `fouine root
-  ignore add|remove`. The column is part of `Schema.ddl`; a v9 index created
-  before it receives it through `ALTER TABLE roots ADD COLUMN` at the **first
-  rule saved**, not at opening, so `schema_version` stays 9, opening an index
-  still writes nothing, and read-only openings (MCP, `search`, `status`) read
-  both shapes. The write takes no `fouine.lock`, like `settings`: no pass writes
+  ignore add|remove`. The column is part of `Schema.ddl`; an index created
+  before the column existed receives it through `ALTER TABLE roots ADD COLUMN`
+  at the **first rule saved**, not at opening, so opening an index still
+  writes nothing, and read-only openings (MCP, `search`, `status`) read both
+  shapes. The write takes no `fouine.lock`, like `settings`: no pass writes
   the column, and the agent may hold that lock for a whole OCR batch;
 - the `.fouineignore` file at the top of the root, which Fouine only reads.
 
@@ -408,24 +411,12 @@ the base is open waits in `DeepLinkQueue`.
 |---|---|---|
 | Index | `~/Library/Application Support/Fouine/fouine.db` (+ `-wal`, `-shm`) | `FOUINE_DB` |
 | Write lock | `~/Library/Application Support/Fouine/fouine.lock` | follows `FOUINE_DB` |
-| Campaign lock | `~/Library/Application Support/Fouine/fouine-embed.lock` | follows `FOUINE_DB` |
-| Semantic model | `~/Library/Application Support/Fouine/models/e5-small` | `FOUINE_MODEL_DIR` (source: `FOUINE_MODEL_URL`) |
 | Agent log | `~/Library/Logs/Fouine/fouine.log` (rotates at 10 MiB to `.log.1`) | `FOUINE_AGENT_LOG` |
 | Preferences | `~/Library/Preferences/io.github.basedpolymer.fouine.plist` | — |
 | LaunchAgent | `Fouine.app/Contents/Library/LaunchAgents/…agent.plist` | — |
 
 The LaunchAgent plist is never dropped into `~/Library/LaunchAgents`: it stays
 in the bundle, and `SMAppService.agent(plistName:)` loads it.
-
-**Two locks, for two different jobs.** `fouine.lock` protects writes, and is
-taken and released at every batch, vectorisation included, so the application
-can index during a twenty-hour campaign. That is also why nothing stopped two
-`fouine embed` runs from working on the same base and redoing the same work.
-`fouine-embed.lock` answers that question: held with `flock(LOCK_EX|LOCK_NB)`
-for the life of the process, carrying «pid N since <ISO 8601>», it makes a
-second start exit with 3 naming the first. `fouine status` turns it into the
-`semantic_campaign` key. It protects no write, and the kernel releases it when
-the process dies.
 
 The bundle identifier is `io.github.basedpolymer.fouine`, and it does not
 change: macOS authorisations and the agent's registration are keyed by it.
@@ -458,8 +449,6 @@ Sources/FouineCrawl/    root walking, exclusions, root policy, FSEvents
 Sources/FouineExtract/  one extractor per format family, bsdtar/HTML/XML helpers
 Sources/FouineIndex/    the shared indexing pass, Spotlight donation, app sources
 Sources/FouineOCR/      page rendering, Vision engine, thermal governor, OCR loop
-Sources/FouineEmbed/    e5-small CoreML model, tokenizer, vectorisation campaign,
-                        model download (the only URLSession under Sources/)
 Sources/FouineMCPKit/   MCP framing, JSON-RPC, router, budgets (MIT, no dependency)
 Sources/FouineMCP/      the MCP server itself: read-only store and tools
 Sources/fouine/         swift-argument-parser CLI (see cli.md)
@@ -467,7 +456,7 @@ Sources/FouineApp/      SwiftUI app: App/, Model/, Views/, Intents/
 Sources/FouineAgent/    headless launchd agent: conditions, pipeline, log
 Tests/                  unit tests per module, plus Tests/Integration (the recipe)
 Packaging/              bundle.sh, dmg.sh, notarize.sh, Info.plist, entitlements, INSTALL.md
-Tools/                  convert_e5.py, package_model.sh, the l10n scripts, the ranking bench
+Tools/                  the l10n scripts, the corpus fixtures generator, the ranking bench
 docs/                   this documentation
 .github/workflows/      ci.yml (tests and packaging) and release.yml (tag v*)
 SPEC.md                 the implementation contract
@@ -482,10 +471,8 @@ makes its MIT licence real rather than decorative, and one line of
 **Where a shared sentence lives.** A phrase or a predicate that two surfaces
 publish belongs to the module that owns the *fact*, never to the surfaces: the
 scope predicate "does this query narrow the set of documents?" is
-`SearchQuery.filtersDocuments` (FouineCore), and the sentence "no vectorised
-page in this scope…" is `SemanticDisarmReason.noVectorsInScopeNote`
-(FouineEmbed). The command line and the MCP server call them. Both had been
-copied word for word between `Sources/fouine` and `Sources/FouineMCP` for a
+`SearchQuery.filtersDocuments` (FouineCore). The command line and the MCP
+server call it. It had been copied word for word between `Sources/fouine` and `Sources/FouineMCP` for a
 day, which is how two surfaces end up publishing two different figures for the
 same search.
 
@@ -512,7 +499,6 @@ nothing more:
 |---|---:|
 | `fouine search energie --limit 50` | **317 ms** (110 ms with `--no-morphology`) |
 | `fouine search metal` (46 000 matching pages) | **522 ms** |
-| `fouine search 'energie libre' --hybrid` | **1 792 ms** |
 | `fouine status` | **673 ms** |
 | `fouine doctor` | **696 ms** |
 | fixed cost of one process (`fouine --version`) | 49 ms |
@@ -520,12 +506,11 @@ nothing more:
 | rendering one page for OCR | median **0,073 s**, p95 0,234 s |
 | Vision on a dense scan | median **2,335 s**, p95 3,270 s |
 | fuzzy expansion of one term | **0,90 to 3,00 ms** over 1 487 881 terms |
-| exhaustive semantic scan | about **6 ms** over the whole corpus |
 | resident memory, 4 threads | **1,148 GB** |
 
 On `energie`, morphology accounts for 207 ms of the latency, diversity 47 ms,
-and the typed form 22 ms. A recent Apple Silicon machine is much faster on OCR
-and on semantic inference; the size of the index depends only on the corpus.
+and the typed form 22 ms. A recent Apple Silicon machine is much faster on OCR;
+the size of the index depends only on the corpus.
 
 **What a page costs, by collection.** The budget in the specification is
 **2,5 GB** (criterion P5), and two profiles were measured:
@@ -533,27 +518,24 @@ and on semantic inference; the size of the index depends only on the corpus.
 | | **books** | **letters and invoices** |
 |---|---:|---:|
 | documents / pages | 1 527 / 408 951 | 63 / 2 858 |
-| index size | 2,151 GB | 22,7 MiB compacted |
-| per page, vectors complete | **5,5 KiB** | **8,3 KiB** |
+| index size | about 1,90 GB | under 22,7 MiB compacted |
+| per page | **about 4,5 KiB** | **under 8,3 KiB** |
 | pages per document | about 268 | about 3 |
-| budget reached around | about **451 000 pages** | about 300 000 pages |
+| budget reached around | about **540 000 pages** | over 300 000 pages |
 
 A page of a scanned book costs less than a page of correspondence (a page of a
 novel carries less text than a 4 000-character form), but a collection of books
 has a hundred times more pages per document. In practice, 10 000 three-page
-letters make about 240 MiB, and it would take about 100 000 such documents to
-approach the budget: the ceiling is a subject for a collection of books, not
+letters make at most about 240 MiB, and it would take over 100 000 such
+documents to approach the budget: the ceiling is a subject for a collection of books, not
 for the intended audience.
 
 Breakdown on the same index (`SELECT name, sum(pgsize) FROM dbstat GROUP BY
-name`, semantic preparation at 67 %): `page_fts_content` 1 186 MiB (58,0 %),
-`page_fts_data` 392 MiB (19,2 %), `page_vec` 232 MiB (11,4 %), the fuzzy
-vocabulary 119 MiB (5,8 %), `ocr_layout` 92 MiB (4,5 %), everything else 22 MiB.
-`page_vec` holds 764 872 rows of which 582 086 are real windows (the others are
-empty completeness sentinels): 384 bytes of vector plus about 26 bytes of
-SQLite row. At full coverage of the current corpus, about 868 000 windows in
-about 1 141 000 rows come to about 346 MiB, which is the 2,27 GB `fouine
-status` projects.
+name`), 1 811 MiB in all: `page_fts_content` 1 186 MiB (65,5 %),
+`page_fts_data` 392 MiB (21,6 %), the fuzzy vocabulary 119 MiB (6,6 %),
+`ocr_layout` 92 MiB (5,1 %), everything else 22 MiB. The size and the per-page
+cost of the books column are computed from this breakdown; the letters column
+gives the measured upper bounds.
 
 ## 9. Spotlight
 
@@ -790,8 +772,8 @@ to reopen, and that is said rather than guessed.
 ## 12. The MCP server
 
 `fouine mcp --stdio` exposes the index to an MCP client over JSON-RPC on stdin
-and stdout. Five read-only tools: search, list documents, read a page, find
-similar pages, index status. The server never writes, never starts an indexing
+and stdout. Four read-only tools: index status, search, read a page, list
+documents. The server never writes, never starts an indexing
 pass, never returns the original files, and never opens a network connection.
 It opens the base through `GRDBStore.openReadOnly` and takes no lock, so it
 answers while the agent indexes. `stdout` carries protocol frames and nothing

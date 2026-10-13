@@ -1160,10 +1160,9 @@ the final report gives its duration:
 
 ```
   step quick_check   : 79592.8 ms
-  step page_vec      : 5501.7 ms
   step docs_fts      : 8.9 ms
   step fts5_integrity: 91962.2 ms
-  check duration     : 177067.4 ms
+  check duration     : 171565.7 ms
 ```
 
 The two big steps take about the same time, `quick_check` reading the whole

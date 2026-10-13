@@ -1,14 +1,13 @@
 # CI Fouine — tout ce qui peut tourner sans le corpus personnel du mainteneur.
 #
 # Comptes réels, MESURÉS LOCALEMENT LE 03/09/2026 sur `i2/vitesse-tests`
-# (lot I2) — Xcode 26 / Swift 6.2.3, modèle e5 présent, `FOUINE_TEST_DB` et
+# (lot I2) — Xcode 26 / Swift 6.2.3, `FOUINE_TEST_DB` et
 # `Tests/Fixtures/paths.json` absents (worktree neuf) :
 #
 #     FouineCoreTests    170 (1 sauté)   FouineOCRTests      53 (3 sautés)
 #     FouineCrawlTests    55             FouineIndexTests    33
 #     FouineExtractTests 130 (2 sautés)  FouineAppTests     123
-#     FouineEmbedTests    76             FouineAgentTests    41
-#                                        FouineMCPTests      67
+#     FouineAgentTests    41             FouineMCPTests      67
 #
 #     Les six sauts : CINQ exigent le corpus PERSONNEL du mainteneur
 #     (`FOUINE_P8_DB`, la fixture T6 par `Tests/Fixtures/paths.json`, le livre
@@ -16,7 +15,7 @@
 #     sixième n'existe QUE pour djvulibre absent, et se saute donc quand il
 #     est là.
 #                                                          ─────
-#     make ci-unit       1 769 exécutés, 3 sautés (6 sans paths.json), 0 échec, ~1 min (--parallel)
+#     make ci-unit           — exécutés (à recompter), 3 sautés (6 sans paths.json), 0 échec, ~1 min (--parallel)
 #     make ci-integration 118 exécutés, 31 sautés (le régime « corpus complet », FOUINE_TEST_DB), 0 échec, 115 s
 #                                                            952
 #
@@ -30,14 +29,8 @@
 # « Exécutés » compte un test sauté : XCTSkip est un test qui a tourné et s'est
 # retiré. Les deux cibles partitionnent la même population.
 #
-# SUR LE RUNNER, il y a DES SAUTS EN PLUS, et rien d'autre ne change : il n'a
-# NI le modèle e5 (asset 404 tant que le dépôt est privé, audit B1-21) NI
-# `FOUINE_TEST_DB`. Le delta, relevé sur le run de référence 33684209828 (vert,
-# `main` en `e9abc28`, 02/09/2026, macos-15, Xcode 26.3, djvulibre installé) :
-#
-#     make ci-unit         + 10 sautés   (les tests qui exigent le modèle e5,
-#                                        dont les 3 de SemanticModelTests)
-#     make ci-integration   + 5 sautés   (HybridCorpusTests, même cause)
+# SUR LE RUNNER, rien ne change : il n'a pas plus `FOUINE_TEST_DB` ni
+# `paths.json` qu'un worktree neuf.
 #
 # Un run ANTÉRIEUR, le 33648319798 (494 / 11 en unitaire, 49 / 27 en
 # intégration), est celui qui a montré que djvulibre manquait à l'image : les
@@ -46,12 +39,12 @@
 # ci-dessous, et le `XCTSkipIf` compté de `VersionedCorpusTests`.
 #
 # Le contrôle : `swift test` n'imprime qu'une ligne agrégée par cible, jamais un
-# compte par suite — `make ci-unit` est un SEUL `swift test` à dix `--filter`.
+# compte par suite — `make ci-unit` est un SEUL `swift test` à huit `--filter`.
 # Pour un compte par suite, lancez la suite seule :
 # `swift test --filter FouineCoreTests`.
 #
 # Le palier 3.3 en a ajouté 61 (corpus versionné, recette portable, migration
-# de schéma, agent, hybride) et — c'est le vrai correctif de l'audit D12/M23 —
+# de schéma, agent) et — c'est le vrai correctif de l'audit D12/M23 —
 # a mis en CI trois suites qui n'y tournaient PAS : FouineAppTests (elle
 # existait pourtant depuis le palier 2), FouineIndexTests et la toute nouvelle
 # FouineAgentTests. « Zéro test sur FouineApp/, FouineAgent/, fouine/ » était
@@ -59,13 +52,10 @@
 # tournaient nulle part.
 #
 # Ce qui tourne ici, et pourquoi c'est sûr :
-#   · les NEUF suites unitaires (`make ci-unit`), FouineMCPTests comprise
+#   · les HUIT suites unitaires (`make ci-unit`), FouineMCPTests comprise
 #     (palier 4 : transcriptions « golden » du serveur MCP, hygiène de stdout,
-#     lecture seule prouvée sur base jetable), y compris FouineEmbedTests —
-#     jamais lancée nulle part avant le palier 0. Ses trois tests qui exigent le
-#     modèle e5 se sautent d'eux-mêmes par XCTSkip quand il est absent. Tout ce
-#     qui tire au sort dans cette suite le fait désormais sur SEMENCE FIXE : un
-#     test rouge une fois sur dix n'est pas un test.
+#     lecture seule prouvée sur base jetable). Tout ce qui tire au sort le fait
+#     sur SEMENCE FIXE : un test rouge une fois sur dix n'est pas un test.
 #   · IntegrationTests (`make ci-integration`), redevenue sûre au palier 0
 #     (audit S3). Elle ne désigne plus la base de PRODUCTION : par défaut chaque
 #     test fabrique sa propre base et sa propre racine jetables. Depuis le
@@ -74,7 +64,6 @@
 #     de requête, OCR, statut, diagnostic, fichiers déplacés, piège S1. Il ne
 #     reste sur `FOUINE_TEST_DB` que ce qui n'a de sens que sur le corpus réel —
 #     performance et bancs OCR.
-#   · le MODÈLE SÉMANTIQUE, en meilleur effort (voir plus bas).
 #   · un job d'empaquetage : `make ci-bundle` bâtit le bundle de contrôle sous
 #     .build/bundle/Fouine.app (jamais à la racine), passe les plists
 #     au linter, affiche les tranches (`lipo`) et signe le tout AD HOC pour
@@ -123,11 +112,6 @@ env:
   # sur l'image macos-15. Bouger cette valeur est un geste délibéré ; l'étape de
   # sélection ÉCHOUE si la version manque, au lieu de retomber en silence.
   XCODE_VERSION: "26.3"
-
-  # Empreinte de l'archive du modèle e5 (Sources/FouineEmbed/ModelDownload.swift).
-  # Elle sert de CLÉ DE CACHE : changer de modèle change la clé, donc le cache,
-  # sans qu'on ait à penser à l'invalider.
-  MODEL_SHA256: fa8ead627aa5cab20575e049d082bc4492cfc839414a3dba808fed549afa1484
 
 jobs:
   test:
@@ -202,73 +186,10 @@ jobs:
       - name: swift build
         run: swift build
 
-      # La release est bâtie ICI, avant les tests, et non plus juste avant
-      # l'intégration : `fouine model download` en a besoin, et les deux étapes
-      # suivantes s'appuient dessus.
+      # La release est bâtie ICI, avant les tests : la recette d'intégration
+      # pilote ce binaire, et sans lui elle se sauterait tout entière en vert.
       - name: make release-cli
         run: make release-cli
-
-      # ═══ LE MODÈLE SÉMANTIQUE, EN MEILLEUR EFFORT ════════════════════════
-      #
-      # 220 Mo, hors du dépôt, installés par `fouine model download` depuis un
-      # asset de release. Trois règles :
-      #
-      #   1. LE CACHE D'ABORD. La clé est l'empreinte SHA-256 attendue : un
-      #      nouveau modèle = une nouvelle clé, aucune invalidation manuelle.
-      #   2. FOUINE_MODEL_DIR SOUS LE WORKSPACE, toujours. Rien n'est jamais
-      #      écrit dans ~/Library/Application Support du runner.
-      #   3. UN ASSET ABSENT N'EST PAS UN ÉCHEC. L'asset n'est pas encore publié
-      #      au moment où ce fichier est écrit : le téléchargement rend 404,
-      #      l'étape AVERTIT (::warning:: + résumé de job) et la suite se saute
-      #      d'elle-même — les tests concernés portent déjà leur XCTSkip. Un job
-      #      rouge pour un asset que le mainteneur n'a pas encore publié
-      #      apprendrait aux relecteurs à ignorer le rouge.
-      - name: Restaurer le modèle sémantique (cache)
-        id: model-cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: .fouine-model
-          key: e5-model-${{ env.MODEL_SHA256 }}
-
-      - name: Installer le modèle sémantique (facultatif)
-        env:
-          FOUINE_MODEL_DIR: ${{ github.workspace }}/.fouine-model
-        run: |
-          set -u
-          echo "FOUINE_MODEL_DIR=$FOUINE_MODEL_DIR" >> "$GITHUB_ENV"
-
-          if [ "${{ steps.model-cache.outputs.cache-hit }}" = "true" ]; then
-            echo "modèle restauré du cache"
-          else
-            # `set +e` : l'échec est un cas NORMAL tant que l'asset n'est pas
-            # publié. On veut le journal complet, pas un job interrompu.
-            set +e
-            .build/release/fouine model download
-            status=$?
-            set -e
-            if [ "$status" -ne 0 ]; then
-              echo "::warning title=Modèle sémantique indisponible::\
-          \`fouine model download\` a échoué (code $status) — l'asset \
-          e5-small-v1 n'est probablement pas encore publié. FouineEmbedTests \
-          et HybridCorpusTests se sautent proprement ; ce n'est PAS un échec."
-              {
-                echo "### Modèle sémantique : absent"
-                echo ""
-                echo "\`fouine model download\` a rendu **$status**."
-                echo "L'asset \`e5-small-v1\` n'est probablement pas publié."
-                echo ""
-                echo "Conséquence : 3 tests de \`FouineEmbedTests\` et les 5 de"
-                echo "\`HybridCorpusTests\` se **sautent** (XCTSkip). Tout le"
-                echo "reste tourne."
-              } >> "$GITHUB_STEP_SUMMARY"
-            fi
-          fi
-
-          # Dans tous les cas, on DIT ce qu'on a : `model status --json` est le
-          # portier des tests, autant le lire ici aussi. Une base jetable est
-          # imposée — `fouine` ne doit jamais retomber sur celle par défaut.
-          FOUINE_DB="$RUNNER_TEMP/model-probe.db" \
-            .build/release/fouine model status --json || true
 
       - name: make ci-unit
         run: make ci-unit
@@ -427,6 +348,6 @@ jobs:
       # `test`, et de nouveau par `make ci-bundle` dans le job `bundle`. Trois
       # fois la même compilation ne prouve rien de plus que deux.
 
-      # Les MÊMES dix suites, la même liste, une seule variable de différence.
+      # Les MÊMES huit suites, la même liste, une seule variable de différence.
       - name: make ci-unit CONFIG="-c release"
         run: make ci-unit CONFIG="-c release"

@@ -67,11 +67,8 @@ stored in Fouine's own database. **None of your files is ever modified.**
 text layer. The sidebar counts the page under "scanned, recognised by Fouine",
 and the highlights are drawn on the image of page 27.](docs/images/ocr.png)
 
-The search tolerates typing mistakes and recognition errors. An optional local
-model also searches by meaning: "catalyst selectivity" finds a page about
-*regioselectivity* that shares none of its words. That model is a 220 MB
-download that only starts when you ask for it (Settings ▸ Search by meaning, or
-`fouine model download`), and full-text search never needs it. See
+The search tolerates typing mistakes and recognition errors: a word typed with
+a letter wrong, or misread on a scanned page, still finds its page. See
 [searching](docs/search.md).
 
 ---
@@ -83,7 +80,7 @@ download that only starts when you ask for it (Settings ▸ Search by meaning, o
 | Document management | Fouine does not file, sort or rename anything. It reads your folders where they are. If you want a library with tags, notes and attachments, Fouine is not that app. |
 | Syncing | There is one index per Mac. Nothing goes to a cloud, so nothing arrives from another device. |
 | PDF editing | The preview is read-only. Fouine never writes into your documents, not even to add the text layer it recognised. |
-| Chat | Fouine has no built-in assistant and writes no summaries. Search by meaning is a local 384-dimension embedding model and nothing more. |
+| Chat | Fouine has no built-in assistant and writes no summaries. It finds the pages that carry your words, or a close spelling of them. |
 | Other systems | Fouine runs on macOS 13 and later only: text recognition uses Vision, the background agent uses `SMAppService`. There is no Windows or Linux version, and there will not be one. |
 | Notion and Craft | Their notes cannot be read on this Mac: Notion keeps an encrypted cache, and Craft keeps files with no readable name. Export your pages as Markdown and add the export folder. |
 
@@ -95,7 +92,7 @@ Fouine is free. Download it, use it at home or at work, on as many Macs as you
 like. There is nothing to buy and no account to create, and updates stay free.
 
 Everything is included: every format, every folder, scanned page recognition,
-search by meaning, the assistant server and the command line.
+the assistant server and the command line.
 
 ---
 
@@ -105,10 +102,10 @@ None of your documents, searches or usage data leaves your Mac. There is no
 account and no password to create, and Fouine sends no telemetry and no crash
 reports.
 
-Fouine makes two kinds of outgoing connection, and neither happens unless you
-click or type something: checking for updates (off by default) and downloading
-the search-by-meaning model. Neither sends anything about your documents, and
-nothing goes out while Fouine indexes, reads or searches.
+Fouine makes one kind of outgoing connection: checking for updates, which is
+off by default and happens only if you turn it on or click **Check for
+updates…**. It sends nothing about your documents, and nothing goes out while
+Fouine indexes, reads or searches.
 
 An automated test checks that last sentence on every change to the code:
 `NetworkSilenceTests` runs a local server while an indexing pass reads
@@ -132,15 +129,15 @@ and works on the same index. To install it, open Settings ▸ Advanced and click
 ```sh
 fouine root add ~/Documents/Thesis --label Thesis   # add a folder
 fouine search '"ideal gas" -biology'                # exact phrase, exclusion
-fouine search 'catalysis' --hybrid --json           # meaning, JSON output
+fouine search 'catalysis' --json                    # JSON output
 ```
 
 Every command and option: [the command line](docs/cli.md).
 
 `fouine mcp --stdio` lets an AI assistant read your index. It serves Claude
 Code, Claude Desktop, Cursor, Codex or Antigravity, read-only and with no
-network, through five tools to search, read a page, jump to nearby pages and
-see what is indexed. The server cannot change the index, start indexing or hand
+network, through four tools to check the index, search, read a page and see
+what is indexed. The server cannot change the index, start indexing or hand
 over your original files.
 
 `fouine mcp install` configures those five clients in one command. Until you
@@ -205,8 +202,7 @@ redistribute it under any licence (article 4, and
 [`CONTRIBUTING.md`](CONTRIBUTING.md)). There is no separate agreement to sign.
 
 GRDB.swift (MIT), swift-argument-parser (Apache-2.0) and Sparkle (MIT) ship with
-the app; the `multilingual-e5-small` model is MIT, from Microsoft. Their notices
-are in [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md), and `fouine
+the app. Their notices are in [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md), and `fouine
 licenses` prints them in a terminal. Which licence covers which part, the MCP
 server included: [`LICENSING.md`](LICENSING.md).
 

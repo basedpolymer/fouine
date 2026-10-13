@@ -11,7 +11,7 @@ and is available in English and French, and its built-in guide exists in both
 | [`app.md`](app.md) | the app, screen by screen: window, Index card, menu bar, preview, settings, Spotlight, Shortcuts, keyboard shortcuts. This is the guide the Help menu shows (⌘?). |
 | [`fr/app.md`](fr/app.md) | the same guide in French. |
 | [`agent.md`](agent.md) | keeping the index up to date on its own: what runs in the background, when, and how to read its log. |
-| [`search.md`](search.md) | search syntax, typing mistakes, search by meaning, filters, how to read a result. |
+| [`search.md`](search.md) | search syntax, typing mistakes, filters, how to read a result. |
 | [`formats.md`](formats.md) | every format Fouine reads, family by family, and what each one needs. |
 | [`cli.md`](cli.md) | the `fouine` command: every subcommand, its options, the JSON contract, exit codes, environment variables. |
 | [`mcp.md`](mcp.md) | `fouine mcp --stdio`: letting an assistant read the index, read-only and with no network. |

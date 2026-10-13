@@ -116,6 +116,12 @@ Sources applicatives (Mail, Notes, Messages, Contacts, Safari, Calendrier) · pa
 >   Markdown, puis un dossier ordinaire. Aucune page de vente, aucun document
 >   public ne les cite à côté d'Apple Notes et de Bear.
 
+> **Amendement du 13/10/2026 (SR1, lot retrait du sens).** La recherche
+> sémantique **redevient un non-objectif**, par décision du propriétaire : le
+> point « Recherche sémantique : livrée » de l'amendement DV1 ci-dessus est
+> annulé. Fouine cherche en plein texte et en approché, rien d'autre. Détail au
+> §12.
+
 ---
 
 ## 2 · Environnement cible (mesuré)
@@ -709,6 +715,16 @@ JOIN docs d ON d.id = x.doc_id;
 > `foreignCopyInApplications` et l'alerte « An older version of Fouine is
 > installed » disparaissent, faute de pouvoir se produire.
 
+> **Amendement du 13/10/2026 (SR1, lot retrait du sens) — schéma v10.**
+> `Schema.version` passe à **10**. Le pas v9 → v10 supprime `page_vec` et
+> `vec_meta` (`DROP TABLE IF EXISTS`, rejouable) et rien d'autre : `pages`,
+> `page_fts`, `docs_fts`, `ocr_layout` et les autres tables sont intactes, et
+> le classement lexical ne bouge pas. La migration **ne lance pas de VACUUM** :
+> sur une base de 2,7 Go il ferait attendre plusieurs minutes au lancement ;
+> les pages libérées restent dans le fichier jusqu'au prochain `fouine maintain
+> --vacuum`. Tout ce que les amendements précédents du §4.1 disent du rowid
+> structuré de `page_vec`, du fenêtrage et de `vec_meta` est caduc.
+
 ### 4.2 Protocoles Swift — `Sources/FouineCore/Contracts.swift`
 
 ```swift
@@ -1148,6 +1164,18 @@ Codes de sortie : `0` succès · `1` erreur générique · `2` volume non monté
 > autres ne sont pas renumérotés. ③ **Les commandes qui écrivent dans l'index
 > — `crawl`, `extract`, `index`, `ocr`, `embed` — n'ont plus aucune condition
 > à vérifier** : elles travaillent toujours, comme l'agent d'arrière-plan.
+
+> **Amendement du 13/10/2026 (SR1, lot retrait du sens) — les commandes du
+> sens sont retirées.** `fouine embed`, `fouine model` et `fouine similar`
+> n'existent plus, sans alias. `fouine search` perd `--hybrid`,
+> `--hybrid-auto`, `--depth`, `--vec-floor`, `--vec-weight`, `--vec-center`,
+> `--lex-weight` et `--raw-semantic-ranks`, et son JSON perd les clés
+> hybrides et sémantiques (`semantic_only`, `semantic_stats`,
+> `semantic_rank_scale`…) ; `status` et `doctor` perdent la ligne et les clés
+> `meaning`. Les variables `FOUINE_MODEL_DIR`, `FOUINE_MODEL_URL`,
+> `FOUINE_MODEL_SHA256` et `FOUINE_EMBED_COMPUTE` ne sont plus lues ; aucun
+> code de sortie ne change. `docs/cli.md` fait foi. Les amendements précédents du §4.3 qui
+> décrivent ces commandes ou ces options sont caducs.
 
 > **Amendement du 13/09/2026 (PM-18, PM-16, PM-25, lot MC3) — lire une page,
 > ses voisines, et une facette qui dit son nom.** ① **Deux commandes s'ajoutent
@@ -2425,6 +2453,14 @@ Il s'interrompt proprement dès qu'une condition tombe, en laissant la file coh�
 
 > **Amendement du 15/09/2026 (DF1, version 1.0.1) — la préparation en arrière-plan redevient un choix.** `agent.prepareMeaning` passe à **faux** par défaut (décision du propriétaire, 15/09/2026). L'amendement AG1 ci-dessus reste entier — les quatre garde-fous, la décision pure, `agent_status`, la ligne `meaning` — mais l'agent ne l'exerce que si la case « Préparer aussi la recherche par le sens en arrière-plan » est cochée, ou si le bouton « Préparer la recherche par le sens… » de la barre latérale (qui s'affiche tant que la case est décochée) a lancé une campagne. `fouine doctor` ne signale donc plus, sur une installation neuve, un réglage armé sans modèle.
 
+> **Amendement du 13/10/2026 (SR1, lot retrait du sens) — l'agent ne prépare
+> plus rien d'autre que l'index.** Les amendements AG1 et DF1 ci-dessus sont
+> **annulés** : plus de lot de vecteurs, plus de phase `preparing_meaning`
+> dans `agent_status`, plus de réglages `agent.prepareMeaning`,
+> `agent.embedBudgetMinutes` ni `agent.lastEmbedBatchAt`, plus de verrou
+> `fouine-embed.lock`. Le travail de l'agent s'arrête quand les documents sont
+> extraits et la file d'OCR vide.
+
 > **Amendement du 13/09/2026 (PM-05, PM-09, lot MC3) — l'ordre de la campagne de
 > vecteurs, et ce qu'elle n'infère plus.** ① **`roots.pinned` gouverne aussi la
 > préparation du sens.** Le réglage n'était consommé que par la file d'OCR
@@ -2871,6 +2907,20 @@ Tant que ce n'est pas fait, A-Pack livre tout jusqu'à la signature incluse, et 
 Par ordre de valeur décroissante, hors périmètre de cette session :
 
 1. **Recherche sémantique.** C'est la seule des trois familles de « termes voisins » du §5.5.3 que la v1 ne couvre pas : trouver une page qui parle de régiosélectivité quand on interroge « sélectivité des catalyseurs ». Aucune expansion lexicale n'y parvient — il faut des embeddings par page, un index vectoriel local, et une fusion des scores lexical et vectoriel.
+
+   > **Amendement du 13/10/2026 (SR1, lot retrait du sens) — RETIRÉE.** Par
+   > décision du propriétaire (13/10/2026, en même temps que la gratuité,
+   > GR1), la recherche par le sens est retirée du produit : cible
+   > `FouineEmbed`, modèle e5-small téléchargeable, vecteurs, recherche
+   > hybride (RRF, échelle de rang, marge z, plancher), outil MCP
+   > `fouine_similar_pages`, `fouine embed`, `fouine model`, `fouine similar`
+   > et l'onglet de l'application. Motifs : elle était éteinte par défaut
+   > depuis DF1, demandait un téléchargement de 220 Mo et une campagne de
+   > ~30 h sur le corpus de référence, ~90 Mio de mémoire pendant la
+   > préparation, et la mesure du 03/09 n'a jamais trouvé de statistique qui
+   > sépare une réponse pertinente d'une réponse hors sujet. Les amendements
+   > qui suivent restent comme historique de conception ; aucun ne décrit
+   > plus le produit. Schéma : §4.1 (v10).
 
    > **Amendement du 01/09/2026 — IMPLÉMENTÉE** (cible `FouineEmbed`, `fouine embed`, `fouine search --hybrid`, interrupteur « Sémantique » dans l'app ; conception et mesures issues de la contre-expertise interne). Les décisions ci-dessous se sont presque toutes vérifiées : modèle **multilingual-e5-small** (MIT), **balayage exhaustif SIMD sans index approché** (6,4 ms mesurées sur 379 k vecteurs int8), vecteurs en table ordinaire + similarité en Swift (`sqlite-vec` bien inutilisable), texte de `page_fts` réencodé sans ré-extraction. **Une décision est amendée : le moteur d'exécution est Core ML, pas ONNX Runtime.** Motifs : ONNX Runtime ajouterait une dépendance lourde que le §2.2 (« deux dépendances, pas une de plus ») interdit par ailleurs, tandis que Core ML est un cadriciel système ; et l'argument « sans Neural Engine, sans intérêt » est réfuté par la mesure — mlprogram fp16 par lots de 24 tient **66 ms/page** en CPU pur sur cette machine, sous le bas de la fourchette estimée (100-500 ms). La fusion des scores est un **RRF** (fusion de rangs, k = 60), pas une combinaison de scores : bm25 et cosinus ne sont pas commensurables. Détail d'implémentation notable : tokenizer SentencePiece Unigram réimplémenté en Swift (parité vérifiée contre Hugging Face), conversion du modèle par `Tools/convert_e5.py`.
    > **Amendement du 04/09/2026 (A1m-15, A1m-16, lot K1) — l'échelle se compte en FENÊTRES, et le poste de coût n'est pas le balayage.** ① Le « 379 k vecteurs » de l'amendement ci-dessus est le chiffre du schéma v3, où une page valait un vecteur. Mesuré le 04/09/2026 sur la base de production : **2,126 fenêtres réelles par page complète** (8 971 fenêtres pour 4 220 pages, soit le 2,13 de C2-05) ; à couverture pleine, 389 862 pages donnent ~829 000 fenêtres, soit **~318 Mio** de tampon int8 — deux fois et demie l'estimation d'origine, et le second poste de la base après le texte. Le rapport naïf « lignes de `page_vec` / pages vues » (1,371 avant réparation, 1,12 après) ne mesure PAS cela : il mélange les pages incomplètes de la campagne en cours, les sentinelles vides et les lignes d'un autre schéma. ② **Le balayage n'a jamais été le poste de coût.** Décomposition d'une recherche hybride en ligne de commande, mesurée le 04/09 : chargement du vocabulaire **4,9 à 7,0 s**, chargement CoreML 0,9 s, chargement de l'index vectoriel 0,12 s, recherche elle-même 0,3 s. Le vocabulaire — 9,3 Mo de JSON matérialisés en 250 000 `NSString` et 250 000 `NSNumber` par `JSONSerialization` — pesait donc à lui seul **plus de 80 %** du temps d'une recherche sémantique. Un cache binaire posé à côté du modèle (`vocab.bin`, invalidé par la révision du modèle et la taille de `vocab.json`) le ramène à **0,18-0,24 s**, et la recherche hybride complète de 11,7 s à **1,1 s**. Optimiser le balayage SIMD, passer en float16 ou poser des centroïdes aurait porté sur 1 % du temps. ③ `FOUINE_EMBED_COMPUTE=cpu` divise la mémoire résidente par **5,8** (86 Mio contre 498) et, sur le chemin RECHERCHE — une seule inférence —, va **plus vite** (0,67 s contre 1,14 s de mur, l'initialisation GPU/ANE n'étant pas amortie) ; sur le chemin CAMPAGNE il reste **1,7× plus lent** (3,8-4,3 fenêtres/s contre 6,6-7,2). Le défaut reste `.all`, arbitré par D2 sur la campagne : c'est elle qui dure vingt heures.

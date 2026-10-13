@@ -41,7 +41,7 @@ To turn it off: the same switch, or the same pane of System Settings.
 
 ## 2. What it does
 
-Two independent loops, and one background job.
+Two independent loops.
 
 **Watching.** The agent listens to your folders through FSEvents, with a
 three-second latency. On each burst it walks what changed and extracts the new
@@ -94,43 +94,6 @@ on two consecutive readings recognition suspends until it comes back to 50 %.
 An FSEvents burst waits for the current recognition batch to finish: the agent
 never does two heavy things at once.
 
-**Search by meaning.** The agent also prepares search by meaning, which is what
-`fouine embed` does, when `agent.prepareMeaning` is on (off by default since
-1.0.1: the app's "Prepare search by meaning…" button or the checkbox in
-Settings ▸ Indexing arms it), in batches of `agent.embedBudgetMinutes` minutes
-(10 by default) and under the **same six conditions**. Four more guards, in this
-order:
-
-1. **recognition first**: a batch starts only when the recognition queue is
-   **empty**. Reading a scanned page erases that page's vectors, so vectorising
-   before recognition would mean vectorising twice;
-2. the **model** must be installed (`fouine model download`), otherwise the
-   agent logs it once and starts nothing;
-3. there must be pages left to prepare;
-4. the campaign lock `fouine-embed.lock` must be free: if a hand-launched
-   campaign is running, the agent says nothing and tries again at the next
-   tick. The other way round, a `fouine embed` launched during one of its
-   batches exits **3** naming the agent (§ 6).
-
-**Meaning preparation starts with the pinned folders.** `roots.pinned` — the
-setting the app calls "read their scanned pages first" — now orders the meaning
-campaign as well: one full phase on those folders, then the rest of the index.
-Before this, the selection went by document discovery order alone, and a folder
-pinned after the first ones could sit at zero vectors while an older folder was
-two thirds done. Spreadsheets are left out of the vectors
-(`embed.skip_spreadsheets`, true by default): a column of numbers describes
-nothing, and those pages stay findable word for word.
-
-The model (~90 MiB in memory) is **kept between two consecutive batches** and
-**released** as soon as the agent goes idle or a condition falls. A condition
-that falls **during** a batch interrupts it cleanly, between two inference
-batches: the vectors already produced are written, and resuming costs nothing.
-The setting is one checkbox (`agent.prepareMeaning`, § 5).
-
-Three log lines per batch: the start (`meaning: batch of 10 min, 118302 page(s)
-left`), the outcome (`meaning: 612 page(s) prepared, 117690 left, 600 s`) and
-the reason it stopped (budget reached, queue empty, condition fallen).
-
 **Spotlight: the agent hands over nothing.** Handing documents to Spotlight
 happens at the end of a pass, every pass, the agent's included, but it is
 refused to the agent itself. It lives in `Fouine.app/Contents/MacOS/FouineAgent`,
@@ -168,7 +131,7 @@ The state and the progress appear in the **Index** card of the sidebar and, in
 detail, in the **"Your index"** window:
 
 - the **phase**: idle, walking the folders, extracting text, text recognition,
-  preparing search by meaning, waiting, stopped. The app renders these from a
+  waiting, stopped. The app renders these from a
   language-free token rather than from the log line, so it says them in your
   language;
 - a **progress bar** with its count when there is one (documents of an
@@ -188,13 +151,6 @@ detail, in the **"Your index"** window:
 The menu bar shows one part of this: its icon takes one of three shapes
 (magnifier, circular arrows, triangle) and its panel carries the state
 sentence, greyed out and with no gesture.
-
-While the agent prepares search by meaning, the card shows **"Preparing search
-by meaning · N pages of M"**, the same as a preparation started from the app,
-with no Stop button: a setting commands it rather than a gesture. The
-**"Prepare search by meaning…"** button in Settings disappears then, replaced by
-"Fouine takes care of it in the background, when the Mac is plugged in and
-idle."
 
 A status whose **process has disappeared**, or which has not moved for **five
 minutes**, shows as stopped or idle. `fouine status` says the same on the
@@ -285,8 +241,6 @@ every batch**, so a change is seen within one polling period.
 | `agent.requireAC` | `true` | condition 1 |
 | `agent.pauseOnLowPower` | `true` | condition 2 |
 | `agent.pauseOnThermal` | `true` | conditions 3 and 4 |
-| `agent.prepareMeaning` | `true` | also prepare search by meaning, after recognition |
-| `agent.embedBudgetMinutes` | 10 | length of a meaning preparation batch |
 | `roots.pinned` | *(empty)* | folders whose scanned pages are read first |
 | `notifications.onQueueDrained` | `false` | notification at the end (posted by the app) |
 
@@ -314,8 +268,6 @@ effect then, and it is better to know than to guess.
 | `FOUINE_AGENT_REQUIRE_AC` | `agent.requireAC` |
 | `FOUINE_AGENT_PAUSE_LOW_POWER` | `agent.pauseOnLowPower` |
 | `FOUINE_AGENT_PAUSE_ON_THERMAL` | `agent.pauseOnThermal` |
-| `FOUINE_AGENT_PREPARE_MEANING` | `agent.prepareMeaning` |
-| `FOUINE_AGENT_EMBED_BUDGET_MINUTES` | `agent.embedBudgetMinutes` |
 | `FOUINE_PINNED_ROOTS` | `roots.pinned` |
 | `FOUINE_NOTIFY_QUEUE_DRAINED` | `notifications.onQueueDrained` |
 
@@ -329,10 +281,10 @@ launchd's 20-second axe) and `FOUINE_AGENT_LOG` (path of the log).
 
 Every indexing write takes an exclusive lock on `fouine.lock`. It is **taken at
 the first write and released at every resting point**: end of an indexing pass,
-end of a recognition batch, end of an embedding batch. Writes to settings and
-to the agent's own status are **exempt**: changing a setting must not fail
-because the agent is working, since it is precisely when the agent is
-monopolising the machine that you want to cut its budget.
+end of a recognition batch. Writes to settings and to the agent's own status are
+**exempt**: changing a setting must not fail because the agent is working, since
+it is precisely when the agent is monopolising the machine that you want to cut
+its budget.
 
 While a write is in progress:
 
@@ -355,22 +307,11 @@ While a write is in progress:
 `FOUINE_DB`, two databases in the same folder no longer block each other.
 
 The wait is therefore bounded by one batch rather than by the life of a
-process: a command refused during an embedding campaign succeeds on the next
-try.
+process: a command refused during a recognition batch succeeds once that batch
+ends.
 
 `fouine search`, `fouine status`, `fouine doctor` and `fouine list` never take
 the lock and always work.
-
-**`fouine embed` and the campaign lock.** `fouine-embed.lock`, which is not
-`fouine.lock`, guarantees that only one vectorisation runs at a time. Since the
-agent prepares search by meaning itself, it is usually the agent holding it, ten
-minutes at a time: a campaign launched by hand during one of its batches exits
-**3** with "the background agent is preparing meaning — it will stop by itself;
-or turn the setting off (`fouine config set agent.prepareMeaning false`)".
-Waiting is enough. The other way round, an agent that finds the lock taken says
-nothing and tries again at the next tick. `fouine status` carries the `meaning`
-line; `fouine doctor` repeats it and adds the gesture when the setting is armed
-without the model installed.
 
 **How `doctor` knows who holds the lock.** It probes: it opens `fouine.lock`
 read-only and tries the `flock` without waiting. If it gets it, the lock is free,

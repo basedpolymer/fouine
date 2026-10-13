@@ -7,16 +7,15 @@ Fouine reads all your documents; that is what it is for. So the question “wher
 does that text go?” needs an answer you can check, not just a promise.
 
 The answer: nowhere. No document, no search and no usage data leaves your Mac.
-Fouine makes two kinds of outgoing connection, listed below, and neither happens
-unless you click or type something.
+Fouine makes one kind of outgoing connection, listed below, and it does not
+happen unless you click something.
 
 | | What triggers it | What it contacts | What it sends |
 |---|---|---|---|
 | Update check | **Off by default**. The **Check for updates…** menu item, or the switch in Settings | `github.com` ([details](updates.md)) | nothing |
-| Downloading the search-by-meaning model | The `fouine model download` command, or the button in Settings | `github.com`, then `release-assets.githubusercontent.com` | nothing |
 
-Neither sends anything about your documents, and neither sends anything about
-your Mac: no name, no serial number, no identifier of any kind.
+It sends nothing about your documents and nothing about your Mac: no name, no
+serial number, no identifier of any kind.
 
 **Nothing goes out while Fouine indexes, reads your documents or searches.** An
 automated test checks that sentence on every change to the code (see below).
@@ -25,12 +24,8 @@ automated test checks that sentence on every change to the code (see below).
 
 ## 1. What Fouine does not do
 
-- **Only one file in the code opens a network connection.**
-  `Sources/FouineEmbed/ModelDownload.swift` downloads the search-by-meaning
-  model when you ask for it: a private session that writes no cookies or cache
-  to disk, a single `GET` with a single `User-Agent: Fouine/1.0.0` header, and a
-  SHA-256 check of the file before it is installed. The
-  update check is not Fouine's code at all. It is Sparkle, an open-source
+- **No file in Fouine's code opens a network connection.** The update check
+  is not Fouine's code at all. It is Sparkle, an open-source
   updater, and it ships switched off: with `SUEnableAutomaticChecks` set to
   `false`, Sparkle does not even ask whether to check. When you do check, it
   fetches one XML file from the project's releases page and sends no identifier,
@@ -42,9 +37,7 @@ automated test checks that sentence on every change to the code (see below).
 - **There is no telemetry.** Fouine collects no usage statistics and sends no
   crash reports.
 - **Everything is analysed on your Mac.** Text recognition is Apple's Vision
-  framework, running locally. Search by meaning uses a CoreML model (384
-  dimensions) that also runs locally: it is downloaded once, then works offline.
-  No text is ever sent anywhere to be analysed.
+  framework, running locally. No text is ever sent anywhere to be analysed.
 - **Nothing is written into your files**, not even the text Fouine recognised on
   a scan. That text is stored in Fouine's database.
 - **Speech stays on your Mac too.** When “Also write down what is said” is on
@@ -72,16 +65,12 @@ automated test checks that sentence on every change to the code (see below).
 
 This is a design rule, written into [`CONTRIBUTING.md`](../CONTRIBUTING.md):
 adding a network session, a socket or any telemetry would change what the
-product is, not improve it. Two exceptions have been allowed, each under the
-same conditions: a published address, full disclosure to the user, and no call
-unless the user did something that asks for it.
-
-1. **Updates**, because Fouine is distributed outside the App Store and has no
-   other way to get a security fix to people who have already downloaded it.
-2. **The search-by-meaning model**, because making people build it themselves
-   with Python and `torch` would keep half the product for developers.
-
-A third exception would need the same discussion.
+product is, not improve it. One exception has been allowed: **updates**,
+because Fouine is distributed outside the App Store and has no other way to get
+a security fix to people who have already downloaded it. It comes with three
+conditions: a published address, full disclosure to the user, and no call
+unless the user did something that asks for it. A second exception would need
+the same discussion.
 
 Indexing is the harder case. Fouine hands your files to macOS components
 (PDFKit, Vision, the rich-text importers in AppKit), and some of them can fetch
@@ -109,38 +98,6 @@ The test covers one file type for each way Fouine reads documents:
 | `.pdf` | an `/OpenAction` pointing to an address, a remote `/GoToR`, a `/Launch` |
 | `.svg` | a remote image and an external entity |
 | `.mkv` (two files) | an HLS playlist and an `ffconcat` script disguised as video, passed to ffprobe and then ffmpeg |
-
-### What `fouine model download` does, step by step
-
-Nothing, until you type it. Indexing, `fouine embed`, `fouine search --hybrid`
-and `fouine doctor` never download anything: they tell you what to type. When
-you do type it, the command says what it is about to do, then:
-
-- it requests
-  `https://github.com/basedpolymer/fouine/releases/download/e5-small-v1/e5-small-v1.zip`;
-- GitHub redirects to `release-assets.githubusercontent.com`, which serves the
-  file, so two hosts appear in your firewall. That is how every GitHub download
-  works;
-- it follows the redirect only over `https:`. A redirect to `http:` is refused,
-  the command stops and nothing is installed: a 220 MB model that will run on
-  your Mac is never downloaded unencrypted, where anyone on the network could
-  tamper with it;
-- it sends one `GET` with the `User-Agent: Fouine/1.0.0` header: no cookie, no
-  identifier, no referrer, nothing from your documents;
-- it caps what it writes during the download at twice the expected size. Both
-  the announced `Content-Length` and the bytes actually received are checked
-  against that cap, anything beyond it is cut off, and the temporary file never
-  grows past it. The cap also applies when you set `FOUINE_MODEL_SHA256`, which
-  is exactly when the archive comes from somewhere else;
-- it checks the size, then the SHA-256 of the archive. If a single byte is
-  wrong, nothing is installed;
-- it installs the model in `~/Library/Application
-  Support/Fouine/models/e5-small`. `fouine model remove` deletes it; `fouine
-  model status` shows what is installed.
-
-`FOUINE_MODEL_URL` installs from another source, such as a local file copied
-from a USB stick (`file:///…/e5-small-v1.zip`). Fouine then opens no connection
-at all. That is the recommended way on a Mac kept offline.
 
 ---
 
@@ -173,16 +130,15 @@ codesign -dv --verbose=4 /Applications/Fouine.app
 names who signed the app. On a copy you built yourself, `TeamIdentifier=not set`
 is normal: that is an ad-hoc signature.
 
-**The source code, and why reading it is not enough.** One file in Fouine opens
-a connection, and only one: `Sources/FouineEmbed/ModelDownload.swift`, the model
-download. Everything is in it, with comments: the address as a constant, the
-private session, the single header and the SHA-256 check.
+**The source code, and why reading it is not enough.** No file under
+`Sources/` opens a connection: there is no `URLSession` and no socket in
+Fouine's own code. The update check is made by Sparkle (see below).
 
 An earlier version of this page suggested `grep 'URLSession\|https://' Sources/`
 as proof. It proved nothing, for two reasons:
 
-1. it returns more than twenty lines (comments, links to documentation, download
-   constants), when the page claimed it would return none;
+1. it returns more than twenty lines (comments, links to documentation), when
+   the page claimed it would return none;
 2. more importantly, **no amount of reading the code can show that an app which
    hands untrusted files to macOS stays offline.** The request a booby-trapped
    document would trigger is made by macOS, to an address taken from the
@@ -208,23 +164,15 @@ sudo lsof -nP -iTCP -a -c Fouine -c fouine
 ```
 
 Index a whole folder, let text recognition run, search: the command returns
-nothing. It lists a connection only during the ones in the table above. This is
+nothing. It lists a connection only during an update check. This is
 an observation, not a proof: it tells you nothing about what other documents
 than yours might do, which is what the test is for.
 
 **The most thorough check: an outgoing firewall** such as Little Snitch, LuLu or
 Radio Silence. Install one, index a whole folder, let text recognition run,
-search: Fouine never shows up. Then trigger the connections one at a time:
-
-- **Fouine ▸ Check for updates…** makes one request, to `github.com`. Block it,
-  and the app carries on as normal;
-- `fouine model download` makes one request to `github.com`, **then a second to
-  `release-assets.githubusercontent.com`** (the redirect that serves the file).
-  Block them, and the command stops with a message and installs nothing;
-  full-text search never needed the model.
-
-Those are the only two connections Fouine can make, and you have just triggered
-both.
+search: Fouine never shows up. Then choose **Fouine ▸ Check for updates…**: it
+makes one request, to `github.com`. Block it, and the app carries on as normal.
+That is the only connection Fouine can make.
 
 ---
 
@@ -243,7 +191,6 @@ It holds:
 | the **text extracted** from your documents | that is its purpose; anyone who opens the file can read it |
 | the **paths** of the indexed files | the volume's UUID plus the path on that volume |
 | the **position of each line** found by text recognition | compressed; it is what draws the highlights on a scan |
-| the **meaning vectors** of the pages, if you prepared search by meaning | 384 bytes per page |
 
 > **The database is as confidential as the documents it indexes.** A folder of
 > medical records, legal papers or personal notes gives a database that is just
@@ -255,7 +202,6 @@ Other locations:
 | | Path |
 |---|---|
 | Write lock | `~/Library/Application Support/Fouine/fouine.lock` |
-| Search-by-meaning model | `~/Library/Application Support/Fouine/models/e5-small` |
 | Background agent log | `~/Library/Logs/Fouine/fouine.log` (+ `.log.1`) |
 | Preferences | `~/Library/Preferences/io.github.basedpolymer.fouine.plist` |
 | **Copies of your notes** (Apple Notes, Bear, Anki), if you ticked an app | `~/Library/Application Support/Fouine/Sources/<App>/` |
@@ -342,9 +288,9 @@ breaks, and how to grant it again: [permissions](permissions.md).
 
 ## 6. Reporting a problem
 
-Any network connection from Fouine **other than those in the table at the top**,
-that is, without your clicking “Check for updates…” or running `fouine model
-download`, would be a security
+Any network connection from Fouine **other than the one in the table at the
+top**, that is, without your clicking “Check for updates…” or turning on the
+automatic check, would be a security
 vulnerability in itself, and it is explicitly covered by
 [`SECURITY.md`](../SECURITY.md). Please don't report it in a public issue: use
 GitHub's private reporting form.

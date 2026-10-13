@@ -208,7 +208,7 @@ a leading `/` is accepted (`/Santé/` and `Santé/` are the same rule). Negation
 (`!file`) is not supported: the line is dropped, with a warning in the log.
 
 A document already indexed that becomes excluded leaves the index at the next
-pass, with its pages, its recognised text and its meaning vectors. Its content
+pass, with its pages and its recognised text. Its content
 no longer comes back in searches, in the app or through the assistant server.
 Remove the rule, and the document comes back at the pass after that: an
 exclusion never touches your files.
