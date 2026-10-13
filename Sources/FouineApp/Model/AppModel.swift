@@ -37,6 +37,24 @@ struct RootStatus: Identifiable, Equatable {
     }
 }
 
+/// Ce qu'une sonde a appris d'une racine, sans le `RootRecord` qui l'entoure
+/// (PI-01). `refreshRoots(probe: false)` le fait voyager jusqu'à la fermeture
+/// détachée pour reporter l'état connu ; `RootStatus` lui-même n'y entrerait
+/// pas sans traîner un enregistrement de base derrière lui.
+struct ProbedRootState: Sendable {
+    let mounted: Bool
+    let readable: Bool
+    let reason: String?
+    let probeReason: RootProbe.Reason?
+
+    init(_ status: RootStatus) {
+        mounted = status.mounted
+        readable = status.readable
+        reason = status.reason
+        probeReason = status.probeReason
+    }
+}
+
 /// Les journaux s'adressent aux dépanneurs : anglais, comme le reste. AU
 /// NIVEAU DU FICHIER : une propriété statique d'une classe `@MainActor` est
 /// elle-même isolée, et la remise à Spotlight tourne sur un fil de fond.
@@ -694,8 +712,19 @@ final class AppModel: ObservableObject {
     /// `probe: true` LIT RÉELLEMENT un fichier de chaque racine active. C'est ce
     /// geste, et lui seul, qui fait apparaître l'invite « Fouine voudrait accéder
     /// à votre dossier Documents » ; l'agent d'arrière-plan en est incapable.
+    ///
+    /// `probe: false` NE SAIT RIEN de la lisibilité : il REPORTE le dernier état
+    /// sondé (PI-01). Sans ce report, ouvrir les réglages — son appelant le plus
+    /// fréquent — repeignait chaque dossier actif « lisible », et la carte
+    /// « Index » perdait au tour de santé suivant la phrase « Fouine n'est pas
+    /// autorisée à lire “X” » ET le bouton qui la répare, pendant que le bandeau
+    /// orange, lui, restait : deux surfaces contradictoires, et c'était celle
+    /// qui portait le remède qui se taisait.
     func refreshRoots(probe: Bool) async {
         let store = service.store
+        let known = Dictionary(uniqueKeysWithValues: roots.map {
+            ($0.id, ProbedRootState($0))
+        })
         let outcome: Result<[RootStatus], Error> = await Task.detached(
             priority: .userInitiated) {
             let records: [RootRecord]
@@ -709,6 +738,19 @@ final class AppModel: ObservableObject {
                                       reason: String(localized: "disk not plugged in"))
                 }
                 guard probe, record.enabled else {
+                    // Le dernier état SONDÉ, quand il y en a un (PI-01). Il
+                    // faut qu'il ait été pris disque branché : une racine
+                    // connue « disque débranché » dont le chemin se résout de
+                    // nouveau est rebranchée, et reporter son ancien refus
+                    // serait un mensonge que seule une nouvelle sonde
+                    // défait. Une racine désactivée reste non lisible.
+                    if !probe, record.enabled,
+                       let seen = known[record.id], seen.mounted {
+                        return RootStatus(record: record, absolutePath: url.path,
+                                          mounted: true, readable: seen.readable,
+                                          reason: seen.reason,
+                                          probeReason: seen.probeReason)
+                    }
                     return RootStatus(record: record, absolutePath: url.path,
                                       mounted: true, readable: record.enabled,
                                       reason: nil)
