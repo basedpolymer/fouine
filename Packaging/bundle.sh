@@ -70,6 +70,32 @@ if [ "$(stat -f%z "$APP/Contents/MacOS/Fouine")" \
     exit 1
 fi
 
+# Second garde-fou, celui du principe (AUDIT-DK, DK-04) : Contents/MacOS ne
+# contient QUE Fouine et FouineAgent. Un exécutable posé là hérite de l'identité
+# du bundle — `Bundle.main` lui rend Fouine.app et son Info.plist —, donc des
+# autorisations TCC de l'app, mais aussi de son statut d'application : au premier
+# cadre qui s'inscrit auprès de LaunchServices (PDFKit le fait), le Dock ouvre
+# une SECONDE tuile « Fouine » qui rebondit. L'agent le neutralise par
+# `setActivationPolicy(.prohibited)` ; un nouvel outil, non. La CLI, elle, reste
+# dans Contents/Helpers, où `Bundle.main.bundleIdentifier` vaut nil et où
+# LaunchServices n'inscrit rien (vérifié le 13/10/2026 sur les trois
+# `fouine mcp --stdio` vivants : absents de `lsappinfo list`).
+for found in "$APP"/Contents/MacOS/*; do
+    case "${found##*/}" in
+        Fouine|FouineAgent) ;;
+        *)
+            echo "bundle.sh : ${found##*/} n'a rien à faire dans Contents/MacOS." >&2
+            echo "  Un binaire placé là hérite de l'identité de l'app (Bundle.main" >&2
+            echo "  = Fouine.app) et de son statut d'application : le Dock lui" >&2
+            echo "  ouvre une seconde tuile « Fouine » dès qu'un cadre comme" >&2
+            echo "  PDFKit s'inscrit auprès de LaunchServices (AUDIT-DK)." >&2
+            echo "  Les outils en ligne de commande vont dans Contents/Helpers," >&2
+            echo "  où Bundle.main est nul." >&2
+            exit 1
+            ;;
+    esac
+done
+
 cp "$ROOT/Packaging/Info.plist" "$APP/Contents/Info.plist"
 cp "$ROOT/Packaging/io.github.basedpolymer.fouine.agent.plist" \
    "$APP/Contents/Library/LaunchAgents/io.github.basedpolymer.fouine.agent.plist"
