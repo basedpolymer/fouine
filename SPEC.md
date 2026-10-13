@@ -22,6 +22,18 @@
 > compatibilité copyleft, on cherche des licences permissives — le critère
 > retenu au §2.2 y suffisait déjà. Détail : `LICENSING.md`.
 
+> **Amendement du 13/10/2026 (GR1, lot gratuit)** — **L'usage de Fouine est
+> gratuit.** La licence passe en **1.1 du 13 octobre 2026** : l'application
+> obtenue du titulaire s'installe et s'utilise sans payer, chez soi comme au
+> travail, sur autant d'ordinateurs qu'on en emploie. Ce qui disparaît du
+> texte : l'achat, la clé de licence, l'essai de trente jours, la limite de
+> trois Mac et la clause interdisant de contourner la vérification de licence.
+> Ce qui ne change pas : le code reste consultable, compilable et modifiable
+> pour un usage personnel ou une contribution, et la redistribution — sources
+> modifiées ou non, binaires compris — reste fermée. **Partout où ce document
+> dit que l'application se vend, qu'elle a un prix ou qu'elle s'essaie, lire
+> « l'usage en est gratuit ».**
+
 ## Journal des révisions
 
 **v1.0 → v1.1** — révision après contre-expertise interne. Ce qui change :
@@ -198,6 +210,17 @@ Tout le reste est refusé : ZIPFoundation (ne remplace pas `bsdtar`, seule voie 
 > relais pour les essais, acceptée seulement en `https://` ou
 > `http://127.0.0.1:<port>` : c'est une adresse contactée, avec la clé.
 > Détail : `docs/privacy.md`.
+
+> **Amendement du 13/10/2026 (GR1, lot gratuit) — retour à DEUX connexions
+> sortantes.** Les deux amendements ci-dessus sont **annulés** : la cible
+> `FouineLicense`, le fichier `license.json`, le relais et
+> `FOUINE_LICENSE_RELAY` sont retirés du produit, et aucun code n'en traite
+> plus. Il ne reste que les deux connexions d'origine, toutes deux à la
+> demande : la vérification de mise à jour (Sparkle, éteinte par défaut) et le
+> téléchargement du modèle de sens. **Un seul fichier de `Sources/` ouvre une
+> connexion**, `FouineEmbed/ModelDownload.swift`. L'agent d'arrière-plan ne
+> sortait déjà jamais sur le réseau ; il n'a plus rien à lire non plus avant de
+> travailler. Détail : `docs/privacy.md`, `LICENSING.md`.
 
 ### 2.3 Corpus cible
 
@@ -1115,6 +1138,16 @@ Codes de sortie : `0` succès · `1` erreur générique · `2` volume non monté
 > une clé morte. ④ La phrase d'un refus d'activation (toujours **7**) suit le
 > texte de Creem : « already in use on 3 Macs » pour la seule limite
 > d'activation, « Contact the seller » pour tout autre refus.
+
+> **Amendement du 13/10/2026 (GR1, lot gratuit) — `fouine license` est
+> retirée, et les codes 6, 7 et 8 reviennent libres.** Les deux amendements
+> ci-dessus sont **annulés**. ① La sous-commande `fouine license` (au
+> singulier) n'existe plus, sans alias : la ligne de commande répond « unknown
+> subcommand », ce qui est le comportement voulu. `fouine licenses`, au
+> pluriel, est inchangée. ② Les **codes de sortie 6, 7 et 8 sont rendus** ; les
+> autres ne sont pas renumérotés. ③ **Les commandes qui écrivent dans l'index
+> — `crawl`, `extract`, `index`, `ocr`, `embed` — n'ont plus aucune condition
+> à vérifier** : elles travaillent toujours, comme l'agent d'arrière-plan.
 
 > **Amendement du 13/09/2026 (PM-18, PM-16, PM-25, lot MC3) — lire une page,
 > ses voisines, et une facette qui dit son nom.** ① **Deux commandes s'ajoutent

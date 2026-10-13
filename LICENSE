@@ -1,5 +1,5 @@
-FOUINE SOURCE-AVAILABLE LICENCE — version 1.0, 13 September 2026
-LICENCE FOUINE SOURCE-AVAILABLE — version 1.0 du 13 septembre 2026
+FOUINE SOURCE-AVAILABLE LICENCE — version 1.1, 13 October 2026
+LICENCE FOUINE SOURCE-AVAILABLE — version 1.1 du 13 octobre 2026
 
 Fouine — document search engine for macOS.
 Copyright © 2026 Mathis Demory. All rights reserved.
@@ -41,22 +41,14 @@ is protected by copyright law and by international treaties.
 
 1. GRANT OF LICENCE
 
-(a) Installation and use. The Licensor grants you the right to install and
-    use copies of the Software obtained from the Licensor — the disk image
-    published by the Licensor, the official Homebrew cask, the built-in
-    update — under the terms of your purchase.
+(a) Installation and use, free of charge. The Licensor grants you the right
+    to install and use, free of charge, copies of the Software obtained from
+    the Licensor — the disk image published by the Licensor, the official
+    Homebrew cask, the built-in update. That right covers private and
+    professional use alike, on as many computers as you use, and no payment,
+    registration or activation is required for it.
 
-(b) One licence per person, up to three Macs. The licence is granted to one
-    person, who may install and activate the Software on up to three Macs of
-    the same household. It is not shared between several people. You may
-    release one of those activations at any time to use another Mac.
-
-(c) Trial. The Software may be used without a licence key for a trial period
-    of thirty days. When that period ends, updating the index stops and a
-    licence key is required to resume it; searching, reading and exporting
-    what is already indexed continue to work.
-
-(d) Backup copies. You may make the copies of the Software necessary for
+(b) Backup copies. You may make the copies of the Software necessary for
     backup and archival purposes.
 
 2. OTHER RIGHTS AND LIMITATIONS
@@ -71,14 +63,11 @@ is protected by copyright law and by international treaties.
 (c) No rental or lending. You must not rent, lease or lend the Software, make
     it available to a third party, or offer it as a service.
 
-(d) Licence verification. You must not circumvent, disable or alter the means
-    by which the Software verifies your licence, nor help a third party do so.
-
-(e) Support. The Licensor may provide support services for the Software. Any
+(d) Support. The Licensor may provide support services for the Software. Any
     code supplied as part of them is part of the Software and is governed by
     the Licence.
 
-(f) Compliance with applicable laws. You must comply with applicable law in
+(e) Compliance with applicable laws. You must comply with applicable law in
     your use of the Software.
 
 3. SOURCE CODE
@@ -204,24 +193,14 @@ Logiciel est protégé par le droit d'auteur et par les traités internationaux.
 
 1. CONCESSION
 
-(a) Installation et usage. Le Titulaire vous concède le droit d'installer et
-    d'utiliser les copies du Logiciel obtenues du Titulaire — image disque
-    publiée par le Titulaire, formule Homebrew officielle, mise à jour
-    intégrée au Logiciel — selon les conditions de votre achat.
+(a) Installation et usage, à titre gratuit. Le Titulaire vous concède le
+    droit d'installer et d'utiliser gratuitement les copies du Logiciel
+    obtenues du Titulaire — image disque publiée par le Titulaire, formule
+    Homebrew officielle, mise à jour intégrée au Logiciel. Ce droit couvre
+    l'usage privé comme l'usage professionnel, sur autant d'ordinateurs que
+    vous employez, et n'exige ni paiement, ni inscription, ni activation.
 
-(b) Une licence par personne, jusqu'à trois Mac. La licence est accordée à une
-    personne, qui peut installer et activer le Logiciel sur trois Mac au plus
-    d'un même foyer. Elle n'est pas partagée entre plusieurs personnes. Vous
-    pouvez libérer l'une de ces activations à tout moment afin d'employer un
-    autre Mac.
-
-(c) Essai. Le Logiciel peut être utilisé sans clé de licence pendant une
-    période d'essai de trente jours. À la fin de cette période, la mise à jour
-    de l'index s'arrête et une clé de licence est nécessaire pour la
-    reprendre ; la recherche, la lecture et l'export de ce qui est déjà indexé
-    continuent de fonctionner.
-
-(d) Copies de sauvegarde. Vous pouvez faire les copies du Logiciel
+(b) Copies de sauvegarde. Vous pouvez faire les copies du Logiciel
     nécessaires à la sauvegarde et à l'archivage.
 
 2. DROITS ET LIMITES
@@ -238,15 +217,11 @@ Logiciel est protégé par le droit d'auteur et par les traités internationaux.
 (c) Pas de location ni de prêt. Vous ne devez ni louer, ni prêter, ni mettre
     le Logiciel à la disposition d'un tiers, ni le proposer comme service.
 
-(d) Vérification de la licence. Vous ne devez pas contourner, désactiver ni
-    altérer les moyens par lesquels le Logiciel vérifie votre licence, ni
-    aider un tiers à le faire.
-
-(e) Assistance. Le Titulaire peut fournir une assistance relative au
+(d) Assistance. Le Titulaire peut fournir une assistance relative au
     Logiciel. Tout code fourni à ce titre fait partie du Logiciel et relève
     de la Licence.
 
-(f) Respect de la loi. Vous devez respecter la loi applicable dans votre
+(e) Respect de la loi. Vous devez respecter la loi applicable dans votre
     usage du Logiciel.
 
 3. CODE SOURCE

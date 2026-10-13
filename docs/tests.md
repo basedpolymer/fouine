@@ -41,7 +41,6 @@ make check-docs check-changelog              # after any doc or CHANGELOG change
 | `Sources/FouineOCR` | `FouineOCRTests`, `FouineIndexTests` | 36 s |
 | `Sources/FouineIndex` | `FouineIndexTests`, `FouineAgentTests` | 8 s |
 | `Sources/FouineEmbed` | `FouineEmbedTests`, `FouineMCPTests/SemanticModelTests` | 20 s |
-| `Sources/FouineLicense` | `FouineLicenseTests` | 2 s |
 | `Sources/FouineMCPKit`, `Sources/FouineMCP` | `make ci-mcp`, plus `docs/mcp.md` and `Packaging/mcpb/manifest.json` when a tool changes | 19 s |
 | `Sources/FouineApp` | `FouineAppTests`, plus `./Tools/l10n-lint.sh` when a string changes | 25 s |
 | `Sources/FouineApp/Resources/Localizable.xcstrings` | `FouineAppTests/L10nTests`, `./Tools/l10n-lint.sh`, then `make ci-bundle-i18n` | 25 s |
@@ -193,13 +192,12 @@ share.
 | `FouineOCRTests` | 63 | Vision, page rendering (webp, psd, animated gif, Sketch and Figma previews), thermal governor, deadlines, cancellation |
 | `FouineIndexTests` | 122 | the shared indexing pass, OCR priority, pinned roots, Spotlight donation against a fake donor, language catch-up at the end of a pass, Apple Notes, Bear and Anki against SQLite bases built at the real schema (an Anki collection held open in WAL mode), a copy recognised by where it lives and named as in its app, a rule kept in the settings taking a document and its vectors out of a real pass |
 | `FouineEmbedTests` | 131 | quantisation, vector index, RRF, `EmbedRun`, semantic windowing, lock released per batch, model download, parity with the Python reference, a page encoded on the fly byte for byte like the campaign |
-| `FouineAppTests` | 546 | the pure models behind the window: `SearchModel`, sorting, export, facets and restored session, preview, the single index state, the deep-link router, the menu-bar search, Shortcuts actions, uninstalling, the licence model, the “What Fouine skips…” sheet, plus accessibility and localisation |
-| `FouineAgentTests` | 68 | the pure state machine, transitions, the §5.7 conditions, the 0o600 log, `agent_status`, the trial guard, the roots walked again when their kept exclusion rules change |
+| `FouineAppTests` | 602 | the pure models behind the window: `SearchModel`, sorting, export, facets and restored session, preview, the single index state, the deep-link router, the menu-bar search, Shortcuts actions, uninstalling, the “What Fouine skips…” sheet, plus accessibility and localisation |
+| `FouineAgentTests` | 67 | the pure state machine, transitions, the §5.7 conditions, the 0o600 log, `agent_status`, the roots walked again when their kept exclusion rules change |
 | `FouineMCPTests` | 176 | stdio framing, `stdout` hygiene, thirteen golden transcripts, read-only proved on all five tools, pagination, response budget, semantic fallback, the search parameters (`since`, `fuzzy`, `facet`, `compact`, `marks`), citation fields, semantic scope, network silence, the `.mcpb` manifest against `tools/list`, client configuration, the agent verdict and the per-root coverage, `encode_if_missing` and `compact` on neighbours, the `--folders` scope (served roots, refusals naming only them, an out-of-scope document unknown, exact pagination across roots) |
-| `FouineLicenseTests` | 31 | the five licence states, the file (atomic write, unreadable counts as absent, clock moved back), the monthly check, the relay client behind a stand-in `URLProtocol` answering the bodies Creem really returned in its sandbox (`CreemReplies.swift`) |
 | `IntegrationTests` | 142 | the recipe: the CLI driven by `Process`, `read` and `similar`, `search --mark`, the citation keys and `bm25` of `search --json`, `--hybrid-auto`, `similar --encode`, `mcp --folders`, `root list ignore_rules`, `root ignore add`, `remove` and `list`, named refusals in 64, `status --unreadable`, a copy without `-wal` repaired by `maintain`, `ocr` under lock exiting 3, semantics disarmed end to end |
 
-The ten unit suites make **2 058 tests** and are what `make ci-unit` runs, in
+The nine unit suites make **2 132 tests** and are what `make ci-unit` runs, in
 `--parallel`; `IntegrationTests` counts separately, as `make ci-integration`. Counts are refreshed at the end of a
 session, after a green gate, not on every change.
 
@@ -507,12 +505,6 @@ are undone in a `defer`. The CoreML model is read, never written.
   `Agent.postBatchTick`, `Agent.timerTick`), covered at **82,5 %** by
   `FouineAgentTests`, with a clean stop through an injected `onExit` and a full
   simulation of the blocking and resuming conditions.
-- **`fouine license` against the real seller.** An offline recipe must not go
-  out on the network: `LicenseRecetteTests` drives `activate`, `deactivate` and
-  the monthly check of `status` through `LocalLicenceRelay`, a stand-in relay
-  on `127.0.0.1` (`FOUINE_LICENSE_RELAY`) answering Creem's real sandbox
-  bodies. The round trip with Creem itself is played by hand, in its sandbox,
-  when the licence code changes (lot LC2).
 - **The `rtfd`, `webarchive` and `cbr` extensions.** No versioned fixture:
   proprietary formats, packages, or a RAR archive no free tool produces. They
   stay covered by unit tests on fixtures built on the fly.
