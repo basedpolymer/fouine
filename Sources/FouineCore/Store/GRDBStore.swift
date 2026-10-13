@@ -1287,6 +1287,51 @@ public final class GRDBStore: IndexStore {
 
     // MARK: - Statistiques et vocabulaire
 
+    /// Ce qu'il faut savoir TOUTES LES DEUX SECONDES pour dire l'état de
+    /// l'index : quand un document a été indexé pour la dernière fois, et
+    /// combien de pages scannées attendent d'être lues.
+    public struct IndexFreshness: Equatable, Sendable {
+        /// `max(indexed_at)` de `docs` — un ajout comme une mise à jour, l'OCR
+        /// d'une page scannée comprise (`completeOCR` retouche la colonne,
+        /// lot INT-S1). `nil` sur un index vierge, ou quand aucun document
+        /// n'a encore été extrait : il n'y a alors rien de vrai à dater.
+        public let lastIndexedAt: Date?
+        /// Longueur de la file de reconnaissance.
+        public let scansWaiting: Int
+
+        public init(lastIndexedAt: Date?, scansWaiting: Int) {
+            self.lastIndexedAt = lastIndexedAt
+            self.scansWaiting = scansWaiting
+        }
+    }
+
+    /// La LECTURE LÉGÈRE de l'interface (PI-02, PI-05, PI-10).
+    ///
+    /// POURQUOI PAS `stats()`. L'application affichait « Mis à jour il y a un
+    /// instant » depuis la dernière écriture d'`agent_status` — un battement
+    /// republié toutes les 60 s, qui ne dit rien de l'index —, et son compte de
+    /// pages en attente datait de la dernière fois que la fenêtre avait été
+    /// devant. Les deux nombres justes sont ici ; les prendre dans `stats()`
+    /// aurait coûté le balayage de `page_vec` (258 ms, lot MN1) à chaque tic de
+    /// sonde.
+    ///
+    /// Mesuré le 13/10/2026 sur une copie de la base de production (3 642
+    /// documents, 820 000 fenêtres de vecteurs), cache chaud, médiane de trois
+    /// passes : **0,85 ms** (0,87 / 0,85 / 0,75), contre **379 ms** pour
+    /// `stats()` au même instant. PAS D'INDEX SUR `indexed_at`, et il n'en faut
+    /// pas : `docs` tient en quelques milliers de lignes, et un index de plus
+    /// serait à tenir à jour à chaque document indexé.
+    public func indexFreshness() throws -> IndexFreshness {
+        try read { db in
+            let last = try Double.fetchOne(db, sql: "SELECT max(indexed_at) FROM docs")
+            let queued = try Int.fetchOne(
+                db, sql: "SELECT count(*) FROM ocr_queue") ?? 0
+            return IndexFreshness(
+                lastIndexedAt: last.map { Date(timeIntervalSince1970: $0) },
+                scansWaiting: queued)
+        }
+    }
+
     public func stats() throws -> [String: Int] {
         var out = try read { db -> [String: Int] in
             func count(_ sql: String, _ args: StatementArguments = []) throws -> Int {

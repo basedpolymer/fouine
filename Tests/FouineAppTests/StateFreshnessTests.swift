@@ -16,6 +16,7 @@
 //     répondu en quelques millisecondes.
 
 import XCTest
+import Combine
 import FouineCore
 @testable import FouineApp
 
@@ -31,6 +32,7 @@ final class StateFreshnessTests: XCTestCase {
         let db = try TempAppDB()
         let folder = try db.makeFolder(named: "Livres")
         let app = AppModel(service: db.service)
+        app.readServiceStatus = { .enabled }
         _ = try db.store.addRoot(path: folder, label: "Livres")
 
         await app.start()
@@ -38,6 +40,9 @@ final class StateFreshnessTests: XCTestCase {
             app.stopAgentStatusProbe()
             app.stopHealthProbe()
         }
+        // L'enregistrement se lit dans sa propre tâche (suite de PI-04) :
+        // avant sa réponse, la carte dit « Vérification… » à bon droit.
+        await until(5) { app.indexStatus != .checking }
 
         // Ce que la sonde trouve chez qui a refusé l'invite de macOS.
         var refused = try XCTUnwrap(app.roots.first)
@@ -203,6 +208,96 @@ final class StateFreshnessTests: XCTestCase {
         app.refreshServiceStatusIfStale(force: true)
         try await Task.sleep(nanoseconds: 100_000_000)
         XCTAssertEqual(reads.count, 2, "un geste relit tout de suite")
+    }
+
+    // MARK: - Suite de PI-04 · le lancement n'attend plus `smd`
+
+    /// Un service qui ne répond pas ne retient plus le démarrage, et il ne fait
+    /// pas afficher un agent « non enregistré » qui n'a jamais été lu : la
+    /// carte reste sur « Vérification… », sans bouton, et l'avancement lu en
+    /// base est publié quand même.
+    func testASilentServiceNeitherDelaysTheLaunchNorInventsAnUnregisteredAgent() async throws {
+        let db = try TempAppDB()
+        try db.store.writeAgentStatus(
+            AgentStatusRecord(phase: .ocr, detail: "", done: 3, total: 10,
+                              startedAt: Date(), updatedAt: Date()))
+        let app = AppModel(service: db.service)
+        let silence = DispatchSemaphore(value: 0)
+        defer { silence.signal() }
+        app.readServiceStatus = {
+            _ = silence.wait(timeout: .now() + 10)
+            return .enabled
+        }
+        var states: [AgentOperationalState] = []
+        let token = app.$agentOperationalState.sink { states.append($0) }
+        defer { token.cancel() }
+
+        let started = Date()
+        await app.start()
+        let elapsed = Date().timeIntervalSince(started)
+        defer {
+            app.stopAgentStatusProbe()
+            app.stopHealthProbe()
+        }
+
+        XCTAssertLessThan(elapsed, 2,
+                          "suite de PI-04 : le lancement a attendu `smd`")
+        XCTAssertTrue(app.isReady, "la base est ouverte, la fenêtre peut s'ouvrir")
+        XCTAssertEqual(app.agentStatus?.done, 3,
+                       "l'avancement de la mise à jour automatique n'est pas publié")
+        XCTAssertEqual(app.indexStatus, .checking,
+                       "un état a été deviné avant la réponse du service")
+        XCTAssertNil(app.indexStatus.primaryAction, "aucun bouton sur un doute")
+        XCTAssertFalse(states.contains(.notFound),
+                       "« non enregistré » a été publié sans avoir été lu")
+        XCTAssertFalse(states.contains(.registeredButSilent))
+    }
+
+    // MARK: - PI-06 · un tic immobile ne publie rien
+
+    /// L'agent republie `.idle` à chaque tic : c'est son battement. Un
+    /// `@Published` publiant AVANT de comparer, chaque tic réévaluait le corps
+    /// de la scène et celui de `MenuBarExtra` pour réécrire le même état.
+    func testATickWithoutChangePublishesNothing() async throws {
+        let db = try TempAppDB()
+        let beat = AgentStatusRecord(phase: .idle,
+                                     detail: AgentStatusDetail.queueDrained,
+                                     startedAt: Date(), updatedAt: Date(),
+                                     pid: getpid())
+        try db.store.writeAgentStatus(beat)
+        let app = AppModel(service: db.service)
+        app.readServiceStatus = { .enabled }
+        _ = try db.store.addRoot(path: try db.makeFolder(named: "Docs"),
+                                 label: "Docs")
+
+        await app.start()
+        // Les sondes battent toutes les deux secondes : elles publieraient
+        // pendant le comptage.
+        app.stopAgentStatusProbe()
+        app.stopHealthProbe()
+        await until(5) { app.indexStatus != .checking }
+        XCTAssertEqual(app.indexStatus, .idle(automatic: true, scansWaiting: 0,
+                                              lastUpdate: nil),
+                       "état de départ : à jour, rien d'indexé à dater")
+
+        var publications = 0
+        let token = app.objectWillChange.sink { _ in publications += 1 }
+        defer { token.cancel() }
+
+        // Le battement, à l'identique : rien n'a changé, rien ne se publie.
+        try db.store.writeAgentStatus(beat)
+        await app.refreshAgentActivity()
+        XCTAssertEqual(publications, 0,
+                       "PI-06 : un tic immobile a publié \(publications) fois")
+
+        // Et quand quelque chose change, ça se publie.
+        try db.store.writeAgentStatus(
+            AgentStatusRecord(phase: .ocr, detail: "", done: 2, total: 40,
+                              startedAt: Date(), updatedAt: Date(),
+                              pid: getpid()))
+        await app.refreshAgentActivity()
+        XCTAssertGreaterThan(publications, 0, "un changement ne s'est pas publié")
+        XCTAssertTrue(app.indexStatus.isWorking)
     }
 }
 

@@ -56,11 +56,19 @@ final class AppModelStartupTests: XCTestCase {
     func testApresLeDemarrageLEtatEstCeluiDeLaBase() async throws {
         let db = try TempAppDB()
         let app = AppModel(service: db.service)
+        app.readServiceStatus = { .notRegistered }
 
         await app.start()
         defer {
             app.stopAgentStatusProbe()
             app.stopHealthProbe()
+        }
+        // L'enregistrement de l'agent se lit dans sa propre tâche (suite de
+        // PI-04) : tant qu'il n'a pas répondu, l'état est « Vérification… », et
+        // c'est voulu — un `smd` lent ne retient plus le lancement.
+        let deadline = Date().addingTimeInterval(5)
+        while Date() < deadline, app.indexStatus == .checking {
+            try? await Task.sleep(nanoseconds: 20_000_000)
         }
 
         XCTAssertTrue(app.isReady)

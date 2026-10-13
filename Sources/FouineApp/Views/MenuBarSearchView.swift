@@ -68,6 +68,12 @@ struct MenuBarSearchView: View {
                 // entre-temps). On la rejoue — huit lignes lexicales, c'est le
                 // prix d'un clin d'œil.
                 if !mini.text.isEmpty { mini.execute() }
+                // ET L'ÉTAT DE L'INDEX (PI-08, PI-10). Le pied du panneau porte
+                // une ligne d'état et l'icône un pictogramme ; fenêtre fermée,
+                // la sonde ne bat que toutes les trente secondes et rien ne
+                // relisait le compte de pages scannées en attente. On ouvre ce
+                // panneau pour une seconde : il doit dire vrai tout de suite.
+                Task { await app.refreshAgentActivity() }
             },
             onResignKey: { fieldFocused = false }))
         // Échap ferme le panneau, comme il ferme un menu. `onExitCommand` et

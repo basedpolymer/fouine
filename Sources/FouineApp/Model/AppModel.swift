@@ -430,13 +430,26 @@ final class AppModel: ObservableObject {
     /// santé, statut de l'agent, passe manuelle) : c'est moins fragile qu'un
     /// `didSet` par propriété, et l'évaluation est pure et instantanée.
     func refreshIndexStatus() {
-        indexStatus = IndexStatusEvaluator.evaluate(IndexStatusInput(
-            probed: isReady && agentProbed,
+        let fresh = IndexStatusEvaluator.evaluate(IndexStatusInput(
+            // ET L'ENREGISTREMENT LU AU MOINS UNE FOIS (suite de PI-04) :
+            // tant que `smd` ne s'est pas prononcé, on ne sait pas si la mise
+            // à jour automatique est armée, et un état deviné là est soit un
+            // « Ré-enregistrer » soit un « éteint » qui clignote.
+            probed: isReady && agentProbed && knownServiceStatus != nil,
             roots: roots, rootsError: rootsError, health: healthReport,
             indexing: indexing, automatic: backgroundIndexing,
             agentState: agentOperationalState, agentStatus: agentStatus,
             scansWaiting: ocrQueueLength,
+            lastIndexedAt: freshness?.lastIndexedAt,
             agentRemainingSeconds: rateEstimator.remainingSeconds))
+        // UN `@Published` PUBLIE AVANT DE COMPARER (PI-06, piège « An empty
+        // window at 99 % CPU »). `AppModel` est l'`@EnvironmentObject` de la
+        // fenêtre ET du panneau de la barre des menus : sans cette garde,
+        // chaque tic de sonde réévaluait le corps de la scène et celui de
+        // `MenuBarExtra` — toutes les deux secondes fenêtre devant — pour
+        // réécrire le même état.
+        guard fresh != indexStatus else { return }
+        indexStatus = fresh
     }
 
     // MARK: - Démarrage
@@ -482,7 +495,14 @@ final class AppModel: ObservableObject {
         await refreshStats()
         sinceLastVisitPages = SinceLastVisit.added(
             previous: pagesAtLastVisit, current: stats["pages_indexed"] ?? 0)
-        await refreshAgentStatus()
+        // L'ENREGISTREMENT DE L'AGENT NE RETIENT PLUS LE DÉMARRAGE (suite de
+        // PI-04). C'est un aller-retour XPC vers `smd`, le service que BU-03 a
+        // mesuré figé plus de 100 s sur la machine du propriétaire : attendu
+        // ici, il retardait TOUT ce qui suit — la santé, les deux sondes, le
+        // vocabulaire, le rattrapage Spotlight. Il part donc dans sa propre
+        // tâche et publie quand il revient ; d'ici là, la carte dit
+        // « Vérification… » plutôt qu'un état deviné.
+        startServiceStatusRead()
         // La PREMIÈRE lecture d'`agent_status` se fait ici, avant tout
         // affichage d'un état : sans elle, l'agent enregistré était tenu pour
         // « silencieux » jusqu'au premier tour de la sonde, et la barre
@@ -821,11 +841,33 @@ final class AppModel: ObservableObject {
         // (`DiskSpaceNotice`). `nil` quand le volume ne répond pas : la carte
         // se tait alors, plutôt que d'annoncer un reste faux.
         diskFreeBytes = AppPaths.freeDiskBytes()
+        // `stats()` vient de compter la file : c'est la lecture la plus
+        // récente, elle prend donc la place de celle de la sonde. Sans cela,
+        // la fin d'une passe d'OCR gardait le compte d'il y a deux secondes.
+        if let queued = fresh["ocr_queue_len"] {
+            freshness = GRDBStore.IndexFreshness(
+                lastIndexedAt: freshness?.lastIndexedAt, scansWaiting: queued)
+        }
         rememberPagesIndexed(fresh["pages_indexed"] ?? 0)
         refreshIndexStatus()
     }
 
-    var ocrQueueLength: Int { stats["ocr_queue_len"] ?? 0 }
+    /// La dernière lecture légère (`GRDBStore.indexFreshness`), ou `nil` tant
+    /// qu'aucune n'a répondu. Pas `@Published` : rien ne l'affiche telle quelle,
+    /// elle n'entre que dans `indexStatus` — et une publication de plus par tic
+    /// est exactement ce que PI-06 retire.
+    private var freshness: GRDBStore.IndexFreshness?
+
+    /// Les pages scannées qui attendent d'être lues.
+    ///
+    /// DE LA LECTURE LÉGÈRE, ET PLUS DE `stats` (PI-10). `stats()` n'est relue
+    /// qu'au démarrage, à la fin d'une passe, au retour de l'app au premier plan
+    /// et dans la fenêtre « Votre index » : fenêtre fermée — le mode de vie
+    /// normal de Fouine depuis UX-08 —, le panneau de la barre des menus
+    /// annonçait « À jour — N pages scannées à lire » avec le N de la dernière
+    /// fois que la fenêtre avait été devant. Le compte de `stats` reste le
+    /// filet, pour le temps qu'il faut à la première lecture légère.
+    var ocrQueueLength: Int { freshness?.scansWaiting ?? stats["ocr_queue_len"] ?? 0 }
 
     /// Le poids de l'index et ce qu'il doit encore écrire (MO-03). L'app ne
     /// compare plus ce poids à la taille prévue par la SPEC (décision du
@@ -900,7 +942,12 @@ final class AppModel: ObservableObject {
     /// la progression — et le mesurer a donné ~212 appels en trois heures,
     /// fenêtre au fond, pour un état immobile. On le relit donc au plus toutes
     /// les 30 s, une lecture à la fois, et entre deux on reporte celui-ci.
-    private var knownServiceStatus: SMAppService.Status = .notFound
+    /// `nil` TANT QU'AUCUNE LECTURE N'A RÉPONDU (suite de PI-04). Partir de
+    /// `.notFound` faisait évaluer l'état opérationnel comme si l'agent n'était
+    /// pas enregistré : « Ré-enregistrer », ou un « éteint » qui clignote, le
+    /// temps que `smd` réponde — et ce temps peut être long, c'est tout le
+    /// propos de BU-03. Tant qu'on ne sait pas, la carte dit « Vérification… ».
+    private var knownServiceStatus: SMAppService.Status?
     private var serviceStatusReadAt: Date?
     private var serviceStatusTask: Task<Void, Never>?
     static let serviceStatusInterval: TimeInterval = 30
@@ -926,6 +973,19 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Lance la lecture de l'enregistrement SANS l'attendre, dans le créneau de
+    /// la sonde : une seule lecture en vol, celle-ci comprise. C'est ce qui
+    /// évite qu'un démarrage demande deux fois la même chose à `smd` — la sonde
+    /// part dans la seconde qui suit.
+    func startServiceStatusRead() {
+        guard serviceStatusTask == nil else { return }
+        serviceStatusTask = Task { [weak self] in
+            guard let self else { return }
+            await self.refreshAgentStatus()
+            self.serviceStatusTask = nil
+        }
+    }
+
     func refreshAgentStatus() async {
         let status = await serviceStatus()
         noteServiceStatus(status)
@@ -948,13 +1008,28 @@ final class AppModel: ObservableObject {
     /// seule façon de garantir qu'aucun rafraîchissement d'interface ne pose
     /// une question XPC au passage.
     func updateOperationalState(serviceStatus: SMAppService.Status) {
-        agentOperationalState = AgentStateMachine.evaluate(
+        let fresh = AgentStateMachine.evaluate(
             serviceStatus: serviceStatus,
             switchEnabled: backgroundIndexing,
             agentStatus: agentStatus,
             enabledAt: agentEnabledAt
         )
+        // La même garde que `refreshIndexStatus` (PI-06) : cet état ne change
+        // qu'à un geste ou à un silence de cinq minutes, et il était réécrit
+        // toutes les deux secondes.
+        if fresh != agentOperationalState { agentOperationalState = fresh }
         refreshIndexStatus()
+    }
+
+    /// Publie l'état opérationnel depuis le dernier enregistrement CONNU, et ne
+    /// publie rien tant qu'il n'y en a aucun (suite de PI-04) : ce qui a été lu
+    /// en base part quand même à l'affichage.
+    private func publishOperationalState() {
+        guard let known = knownServiceStatus else {
+            refreshIndexStatus()
+            return
+        }
+        updateOperationalState(serviceStatus: known)
     }
 
     // MARK: - Ce que l'agent fait (audit F7)
@@ -1105,20 +1180,31 @@ final class AppModel: ObservableObject {
     /// service se taisait.
     func refreshAgentActivity() async {
         let store = service.store
-        let fresh = await Task.detached(priority: .utility) {
-            try? store.agentStatus()
+        // DEUX LECTURES DANS LA MÊME TÂCHE (PI-02, PI-05, PI-10) : le statut de
+        // l'agent, et la lecture légère qui dit depuis quand l'index n'a pas
+        // bougé et combien de pages scannées attendent. Mesurées ensemble à
+        // 1,4 ms sur une copie de la base de production (0,85 + 0,5, médianes
+        // de trois passes), là où `stats()` coûte 379 ms — le balayage de
+        // `page_vec`. C'est ce qui permet de les relire à CHAQUE tic.
+        let read = await Task.detached(priority: .utility) {
+            (status: try? store.agentStatus(), freshness: try? store.indexFreshness())
         }.value
         refreshServiceStatusIfStale()
         // Une lecture qui échoue ne DOIT PAS effacer l'état affiché (§5.6,
         // « ne jamais vider l'affichage ») : on garde le dernier connu.
-        guard let fresh else {
-            updateOperationalState(serviceStatus: knownServiceStatus)
+        if let fresh = read.freshness { freshness = fresh }
+        guard let status = read.status else {
+            publishOperationalState()
             return
         }
-        agentStatus = fresh
-        rateEstimator.observe(fresh)
-        updateOperationalState(serviceStatus: knownServiceStatus)
-        await notifyIfQueueDrained(fresh)
+        // PAS DE PUBLICATION SANS CHANGEMENT (PI-06) : l'agent republie `.idle`
+        // à chaque tic, c'est son battement — l'interface n'a pas à se
+        // réévaluer pour autant. Aucune vue ne lit `agentStatus` ; il reste
+        // publié pour ce qui en dérive.
+        if agentStatus != status { agentStatus = status }
+        rateEstimator.observe(status)
+        publishOperationalState()
+        await notifyIfQueueDrained(status)
     }
 
     /// « L'agent a fini » — la notification que l'audit F7 réclame.

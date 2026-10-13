@@ -45,6 +45,25 @@ See `RELEASING.md`.
 - **VoiceOver says what the index is doing.** In the "Your index" window, the
   progress bar shown while Fouine works without knowing a total announced
   nothing at all; it now reads out what Fouine is doing. *(PI3)*
+- **"Updated … ago" now says when a document was last indexed.** The Index card
+  read "Updated a moment ago" at all times, even on an index nothing had
+  changed in for weeks: it was timing the background update's own heartbeat,
+  not the index. *(PI2)*
+- **The number of scanned pages waiting to be read is right, window open or
+  closed.** Pages queued while the window was closed were missing from the
+  count, so the card could say "Up to date" and, underneath, "They will be read
+  once the Mac is plugged in." — a reason to wait for work it had just denied.
+  With nothing waiting, the card now says "Up to date" and nothing else. *(PI2)*
+- **The card no longer says "Up to date" when the list of folders cannot be
+  read.** It showed a green "Up to date" while the folder list, two lines below,
+  showed the failure. It now says "Checking…" until the folders can be read
+  again. *(PI2)*
+- **The state is up to date the moment you look at it.** Coming back to Fouine
+  or opening the menu bar panel now reads the state of the index again, instead
+  of showing what was true up to half a minute earlier. Fouine also no longer
+  redraws the window and the menu bar panel every two seconds when nothing has
+  changed, and no longer shows a guessed state — "Manual updates", "Restart
+  automatic updates" — before macOS has answered. *(PI2)*
 
 ## [1.0.3] — 2026-09-25
 

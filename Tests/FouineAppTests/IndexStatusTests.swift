@@ -43,6 +43,7 @@ final class IndexStatusTests: XCTestCase {
                        automatic: Bool = true,
                        agentStatus: AgentStatusRecord? = nil,
                        scans: Int = 0,
+                       lastIndexedAt: Date? = nil,
                        remaining: TimeInterval? = nil) -> IndexStatusInput {
         let roots = roots ?? [root()]
         let health = HealthBannerEvaluator.evaluate(
@@ -52,6 +53,7 @@ final class IndexStatusTests: XCTestCase {
             probed: probed, roots: roots, rootsError: rootsError, health: health,
             indexing: indexing, automatic: automatic, agentState: agentState,
             agentStatus: agentStatus, scansWaiting: scans,
+            lastIndexedAt: lastIndexedAt,
             agentRemainingSeconds: remaining, now: now)
     }
 
@@ -71,11 +73,33 @@ final class IndexStatusTests: XCTestCase {
         XCTAssertEqual(s.primaryAction, .addFolder)
     }
 
-    /// Une lecture des racines qui échoue n'est pas « aucun dossier ».
-    func testRootsErrorIsNotNoFolders() {
+    /// Une lecture des racines qui échoue n'est pas « aucun dossier » — et ce
+    /// n'est pas « À jour » non plus (PI-09) : la carte traversait tout et
+    /// finissait verte pendant que la section « Vos dossiers » affichait, deux
+    /// lignes plus bas, le triangle orange et la phrase d'échec.
+    func testRootsErrorIsCheckingNotUpToDate() {
         let s = IndexStatusEvaluator.evaluate(
             input(roots: [], rootsError: "boom", agentStatus: status(.idle)))
         XCTAssertNotEqual(s, .noFolders)
+        XCTAssertEqual(s, .checking)
+
+        // Même avec la liste précédente en mémoire et un agent au repos.
+        let withRoots = IndexStatusEvaluator.evaluate(
+            input(rootsError: "database is locked",
+                  agentStatus: status(.idle),
+                  lastIndexedAt: now.addingTimeInterval(-60)))
+        XCTAssertEqual(withRoots, .checking)
+        XCTAssertNil(withRoots.primaryAction, "on ne propose rien sur un doute")
+
+        // Mais la passe lancée d'ici reste affichée et arrêtable : elle est
+        // connue de ce processus, pas de la base.
+        var indexing = IndexingState(running: true, phase: "extracting")
+        indexing.total = 10
+        indexing.done = 3
+        let running = IndexStatusEvaluator.evaluate(
+            input(rootsError: "database is locked", indexing: indexing))
+        XCTAssertTrue(running.isWorking)
+        XCTAssertEqual(running.primaryAction, .stop)
     }
 
     // MARK: - La passe de l'application passe avant tout
@@ -259,12 +283,82 @@ final class IndexStatusTests: XCTestCase {
                        .other("mercury retrograde"))
     }
 
+    /// LE COMPTE LE PLUS FRAIS (PI-05). Les pages mises en file pendant que la
+    /// fenêtre était fermée ne figuraient pas dans celui de l'app : la carte
+    /// disait « À jour » puis « Elles seront lues dès que le Mac sera
+    /// branché » — un pronom sans antécédent.
+    func testWaitingTakesTheFreshestScanCount() {
+        let s = IndexStatusEvaluator.evaluate(
+            input(agentStatus: status(.waiting, detail: "no AC power",
+                                      done: 0, total: 900),
+                  scans: 12))
+        XCTAssertEqual(s, .paused(reason: .onBattery, scansWaiting: 900))
+        XCTAssertEqual(IndexStatusText.headline(s),
+                       "Up to date — 900 scanned page(s) to read")
+
+        // Et l'inverse : l'app a vu plus de pages arriver que ce que l'agent a
+        // publié en entrant en attente.
+        let appAhead = IndexStatusEvaluator.evaluate(
+            input(agentStatus: status(.waiting, detail: "no AC power",
+                                      done: 0, total: 900),
+                  scans: 1_200))
+        XCTAssertEqual(appAhead, .paused(reason: .onBattery, scansWaiting: 1_200))
+    }
+
+    /// Aucune page en attente : le motif de l'attente ne se dit pas. Il
+    /// parlerait d'un travail que le titre « À jour » nie (PI-05).
+    func testAnEmptyWaitSaysNothingMore() {
+        let s = IndexStatus.paused(reason: .onBattery, scansWaiting: 0)
+        XCTAssertEqual(IndexStatusText.headline(s), "Up to date")
+        XCTAssertNil(IndexStatusText.detail(s, now: now))
+        XCTAssertNil(s.primaryAction, "rien à lire : rien à proposer")
+        // Une seule page suffit à rendre la phrase sensée.
+        XCTAssertNotNil(IndexStatusText.detail(
+            .paused(reason: .onBattery, scansWaiting: 1), now: now))
+    }
+
     func testIdleAgentIsUpToDate() {
         let idle = status(.idle, detail: AgentStatusDetail.queueDrained, age: 30)
-        let s = IndexStatusEvaluator.evaluate(input(agentStatus: idle))
-        XCTAssertEqual(s, .idle(automatic: true, scansWaiting: 0, lastUpdate: idle.updatedAt))
+        let indexed = now.addingTimeInterval(-720)
+        let s = IndexStatusEvaluator.evaluate(
+            input(agentStatus: idle, lastIndexedAt: indexed))
+        XCTAssertEqual(s, .idle(automatic: true, scansWaiting: 0,
+                                lastUpdate: indexed))
         XCTAssertNil(s.primaryAction)
         XCTAssertNil(s.secondaryAction)
+    }
+
+    /// LA PHRASE LA PLUS LUE DE L'APP (PI-02). L'agent republie son battement
+    /// toutes les soixante secondes, et la précision de la carte en datait la
+    /// dernière écriture : elle disait « Updated a moment ago » quoi qu'il
+    /// arrive — mesuré le 13/10/2026 sur la production, un battement de
+    /// 17:54:47 au-dessus d'un dernier document indexé à 17:42:44. C'est le
+    /// document qui compte.
+    func testTheAgeShownIsThatOfTheLastIndexedDocument() {
+        let beating = status(.idle, detail: AgentStatusDetail.queueDrained, age: 2)
+        let s = IndexStatusEvaluator.evaluate(
+            input(agentStatus: beating, lastIndexedAt: now.addingTimeInterval(-720)))
+        XCTAssertEqual(IndexStatusText.detail(s, now: now), "Updated 12 min ago")
+        XCTAssertNotEqual(IndexStatusText.detail(s, now: now),
+                          "Updated a moment ago",
+                          "PI-02 : c'est le battement de l'agent qui est daté")
+
+        // Index vierge : rien d'indexé, donc rien à dater — plutôt qu'une date
+        // inventée sous « Up to date ».
+        let empty = IndexStatusEvaluator.evaluate(input(agentStatus: beating))
+        XCTAssertNil(IndexStatusText.detail(empty, now: now))
+    }
+
+    /// Le cas « agent muet » garde SA source : l'âge du silence est justement
+    /// ce qu'on veut dire là, et il ne doit pas être remplacé par l'âge du
+    /// dernier document.
+    func testASilentAgentStillDatesItsOwnSilence() {
+        let stale = status(.idle, age: 6 * 60)
+        let s = IndexStatusEvaluator.evaluate(
+            input(agentState: .registeredButSilent, agentStatus: stale,
+                  lastIndexedAt: now.addingTimeInterval(-86_400)))
+        XCTAssertEqual(s, .idle(automatic: true, scansWaiting: 0,
+                                lastUpdate: stale.updatedAt))
     }
 
     /// L'interrupteur éteint : la carte propose « Mettre à jour maintenant »

@@ -159,7 +159,9 @@ enum IndexStatus: Equatable, Sendable {
     /// La mise à jour automatique attend que la machine s'y prête.
     case paused(reason: IndexPauseReason, scansWaiting: Int)
     /// Rien ne tourne. `scansWaiting` pages scannées attendent d'être lues ;
-    /// `lastUpdate` est la dernière nouvelle connue (statut de l'agent).
+    /// `lastUpdate` date la dernière mise à jour de l'index — le dernier
+    /// document indexé quand la mise à jour automatique répond (PI-02), le
+    /// dernier signe de vie de l'agent quand il s'est tu.
     case idle(automatic: Bool, scansWaiting: Int, lastUpdate: Date?)
 
     /// Le bouton principal de la carte, s'il y en a un.
@@ -222,6 +224,15 @@ struct IndexStatusInput {
     var agentState: AgentOperationalState
     var agentStatus: AgentStatusRecord?
     var scansWaiting: Int
+    /// Quand un document a été indexé pour la dernière fois (`max(indexed_at)`,
+    /// lecture légère de `GRDBStore.indexFreshness`). `nil` : index vierge, ou
+    /// lecture jamais faite.
+    ///
+    /// C'EST CE QUE « Mis à jour il y a… » DOIT DIRE (PI-02). La phrase se
+    /// nourrissait de la dernière écriture d'`agent_status`, c'est-à-dire du
+    /// BATTEMENT que l'agent republie toutes les 60 s : elle disait « il y a un
+    /// instant » quoi qu'il arrive, et donc jamais rien.
+    var lastIndexedAt: Date?
     /// Estimation du temps restant pour la phase de l'agent (voir
     /// `IndexRateEstimator`), ou `nil`.
     var agentRemainingSeconds: TimeInterval?
@@ -245,6 +256,19 @@ enum IndexStatusEvaluator {
                             detail: input.indexing.phase.isEmpty ? nil : input.indexing.phase,
                             stoppable: !input.indexing.cancelled)
         }
+
+        // 1 bis. LES DOSSIERS N'ONT PAS PU ÊTRE LUS (PI-09). Base occupée,
+        //    schéma illisible : `roots` est la liste précédente — ou rien — et
+        //    on ne sait donc pas ce qu'il y a à indexer. La carte traversait
+        //    tout et finissait sur « À jour », pastille verte, pendant que la
+        //    section « Vos dossiers » affichait le triangle orange et la phrase
+        //    d'échec deux lignes plus bas. « On ne sait pas » se dit déjà :
+        //    « Vérification… », sans bouton.
+        //
+        //    APRÈS la passe de l'application, et c'est voulu : celle-ci est
+        //    connue de CE processus, pas de la base, et elle doit rester
+        //    affichée et arrêtable (ST1) quoi que dise la lecture des dossiers.
+        if input.rootsError != nil { return .checking }
 
         // 2. Ce qui réclame un geste. Un dossier illisible ou un disque absent
         //    empêche l'index d'être complet ; une mise à jour automatique qui
@@ -287,12 +311,18 @@ enum IndexStatusEvaluator {
                 return .working(activity: .preparingMeaning,
                                 progress: progress(status, remaining: input.agentRemainingSeconds),
                                 detail: detail(status), stoppable: false)
+            // LE COMPTE LE PLUS FRAIS DES DEUX (PI-05). L'agent ne publie
+            // `.waiting` que la file non vide, et son `total` EST cette file ;
+            // l'app, elle, peut avoir un compte plus ancien — ou plus récent,
+            // si des pages se sont ajoutées depuis. Le prendre à zéro faisait
+            // dire « À jour » suivi de « Elles seront lues dès que le Mac sera
+            // branché », un pronom sans antécédent sous un titre qui le nie.
             case .waiting:
                 return .paused(reason: IndexPauseReason.parse(status.detail),
-                               scansWaiting: input.scansWaiting)
+                               scansWaiting: max(input.scansWaiting, status.total))
             case .idle, .stopped:
                 return .idle(automatic: true, scansWaiting: input.scansWaiting,
-                             lastUpdate: status.updatedAt)
+                             lastUpdate: input.lastIndexedAt)
             }
         }
 
@@ -303,6 +333,9 @@ enum IndexStatusEvaluator {
                             stoppable: false)
         }
 
+        // 6. L'AGENT S'EST TU — ou l'interrupteur est éteint. Ici, et ici
+        //    seulement, c'est son dernier signe de vie qu'on date : l'âge du
+        //    SILENCE est justement ce qu'on veut dire (PI-02).
         return .idle(automatic: input.automatic, scansWaiting: input.scansWaiting,
                      lastUpdate: input.agentStatus?.updatedAt)
     }
