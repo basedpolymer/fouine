@@ -430,7 +430,7 @@ final class AppModel: ObservableObject {
     /// santé, statut de l'agent, passe manuelle) : c'est moins fragile qu'un
     /// `didSet` par propriété, et l'évaluation est pure et instantanée.
     func refreshIndexStatus() {
-        indexStatus = IndexStatusEvaluator.evaluate(IndexStatusInput(
+        let fresh = IndexStatusEvaluator.evaluate(IndexStatusInput(
             // ET L'ENREGISTREMENT LU AU MOINS UNE FOIS (suite de PI-04) :
             // tant que `smd` ne s'est pas prononcé, on ne sait pas si la mise
             // à jour automatique est armée, et un état deviné là est soit un
@@ -442,6 +442,14 @@ final class AppModel: ObservableObject {
             scansWaiting: ocrQueueLength,
             lastIndexedAt: freshness?.lastIndexedAt,
             agentRemainingSeconds: rateEstimator.remainingSeconds))
+        // UN `@Published` PUBLIE AVANT DE COMPARER (PI-06, piège « An empty
+        // window at 99 % CPU »). `AppModel` est l'`@EnvironmentObject` de la
+        // fenêtre ET du panneau de la barre des menus : sans cette garde,
+        // chaque tic de sonde réévaluait le corps de la scène et celui de
+        // `MenuBarExtra` — toutes les deux secondes fenêtre devant — pour
+        // réécrire le même état.
+        guard fresh != indexStatus else { return }
+        indexStatus = fresh
     }
 
     // MARK: - Démarrage
@@ -1000,12 +1008,16 @@ final class AppModel: ObservableObject {
     /// seule façon de garantir qu'aucun rafraîchissement d'interface ne pose
     /// une question XPC au passage.
     func updateOperationalState(serviceStatus: SMAppService.Status) {
-        agentOperationalState = AgentStateMachine.evaluate(
+        let fresh = AgentStateMachine.evaluate(
             serviceStatus: serviceStatus,
             switchEnabled: backgroundIndexing,
             agentStatus: agentStatus,
             enabledAt: agentEnabledAt
         )
+        // La même garde que `refreshIndexStatus` (PI-06) : cet état ne change
+        // qu'à un geste ou à un silence de cinq minutes, et il était réécrit
+        // toutes les deux secondes.
+        if fresh != agentOperationalState { agentOperationalState = fresh }
         refreshIndexStatus()
     }
 
@@ -1185,7 +1197,11 @@ final class AppModel: ObservableObject {
             publishOperationalState()
             return
         }
-        agentStatus = status
+        // PAS DE PUBLICATION SANS CHANGEMENT (PI-06) : l'agent republie `.idle`
+        // à chaque tic, c'est son battement — l'interface n'a pas à se
+        // réévaluer pour autant. Aucune vue ne lit `agentStatus` ; il reste
+        // publié pour ce qui en dérive.
+        if agentStatus != status { agentStatus = status }
         rateEstimator.observe(status)
         publishOperationalState()
         await notifyIfQueueDrained(status)
