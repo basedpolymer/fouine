@@ -19,6 +19,10 @@ See `RELEASING.md`.
 
 ### Fixed
 
+- **A second Fouine icon no longer appears in the Dock.** While the index
+  was being kept up to date in the background, a second Fouine icon could
+  show up in the Dock, bounce for a few seconds and then sit there doing
+  nothing. It is gone. *(DK1)*
 - **Opening the settings no longer hides a folder Fouine cannot read.** The
   Index card said "Fouine is not allowed to read “X”" and offered "Allow
   access…"; a few seconds after the settings window was opened, the card went

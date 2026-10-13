@@ -422,6 +422,22 @@ make ci-bundle ARCHS=$(uname -m) && make ci-bundle-i18n
 14/09/2026 no target ran those tests, and a broken tool went unnoticed until
 the day it was needed.
 
+**`make ci-bundle` ends with `make ci-bundle-dock`.** That last step proves the
+agent does not take an icon in the Dock: it copies
+`Contents/MacOS/FouineAgent` into a throwaway bundle of its own under
+`mktemp -d` (identifier `io.github.basedpolymer.fouine.dockcheck` — never the
+application's, which would register a second copy of Fouine.app and break the
+background agent), runs it as `FouineAgent --dock-self-check`, checks that the
+process printed its line (so PDFKit really was touched, and the check is not
+vacuous), then reads the process type from `lsappinfo`. `Foreground` or
+`UIElement` is a failure, and the message names
+`Sources/FouineAgent/main.swift`, whose first statement
+(`setActivationPolicy(.prohibited)`) is what keeps the type at `BackgroundOnly`
+(AUDIT-DK, 13/10/2026). The temporary bundle is unregistered with `lsregister
+-u` and deleted either way. The mode touches nothing else: no database, no
+settings, no log, no Spotlight. Cost: about 3 s. `make ci-bundle-dock` also runs
+alone, on a bundle already built.
+
 **The gate compiles release once, and only if `ARCHS` is your own
 architecture.** `make release-cli` and the `release-build` behind `ci-bundle`
 pass the same `CONST_VALUES_FLAGS` and, for a single native `--arch`, write to
@@ -436,7 +452,7 @@ request: `make check-version`, `check-docs`, `check-changelog`, `check-ranking`
 (the bench scripts on a fabricated pool), `swift build`, `make release-cli`,
 the semantic model on a best-effort basis, `make ci-unit`, `make
 ci-integration`. `bundle` runs `make ci-bundle` (bundle, `plutil -lint`, `lipo
--archs`, ad-hoc signature) and `make ci-bundle-i18n`. `release-tests` runs
+-archs`, ad-hoc signature, `ci-bundle-dock`) and `make ci-bundle-i18n`. `release-tests` runs
 `make ci-unit CONFIG="-c release"` on `main` only.
 
 **The commands live in the `Makefile`, not in the YAML**, so the CI reproduces

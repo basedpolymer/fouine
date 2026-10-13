@@ -501,7 +501,89 @@ ci-bundle: check-no-stray-app bundle
 	codesign --force --options runtime --timestamp=none \
 	         --entitlements Packaging/Fouine-adhoc.entitlements --sign - "$(APP)"
 	codesign --verify --deep --strict --verbose=2 "$(APP)"
+	@echo "== identité d'exécution de l'agent (icône de Dock)"
+	@$(MAKE) --no-print-directory ci-bundle-dock APP="$(APP)"
 	@echo "ci-bundle : OK — bundle de contrôle sous $(APP), invisible de LaunchServices"
+
+.PHONY: ci-bundle-dock
+# Dernière étape de `ci-bundle` (AUDIT-DK, DK-08). L'agent vit dans
+# Contents/MacOS : Bundle.main lui donne l'Info.plist de l'app, et la première
+# instanciation de PDFDocument le fait alors s'inscrire auprès de
+# LaunchServices en « Foreground » — le Dock ouvre une SECONDE tuile « Fouine »,
+# la fait rebondir, puis la garde morte. La première instruction de
+# Sources/FouineAgent/main.swift l'évite ; ce contrôle échoue si elle disparaît.
+#
+# JAMAIS en exécutant le binaire DEPUIS le bundle de contrôle : un processus
+# lancé d'un bundle portant io.github.basedpolymer.fouine fait enregistrer une
+# DEUXIÈME copie de Fouine.app auprès de LaunchServices — exactement le piège
+# « Two copies of Fouine.app » que le gate passe son temps à éviter
+# (check-no-stray-app, docs/pitfalls.md). L'agent est donc recopié dans un
+# bundle jetable à lui, d'identifiant …fouine.dockcheck, désenregistré et
+# supprimé en sortant, succès ou échec.
+#
+# `--dock-self-check` (main.swift) touche PDFKit, imprime une ligne et attend :
+# l'impression prouve que le contrôle n'est pas vacuant (sans PDFKit touché, un
+# processus ne s'inscrirait de toute façon pas), l'attente laisse à `lsappinfo`
+# le temps de lire le type du processus. Rien d'autre n'est touché : ni base, ni
+# préférences, ni journal, ni Spotlight. Coût ~3 s.
+ci-bundle-dock: APP = $(CI_APP)
+ci-bundle-dock:
+	@agent="$(APP)/Contents/MacOS/FouineAgent"; \
+	 if [ ! -x "$$agent" ]; then \
+	    echo "ci-bundle-dock : $$agent absent — lancez d'abord \`make ci-bundle\`" >&2; \
+	    exit 1; \
+	 fi; \
+	 lsreg=/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister; \
+	 tmp=$$(mktemp -d); \
+	 probe="$$tmp/FouineDockCheck.app"; \
+	 mkdir -p "$$probe/Contents/MacOS"; \
+	 cp "$$agent" "$$probe/Contents/MacOS/FouineAgent"; \
+	 printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' \
+	   '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
+	   '<plist version="1.0"><dict>' \
+	   '<key>CFBundleIdentifier</key><string>io.github.basedpolymer.fouine.dockcheck</string>' \
+	   '<key>CFBundleExecutable</key><string>FouineAgent</string>' \
+	   '<key>CFBundleName</key><string>FouineDockCheck</string>' \
+	   '<key>CFBundlePackageType</key><string>APPL</string>' \
+	   '<key>CFBundleVersion</key><string>1</string>' \
+	   '</dict></plist>' > "$$probe/Contents/Info.plist"; \
+	 plutil -lint "$$probe/Contents/Info.plist" >/dev/null; \
+	 "$$probe/Contents/MacOS/FouineAgent" --dock-self-check >"$$tmp/sortie.txt" 2>&1 & \
+	 pid=$$!; \
+	 sleep 2; \
+	 apptype=$$(lsappinfo info -only ApplicationType "$$pid" 2>/dev/null \
+	            | sed -n 's/.*"ApplicationType"="\([A-Za-z]*\)".*/\1/p'); \
+	 if [ -z "$$apptype" ]; then \
+	    apptype=$$(lsappinfo list | grep -A4 "$$probe/Contents/MacOS/FouineAgent" \
+	               | sed -n 's/.*type="\([A-Za-z]*\)".*/\1/p' | head -n 1); \
+	 fi; \
+	 ligne=$$(cat "$$tmp/sortie.txt"); \
+	 kill $$pid 2>/dev/null || true; \
+	 wait $$pid 2>/dev/null || true; \
+	 "$$lsreg" -u "$$probe" >/dev/null 2>&1 || true; \
+	 rm -rf "$$tmp"; \
+	 case "$$ligne" in \
+	    *dock-self-check*) ;; \
+	    *) echo "ci-bundle-dock : \`FouineAgent --dock-self-check\` n'a rien" >&2; \
+	       echo "  imprimé : PDFKit n'a pas été touché, le contrôle ne prouve" >&2; \
+	       echo "  rien. Voir le mode de contrôle en tête de" >&2; \
+	       echo "  Sources/FouineAgent/main.swift. Sortie du processus :" >&2; \
+	       echo "    $$ligne" >&2; \
+	       exit 1;; \
+	 esac; \
+	 case "$$apptype" in \
+	    Foreground|UIElement) \
+	       echo "ci-bundle-dock : l'agent s'inscrit auprès de LaunchServices en" >&2; \
+	       echo "  « $$apptype » — le Dock ouvre une SECONDE tuile « Fouine » et" >&2; \
+	       echo "  la fait rebondir au premier PDF d'une passe d'indexation." >&2; \
+	       echo "  La PREMIÈRE instruction de Sources/FouineAgent/main.swift" >&2; \
+	       echo "  doit être :" >&2; \
+	       echo "      NSApplication.shared.setActivationPolicy(.prohibited)" >&2; \
+	       echo "  Voir AUDIT-DK et docs/pitfalls.md, « A second Fouine icon" >&2; \
+	       echo "  bounces in the Dock »." >&2; \
+	       exit 1;; \
+	 esac; \
+	 echo "ci-bundle-dock : OK — l'agent touche PDFKit sans prendre d'icône de Dock (type $${apptype:-aucun})"
 
 # Garde-fou du lot J2, appelé AVANT `ci-bundle`. Un `Fouine.app` à la racine du
 # dépôt est une deuxième copie que macOS voit : si son `CFBundleVersion`

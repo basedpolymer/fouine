@@ -523,6 +523,59 @@ repository; the application refuses to arm the switch from the wrong copy, and
 says why; `fouine doctor` lists the copies macOS knows about; and
 `RELEASING.md` says to delete `Fouine.app` from the root after `make dmg`.
 
+## A second Fouine icon bounces in the Dock
+
+**The symptom.** A second «Fouine» tile appears in the Dock, with no running
+dot under it, bounces for a few seconds, then just stays there for hours
+answering nothing. It happens «for no reason»: not when the application opens,
+but minutes later, and again after logging in or after the background indexing
+switch is cycled. `lsappinfo visibleProcessList` shows two application slots
+named `Fouine`, the second one being
+`/Applications/Fouine.app/Contents/MacOS/FouineAgent`.
+
+**The cause.** The agent lives inside `Contents/MacOS` of the application
+bundle, so `Bundle.main` hands it `Fouine.app` and its `Info.plist` — which has
+neither `LSUIElement` nor `LSBackgroundOnly`, and must not have them, being the
+`Info.plist` of a real application. The **first instantiation of
+`PDFDocument`**, even an empty one, then checks the process in with
+LaunchServices as `type="Foreground"`: the Dock treats the agent as an
+application that is launching, and bounces its tile. Measured on 13/10/2026
+(AUDIT-DK): the live agent's LaunchServices entry is exactly PDFKit's
+fingerprint (`flavor=2`, no `NSApplication`), and its check-in falls between
+the crawl and the extraction of a pass that contained PDFs. The timing explains
+the «for no reason»: the bounce waits for the first PDF of a pass, so it
+happens once per agent process — one per login, per switch toggle, per launchd
+restart. `NSAttributedString`, `NSImage`, `NSWorkspace`, Speech, ImageIO and
+AVFoundation register nothing; PDFKit alone does.
+
+**The fix, and why it is the first line of the file.**
+`NSApplication.shared.setActivationPolicy(.prohibited)` is the first executable
+statement of `Sources/FouineAgent/main.swift`. Placed before any work, it
+prevents the check-in altogether — no tile at any frame, not even a brief
+bounce — and it covers in advance any other framework that would register
+(Vision, CoreML, a future reader). Placed after, it only demotes a registration
+the Dock has already shown. It leaves the bundle identity untouched, which
+matters: the agent's Documents, Full Disk Access and Speech Recognition
+authorisations are granted to `io.github.basedpolymer.fouine`, the identifier it
+inherits from `Bundle.main`. Moving the agent into a nested bundle of its own
+would give it another identifier, hence another TCC client, hence three
+authorisations to ask for again — which a background agent cannot do.
+
+**What prevents a relapse.** `make ci-bundle` ends with `make ci-bundle-dock`:
+it copies `Contents/MacOS/FouineAgent` into a throwaway bundle of its own
+(identifier `io.github.basedpolymer.fouine.dockcheck`, never the application's,
+which would register a second copy of Fouine.app and land in the pitfall
+above), runs it as `FouineAgent --dock-self-check` — a mode that touches PDFKit,
+says so on standard output and waits, and does nothing else: no database, no
+settings, no log, no Spotlight — reads `lsappinfo`, and fails if the process
+type is `Foreground` or `UIElement`. The temporary bundle is unregistered and
+deleted either way. And `Packaging/bundle.sh` refuses any file in
+`Contents/MacOS` other than `Fouine` and `FouineAgent`: a binary placed there
+inherits the application's identity and the same defect. Command-line tools go
+to `Contents/Helpers`, where `Bundle.main.bundleIdentifier` is `nil` and
+LaunchServices registers nothing — which is why the CLI and the MCP server never
+had this problem.
+
 ## An old DMG in dist/
 
 `make dmg` used to produce `dist/Fouine-1.0.0.dmg` every time, so without

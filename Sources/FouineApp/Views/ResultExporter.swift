@@ -61,6 +61,11 @@ enum ResultExporter {
                 alert.messageText = String(localized: "Export failed")
                 alert.informativeText = ErrorText.describe(error)
                 alert.addButton(withTitle: String(localized: "OK"))
+                // L'écriture se termine après le panneau : si l'utilisateur est
+                // passé à une autre app entre-temps, le modal arriverait
+                // derrière elle et ne ferait que faire rebondir l'icône du Dock
+                // (AUDIT-DK, DK-12). Même patron que FouineDesktopApp.
+                NSApp.activate(ignoringOtherApps: true)
                 alert.runModal()
             }
         }
