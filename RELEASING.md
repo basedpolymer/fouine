@@ -497,8 +497,8 @@ Two pages there are part of the product, and a release checks them:
 
 | Page | What it is | Where it comes from |
 |---|---|---|
-| `/fouine/privacy`, `/fouine/fr/confidentialite` | the privacy policy the app's **What Fouine sends, in detail** button points at | the same text as `docs/privacy.md`, written directly in HTML and kept in step by hand (no conversion step); the French page is a summary and says the English text prevails. **Change both together** |
-| `/fouine/terms`, `/fouine/fr/conditions` | terms of use: what the licence allows, and how to reach support | written by hand, dated |
+| `/fouine/privacy`, `/fouine/fr/confidentialite` | the privacy policy the app's **What Fouine sends, in detail** button points at | the same text as `docs/privacy.md`, converted with `pandoc -f gfm -t html --syntax-highlighting=none` and its relative links pointed at GitHub; the French page is a summary and says the English text prevails. **Change both together** |
+| `/fouine/mcp`, `/fouine/fr/mcp` | how to connect an AI assistant: install, the four tools, what goes wrong | written by hand from `docs/mcp.md`; **change it when a tool changes** |
 
 The site carries no server-side code: nothing there answers the app, and the
 app asks it nothing.
