@@ -690,8 +690,7 @@ ci-unit:
 	    --filter FouineEmbedTests \
 	    --filter FouineAppTests \
 	    --filter FouineAgentTests \
-	    --filter FouineMCPTests \
-	    --filter FouineLicenseTests
+	    --filter FouineMCPTests
 
 # Le serveur MCP seul. COMMODITÉ, comme `ci-corpus` : aucun workflow ne lance
 # cette cible, et ce n'est pas une perte de couverture — `ci-unit` prend déjà la

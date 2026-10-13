@@ -2,9 +2,9 @@
 // Fouine — moteur de recherche plein texte macOS avec OCR Vision non destructif.
 // Manifeste tenu par L'ORCHESTRATEUR (SPEC §9.2). Un lot ne l'édite pas de sa
 // propre initiative : il peut y AJOUTER une cible quand sa consigne le demande
-// explicitement (c'est ainsi que FouineLicense est arrivée), et signale la
-// modification dans son rapport. Retirer ou renommer une cible, changer une
-// dépendance ou un drapeau reste un geste de l'orchestrateur.
+// explicitement, et signale la modification dans son rapport. Retirer ou
+// renommer une cible, changer une dépendance ou un drapeau reste un geste de
+// l'orchestrateur.
 //
 // Trois dépendances, pas une de plus (SPEC §2.2) :
 //   GRDB.swift (MIT)            — lie le SQLite du SYSTÈME (FTS5 3.43.2 mesuré)
@@ -40,8 +40,6 @@ let package = Package(
         // (D2 § 5.9, LICENSING.md).
         .library(name: "FouineMCPKit", targets: ["FouineMCPKit"]),
         .library(name: "FouineMCP", targets: ["FouineMCP"]),
-        // FouineLicense (lot L1C) : essai de 30 jours, clé Creem, relais.
-        .library(name: "FouineLicense", targets: ["FouineLicense"]),
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.11.0"),
@@ -90,21 +88,11 @@ let package = Package(
         // aussi (LICENSING.md).
         .target(name: "FouineMCP",
                 dependencies: ["FouineMCPKit", "FouineCore", "FouineEmbed"]),
-        // FouineLicense (lot L1C) : l'essai de 30 jours, le fichier
-        // `license.json`, les quatre états, et le client du relais de licence.
-        // **ZÉRO dépendance**, pas même FouineCore : la décision « l'index a-t-il
-        // le droit de se mettre à jour ? » est prise par les TROIS exécutables
-        // (application, agent, ligne de commande) et ne doit dépendre ni du
-        // store, ni du schéma, ni d'une ouverture de base — l'agent la prend à
-        // chaque réveil sans rien ouvrir. Foundation et `os` sont des
-        // cadriciels du SYSTÈME, pas des paquets SPM : la doctrine « trois
-        // dépendances, pas une de plus » tient (§2.2).
-        .target(name: "FouineLicense"),
         .executableTarget(
             name: "fouine",
             dependencies: [
                 "FouineCore", "FouineCrawl", "FouineExtract", "FouineOCR",
-                "FouineEmbed", "FouineIndex", "FouineMCP", "FouineLicense",
+                "FouineEmbed", "FouineIndex", "FouineMCP",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]
         ),
@@ -112,7 +100,6 @@ let package = Package(
             name: "FouineApp",
             dependencies: ["FouineCore", "FouineCrawl", "FouineExtract",
                            "FouineOCR", "FouineEmbed", "FouineIndex",
-                           "FouineLicense",
                            .product(name: "Sparkle", package: "Sparkle")],
             // Le String Catalog de l'app (palier 3.2, audit U1) est EXCLU de la
             // compilation SwiftPM, et ce n'est pas un oubli. Déclaré en
@@ -142,15 +129,14 @@ let package = Package(
             // FouineEmbed depuis le lot AG1 : l'agent prépare aussi la
             // recherche par le sens, entre deux lots d'OCR (constat PR-21).
             dependencies: ["FouineCore", "FouineCrawl", "FouineExtract",
-                           "FouineOCR", "FouineIndex", "FouineEmbed",
-                           "FouineLicense"]
+                           "FouineOCR", "FouineIndex", "FouineEmbed"]
         ),
         // Cible de tests de l'interface (audit F1 : « aucun test sur
         // SearchModel »). SwiftPM sait tester une cible EXÉCUTABLE : le
         // `main.swift` de FouineApp reste du code de haut niveau, il n'est
         // simplement jamais exécuté depuis les tests.
         .testTarget(name: "FouineAppTests",
-                    dependencies: ["FouineApp", "FouineCore", "FouineLicense"]),
+                    dependencies: ["FouineApp", "FouineCore"]),
         // Cible de tests de l'AGENT (audit D12/M23 : « zéro test sur
         // FouineApp/, FouineAgent/, fouine/ »). Même procédé que ci-dessus :
         // SwiftPM sait tester une cible exécutable, et le `main.swift` de
@@ -162,12 +148,8 @@ let package = Package(
         // La boucle `Agent.start()`, elle, ne se teste qu'en installant un
         // LaunchAgent : elle reste hors de portée, et c'est assumé.
         .testTarget(name: "FouineAgentTests",
-                    dependencies: ["FouineAgent", "FouineCore", "FouineLicense"]),
+                    dependencies: ["FouineAgent", "FouineCore"]),
         .testTarget(name: "FouineCoreTests", dependencies: ["FouineCore"]),
-        // DIXIÈME suite (lot L1C) : les quatre états, le fichier, et le client
-        // du relais éprouvé par un `URLProtocol` de substitution — aucun de ces
-        // tests ne sort sur le réseau.
-        .testTarget(name: "FouineLicenseTests", dependencies: ["FouineLicense"]),
         .testTarget(name: "FouineCrawlTests", dependencies: ["FouineCrawl"]),
         // FouineOCR et FouineCrawl : ImageExtractorTests (lot H2, E4) exerce le
         // rendu et l'OCR réel d'une image seule et la reconnaissance des

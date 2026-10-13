@@ -76,11 +76,6 @@ struct EmbedCommand: ParsableCommand {
         //
         // `--bench` n'ouvre pas la base et `--status` ne fait que lire : ni
         // l'un ni l'autre n'est une campagne, ni ne doit en empêcher une.
-        // LA GARDE D'ESSAI, AVANT MÊME LE VERROU DE CAMPAGNE (lot L1C).
-        // `--status` et `--bench` restent lisibles en fin d'essai : le premier
-        // ne fait que lire, le second n'écrit rien — refuser un compteur
-        // n'apprendrait rien à personne.
-        if bench == nil, !status { LicenseGate.requireIndexing() }
         var campaign: EmbedCampaignLock?
         if bench == nil, !status {
             do {
