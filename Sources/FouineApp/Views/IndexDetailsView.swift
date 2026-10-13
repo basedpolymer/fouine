@@ -17,9 +17,9 @@
 // les pages scannées sans texte lisible, s'il y en a, SANS geste (une relecture
 // en masse rend le même résultat, `ScannedPagesWithoutText`).
 //
-// La vue ne décide de rien : `IndexStatus`, `DocumentCountAffordance`,
-// `DiskSpaceNotice`, `ScannedPagesWithoutText` et `IndexAction.needsMainWindow`
-// sont purs et testés.
+// La vue ne décide de rien : `IndexStatus`, `IndexDetailsActivity`,
+// `DocumentCountAffordance`, `DiskSpaceNotice`, `ScannedPagesWithoutText` et
+// `IndexAction.needsMainWindow` sont purs et testés.
 //
 // MISE EN PAGE. Un `Form` groupé, et des phrases qui passent à la ligne par un
 // CADRE (`frame(maxWidth: .infinity, alignment: .leading)`), jamais par
@@ -51,6 +51,39 @@ struct IndexDetailsCommands: Commands {
             }
             .help("Shows what the index contains and what Fouine is doing.")
         }
+    }
+}
+
+/// Ce que la section « Ce que fait Fouine » présente comme geste, et s'il
+/// répond encore.
+///
+/// POURQUOI UN TYPE (PI-07). La fenêtre rendait `status.primaryAction` brut :
+/// le bouton « Stop » restait cliquable, et recliquable, sans tourniquet, alors
+/// que la carte désarme le sien dès le clic. Seul `IndexCardSummary` sait qu'un
+/// arrêt a été demandé et n'a pas encore abouti (`isStopping`, ST1) — l'état
+/// publié, lui, a déjà perdu son geste. On réutilise donc le résumé de la
+/// carte, et ce qui reste propre à la fenêtre tient en une ligne, ici, où ça se
+/// teste : une vue ne se teste pas.
+struct IndexDetailsActivity: Equatable {
+
+    /// Le résumé de la carte, pour la seule chose que l'état ne dit pas.
+    let summary: IndexCardSummary
+
+    /// Le bouton à présenter : celui de la carte quand elle en a un — donc
+    /// « Stop » pendant un arrêt —, et sinon celui de l'état. Le second terme
+    /// n'est pas un détail : la carte écarte « Lire les pages scannées… »
+    /// (elle ouvre une feuille de budget), cette fenêtre le porte.
+    let action: IndexAction?
+
+    /// L'arrêt demandé, pas encore abouti : le bouton reste là, désarmé, avec
+    /// un tourniquet à côté de la phrase.
+    var isStopping: Bool { summary.isStopping }
+
+    init(status: IndexStatus, disk: DiskSpaceNotice, indexing: IndexingState) {
+        summary = IndexCardSummary(
+            status: status, disk: disk,
+            stopping: indexing.running && indexing.cancelled)
+        action = summary.action ?? status.primaryAction
     }
 }
 
@@ -102,10 +135,20 @@ struct IndexDetailsView: View {
 
     private var status: IndexStatus { app.indexStatus }
 
+    private var activityDecision: IndexDetailsActivity {
+        IndexDetailsActivity(
+            status: status,
+            disk: DiskSpaceNotice.decide(freeBytes: app.diskFreeBytes,
+                                         forecast: app.diskBudget),
+            indexing: app.indexing)
+    }
+
     // MARK: - Ce que fait Fouine
 
     @ViewBuilder
     private var activity: some View {
+        let decision = activityDecision
+
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Image(systemName: status.symbol)
                 .foregroundStyle(status.tint.color)
@@ -118,8 +161,18 @@ struct IndexDetailsView: View {
         // La ligne COMPLÈTE, nom du document compris : la carte l'a laissée
         // ici, c'est ici qu'on vient la lire.
         if let detail = IndexStatusText.detail(status) {
-            sentence(Text(verbatim: detail)
-                .foregroundStyle(.secondary))
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                // Le tourniquet de l'arrêt, comme dans la carte (ST1, PI-07) :
+                // la barre d'avancement continue de dire ce qui se fait, c'est
+                // ici qu'il faut dire que le clic a été pris et qu'on attend.
+                if decision.isStopping {
+                    ProgressView()
+                        .controlSize(.small)
+                        .accessibilityHidden(true)  // la phrase le dit déjà
+                }
+                sentence(Text(verbatim: detail)
+                    .foregroundStyle(.secondary))
+            }
         }
 
         if let bar = IndexCardSummary.bar(for: status) {
@@ -136,8 +189,8 @@ struct IndexDetailsView: View {
             }
         }
 
-        if status.primaryAction != nil || status.secondaryAction != nil {
-            actions
+        if decision.action != nil || status.secondaryAction != nil {
+            actions(decision)
         }
     }
 
@@ -145,11 +198,13 @@ struct IndexDetailsView: View {
     /// scannées… » compris, que la carte ne porte plus. L'un SOUS l'autre, comme
     /// dans la carte : côte à côte, deux libellés français ne tiennent pas dans
     /// une fenêtre rétrécie (BU-04).
-    private var actions: some View {
+    private func actions(_ decision: IndexDetailsActivity) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            if let action = status.primaryAction {
+            if let action = decision.action {
                 Button(IndexStatusText.label(action)) { perform(action) }
                     .buttonStyle(.borderedProminent)
+                    // Un « Stop » déjà cliqué ne se reclique pas (ST1, PI-07).
+                    .disabled(decision.isStopping)
                     .accessibilityIdentifier("indexDetails.action")
             }
             if let action = status.secondaryAction {
