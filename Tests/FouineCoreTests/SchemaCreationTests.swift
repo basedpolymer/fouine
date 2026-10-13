@@ -1,22 +1,24 @@
 // SchemaCreationTests.swift — création du schéma courant, refus de tout autre
 // schéma. Propriété : A-Recette. Lot RC1 du 13/09/2026.
 //
-// IL N'Y A PAS DE MIGRATION. Fouine n'a jamais été distribué : la seule base
-// réelle est au schéma courant, et un binaire qui rattraperait des formes que
-// personne ne possède serait du code qu'aucune base ne peut éprouver.
+// IL N'Y A QU'UN PAS DE MIGRATION, et il est borné (lot SR1) : la v9 devient
+// la v10 en perdant deux tables, parce que refuser ces bases aurait obligé
+// chaque utilisateur à refaire un index de plusieurs gigaoctets pour supprimer
+// des lignes dont plus rien ne se sert. Toute autre version reste refusée.
 //
 // Ce qu'il y a donc à prouver :
 //
 //   · une base neuve naît au schéma courant, complet et cohérent ;
-//   · une base d'un schéma PLUS ANCIEN — toutes versions confondues — est
-//     refusée, avec le geste (« delete it and index again »), sans être
-//     touchée, et en écriture comme en lecture seule ;
+//   · une base d'un schéma PLUS ANCIEN que le pas de migration est refusée,
+//     avec le geste (« delete it and index again »), sans être touchée, et en
+//     écriture comme en lecture seule ;
 //   · une base d'un schéma PLUS RÉCENT est refusée, avec l'autre geste
 //     (« update the fouine binary ») ;
+//   · une base de la version qui PRÉCÈDE est migrée : les deux tables partent,
+//     les documents, leur texte et la recherche ne bougent pas ;
 //   · la création prend le verrou nommé, l'ouverture d'une base à jour non ;
 //   · rouvrir est idempotent — la seconde ouverture ne recrée rien ;
-//   · déplacer un document n'efface ni ses pages, ni sa file, ni ses vecteurs ;
-//   · l'invalidation des vecteurs suit le rowid de fenêtre ;
+//   · déplacer un document n'efface ni ses pages, ni sa file ;
 //   · et la recherche répond sur la base ainsi créée.
 //
 // Les bases « d'un autre schéma » sont fabriquées ICI, au sqlite3 du système :
@@ -110,9 +112,10 @@ final class SchemaCreationTests: XCTestCase {
 
         XCTAssertEqual(try sql("SELECT v FROM meta WHERE k='schema_version'"),
                        String(Schema.version))
-        XCTAssertEqual(Schema.version, 9,
-                       "changer `Schema.version` rend TOUTE base existante "
-                       + "illisible : l'utilisateur devra refaire son index")
+        XCTAssertEqual(Schema.version, 10,
+                       "changer `Schema.version` rend TOUTE base plus ancienne "
+                       + "que la v9 illisible : l'utilisateur devra refaire "
+                       + "son index")
         XCTAssertEqual(try sql("SELECT v FROM meta WHERE k='fouine_version'"),
                        GRDBStore.fouineVersion)
         XCTAssertFalse(try sql("SELECT v FROM meta WHERE k='created_at'").isEmpty)
@@ -121,8 +124,8 @@ final class SchemaCreationTests: XCTestCase {
         // Toutes les tables du schéma, d'un coup : `Schema.ddl` les pose
         // ensemble, il n'y a pas d'ordre d'arrivée.
         let expected = ["agent_status", "docs", "docs_fts", "meta", "ocr_layout",
-                        "ocr_queue", "page_fts", "page_src", "page_vec", "roots",
-                        "settings", "vec_meta", "vocab", "vocab_seen", "vocab_tri",
+                        "ocr_queue", "page_fts", "page_src", "roots",
+                        "settings", "vocab", "vocab_seen", "vocab_tri",
                         "volumes"]
         for table in expected {
             XCTAssertEqual(
@@ -146,17 +149,8 @@ final class SchemaCreationTests: XCTestCase {
             try sql("SELECT count(*) FROM sqlite_master "
                     + "WHERE type='index' AND name='idx_docs_inode'"), "1")
 
-        // La géométrie du fenêtrage est POSÉE : un lecteur SQL doit savoir ce
-        // que couvre un rowid de page_vec sans lire le Swift.
-        XCTAssertEqual(try sql("SELECT v FROM vec_meta WHERE k='win_chars'"),
-                       String(Schema.vecWindowChars))
-        XCTAssertEqual(try sql("SELECT v FROM vec_meta WHERE k='win_stride'"),
-                       String(Schema.vecWindowStride))
-        XCTAssertEqual(try sql("SELECT v FROM vec_meta WHERE k='win_max'"),
-                       String(Schema.vecWindowMax))
-
-        // Et les tables naissent VIDES : la création ne fabrique aucune donnée.
-        for table in ["docs", "docs_fts", "page_vec", "settings", "agent_status"] {
+        // Les tables naissent VIDES : la création ne fabrique aucune donnée.
+        for table in ["docs", "docs_fts", "settings", "agent_status"] {
             XCTAssertEqual(try count(table), 0, "« \(table) » doit naître vide")
         }
     }
@@ -206,10 +200,10 @@ final class SchemaCreationTests: XCTestCase {
                        "0", "aucune table du schéma courant ne doit apparaître")
     }
 
-    /// TOUTES les versions antérieures sont refusées, la 5 comprise : depuis le
-    /// lot RC1, aucune n'a de chemin de reprise.
+    /// TOUTES les versions antérieures sont refusées, SAUF celle qui précède
+    /// immédiatement — le seul pas de migration du produit (lot SR1).
     func testEveryOlderSchemaIsRefused() throws {
-        for version in 1..<Schema.version {
+        for version in 1..<Schema.previousVersion {
             let url = scratch.appendingPathComponent("v\(version).db")
             try Self.sqlite("""
                 CREATE TABLE meta(k TEXT PRIMARY KEY, v TEXT NOT NULL);
@@ -297,12 +291,8 @@ final class SchemaCreationTests: XCTestCase {
                                               engineRev: "vision-rev3",
                                               meanConfidence: 0.9))
         try store.enqueueOCR(docID: docID, pages: [2], priority: 1)
-        try store.upsertVectors([
-            (Schema.vecRowID(pageRowID: Schema.ftsRowID(docID: docID, page: 1),
-                             chunk: 0), Data(repeating: 3, count: 8)),
-        ])
         let before = (src: try count("page_src"), layout: try count("ocr_layout"),
-                      queue: try count("ocr_queue"), vec: try count("page_vec"))
+                      queue: try count("ocr_queue"))
         XCTAssertEqual(before.layout, 1)
 
         try store.relocateDocs([DocRelocation(
@@ -316,7 +306,6 @@ final class SchemaCreationTests: XCTestCase {
         XCTAssertEqual(try count("page_src"), before.src)
         XCTAssertEqual(try count("ocr_layout"), before.layout)
         XCTAssertEqual(try count("ocr_queue"), before.queue)
-        XCTAssertEqual(try count("page_vec"), before.vec)
         XCTAssertEqual(try count("docs"), 1, "aucun document neuf")
 
         // Et le texte se retrouve toujours, au nouveau chemin.
@@ -417,43 +406,96 @@ final class SchemaCreationTests: XCTestCase {
         XCTAssertEqual(try sql("PRAGMA integrity_check"), "ok")
     }
 
-    // MARK: - Invalidation des vecteurs par fenêtre (schéma v5)
+    // MARK: - Le pas v9 → v10 (lot SR1)
 
-    /// Réécrire le texte d'une page emporte TOUTES ses fenêtres, sentinelle
-    /// comprise, et rien d'autre : c'est la propriété que le rowid de fenêtre
-    /// (`pageRowid * 8 + chunk`) doit garantir.
-    func testRewritingAPageDropsEveryWindowOfThatPageOnly() throws {
+    /// La DDL que la v9 portait EN PLUS de la v10 : les deux tables qui ne
+    /// tenaient que les vecteurs. Recopiée ici — et nulle part dans le
+    /// produit — pour qu'une base v9 se fabrique sans ressortir l'ancien
+    /// `Schema.ddl` d'un dépôt d'archives.
+    private static let v9ExtraDDL = """
+    CREATE TABLE page_vec(rowid INTEGER PRIMARY KEY, vec BLOB NOT NULL);
+    CREATE TABLE vec_meta(k TEXT PRIMARY KEY, v TEXT NOT NULL) WITHOUT ROWID;
+    INSERT INTO vec_meta(k, v) VALUES ('win_chars','1400'), ('win_max','3'),
+      ('model_id','multilingual-e5-small'), ('dim','384');
+    INSERT INTO page_vec(rowid, vec) VALUES (8000080, x'0607'), (8000082, x'');
+    UPDATE meta SET v = '9' WHERE k = 'schema_version';
+    """
+
+    /// Une base v9 PLAUSIBLE : le schéma courant, plus les deux tables de la
+    /// v9, plus un document indexé et cherchable.
+    private func makeV9Database() throws -> (docID: Int64, hits: [String]) {
         let store = try open()
-        let docID = try addDoc(store, relPath: "Users/fixture/Livres/scan.pdf")
+        let docID = try addDoc(store, relPath: "Users/fixture/Livres/traite.pdf")
         try store.replacePages(docID: docID, pages: [
-            PageText(page: 1, text: "tellurium", source: .ocrAccurate),
-            PageText(page: 2, text: "mesure du rendement", source: .ocrAccurate),
+            PageText(page: 1, text: "addition électrophile selon Markovnikov",
+                     source: .native),
+            PageText(page: 2, text: "catalyse heterogene et surfaces",
+                     source: .native),
         ])
+        let before = try store.search(try QueryParser.searchQuery("catalyse"),
+                                      excludingDocsMatching: nil)
+        store.releaseWriteLock()
+        try Self.sqlite(Self.v9ExtraDDL, on: databaseURL)
+        return (docID, before.hits.map { "\($0.docID):\($0.page)" })
+    }
 
-        let kept = Schema.ftsRowID(docID: docID, page: 2)
-        let rewritten = Schema.ftsRowID(docID: docID, page: 1)
-        try store.upsertVectors([
-            (Schema.vecRowID(pageRowID: rewritten, chunk: 0),
-             Data(repeating: 1, count: 8)),
-            (Schema.vecRowID(pageRowID: rewritten, chunk: 1),
-             Data(repeating: 2, count: 8)),
-            // La sentinelle de complétude : blob vide, dernier créneau.
-            (Schema.vecRowID(pageRowID: rewritten, chunk: 2), Data()),
-            (Schema.vecRowID(pageRowID: kept, chunk: 0),
-             Data(repeating: 3, count: 8)),
-        ])
-        XCTAssertEqual(try count("page_vec"), 4)
+    /// LE TEST QUI COMPTE POUR L'UTILISATEUR : son index s'ouvre, les deux
+    /// tables sont parties, et sa recherche rend EXACTEMENT ce qu'elle rendait.
+    func testAV9DatabaseIsMigratedWithoutLosingAnything() throws {
+        let (docID, hitsBefore) = try makeV9Database()
+        XCTAssertEqual(try sql("SELECT v FROM meta WHERE k='schema_version'"), "9")
+        XCTAssertEqual(try count("page_vec"), 2)
 
-        try store.completeOCR(docID: docID, page: 1,
-                              result: OCRPage(text: "texte reconnu à nouveau",
-                                              lines: [], level: .accurate,
-                                              seconds: 0.1, engine: .vision,
-                                              engineRev: "vision-rev3",
-                                              meanConfidence: 0.9))
-        XCTAssertEqual(try sql("SELECT group_concat(rowid) FROM page_vec"),
-                       String(Schema.vecRowID(pageRowID: kept, chunk: 0)),
-                       "les trois fenêtres de la page réécrite devaient partir, "
-                       + "et elles seules")
+        let store = try open()
+        XCTAssertEqual(try sql("SELECT v FROM meta WHERE k='schema_version'"),
+                       String(Schema.version))
+        for table in ["page_vec", "vec_meta"] {
+            XCTAssertEqual(
+                try sql("SELECT count(*) FROM sqlite_master WHERE name='\(table)'"),
+                "0", "« \(table) » devait partir")
+        }
+        // Ce qui porte les documents ne bouge PAS : c'est tout l'intérêt du pas
+        // de migration plutôt que d'un refus.
+        XCTAssertEqual(try store.docRow(id: docID)?.record.relPath,
+                       "Users/fixture/Livres/traite.pdf")
+        XCTAssertEqual(try store.indexedPageCount(), 2)
+        let after = try store.search(try QueryParser.searchQuery("catalyse"),
+                                     excludingDocsMatching: nil)
+        XCTAssertEqual(after.hits.map { "\($0.docID):\($0.page)" }, hitsBefore)
+        XCTAssertFalse(hitsBefore.isEmpty, "la recherche doit avoir trouvé quelque chose")
+        store.releaseWriteLock()
+    }
+
+    /// Le pas est IDEMPOTENT : une coupure de courant laisse une base qui se
+    /// dit encore v9 (la version est écrite en dernier, dans la même
+    /// transaction), et le lancement suivant le rejoue sur des tables déjà
+    /// parties.
+    func testTheMigrationCanBeReplayed() throws {
+        _ = try makeV9Database()
+        let first = try open()
+        first.releaseWriteLock()
+        // On remet la base en v9 SANS remettre les tables : exactement l'état
+        // qu'un `DROP` déjà joué laisserait derrière lui.
+        try Self.sqlite("UPDATE meta SET v = '9' WHERE k = 'schema_version';",
+                        on: databaseURL)
+        let second = try open()
+        XCTAssertEqual(try sql("SELECT v FROM meta WHERE k='schema_version'"),
+                       String(Schema.version))
+        second.releaseWriteLock()
+    }
+
+    /// La LECTURE SEULE ne peut pas migrer : elle refuse en nommant le geste
+    /// qui le fait, et surtout PAS en envoyant refaire l'index.
+    func testAReadOnlyOpenOfAV9DatabaseNamesTheGestureThatMigrates() throws {
+        _ = try makeV9Database()
+        XCTAssertThrowsError(try GRDBStore().openReadOnly(at: databaseURL)) {
+            guard case FouineError.databaseFailure(let message) = $0 else {
+                return XCTFail("attendu .databaseFailure, obtenu \($0)")
+            }
+            XCTAssertTrue(message.contains(GRDBStore.schemaNeedsUpgrade), message)
+            XCTAssertFalse(message.contains("delete it"),
+                           "un index parfaitement bon ne se refait pas : \(message)")
+        }
     }
 
     // MARK: - Le test qui compte pour l'utilisateur

@@ -12,13 +12,9 @@ final class StatusProbeTests: XCTestCase {
     func testIncludeAgentFalseNeverCallsProbe() throws {
         let index = try TempIndex()
         let store = ReadOnlyStore(path: index.databaseURL)
-        let semantic = SemanticEngine(store: store, modelDirectory: index.directory)
-
         var probeCallCount = 0
         let statusTool = StatusTool(
             store: store,
-            semantic: semantic,
-            modelDirectory: index.directory,
             launchdProbe: {
                 probeCallCount += 1
                 return .notRegistered
@@ -35,14 +31,10 @@ final class StatusProbeTests: XCTestCase {
     func testProbeIsCachedForSixtySeconds() throws {
         let index = try TempIndex()
         let store = ReadOnlyStore(path: index.databaseURL)
-        let semantic = SemanticEngine(store: store, modelDirectory: index.directory)
-
         var simulatedTime = Date()
         var probeCallCount = 0
         let statusTool = StatusTool(
             store: store,
-            semantic: semantic,
-            modelDirectory: index.directory,
             launchdProbe: {
                 probeCallCount += 1
                 return .notRegistered
@@ -83,8 +75,6 @@ final class StatusProbeTests: XCTestCase {
         let readOnly = ReadOnlyStore(path: index.databaseURL)
         let tool = StatusTool(
             store: readOnly,
-            semantic: SemanticEngine(store: readOnly, modelDirectory: index.directory),
-            modelDirectory: index.directory,
             launchdProbe: { .notRegistered })
         let agent = try XCTUnwrap(
             tool.call(arguments: [:]).structured["agent"] as? [String: Any])

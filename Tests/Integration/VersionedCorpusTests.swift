@@ -404,7 +404,6 @@ final class VersionedCorpusTests: XCTestCase {
         // `djvused` est une CLÉ, pas une exigence : présent ou non, `doctor`
         // doit la rendre et rester en 0.
         XCTAssertTrue(payload.keys.contains("djvused"))
-        XCTAssertTrue(payload.keys.contains("semantic_model"))
     }
 
     /// `doctor` sort en 5 quand une racine devient illisible — et le dit dans le
@@ -660,10 +659,10 @@ final class VersionedCorpusTests: XCTestCase {
     /// la base de production). `hits.prefix(limit)` piège sur une longueur
     /// négative, et SQLite lit `LIMIT -1` comme « aucune limite ». Une longueur
     /// négative est une erreur d'ARGUMENT, comme `--offset` : sortie 64, jamais
-    /// un signal. `--depth` suit la même règle en mode hybride.
-    func testNegativeLimitOrDepthExits64AndNeverCrashes() throws {
+    /// un signal.
+    func testNegativeLimitExits64AndNeverCrashes() throws {
         for arguments in [["search", "azote", "--limit=-5"],
-                          ["search", "azote", "--depth=-1", "--hybrid"]] {
+                          ["search", "azote", "--offset=-1"]] {
             let result = try Recette.run(arguments, database: database)
             XCTAssertLessThan(result.status, 128,
                               "un argument refusé ne doit jamais tuer le "
@@ -702,7 +701,7 @@ final class VersionedCorpusTests: XCTestCase {
             ["doctor", "--deep"],
             ["root", "list"],
             ["config", "list"],
-            ["embed", "--status"],
+            ["list"],
         ]
         for arguments in readOnly {
             let result = try Recette.run(arguments, database: absent)

@@ -14,15 +14,13 @@ final class HitExplanationTests: XCTestCase {
         HitExplanation.words(ofQuery: query)
     }
 
-    private func explain(_ query: String, text: String, fuzzyDistance: Int = 0,
-                         lexRank: Int? = nil, vecRank: Int? = nil)
-        -> HitExplanation? {
+    private func explain(_ query: String, text: String,
+                         fuzzyDistance: Int = 0) -> HitExplanation? {
         HitExplanation(words: words(query), text: text,
-                       fuzzyDistance: fuzzyDistance,
-                       lexRank: lexRank, vecRank: vecRank)
+                       fuzzyDistance: fuzzyDistance)
     }
 
-    // MARK: - Les cinq cas
+    // MARK: - Les trois cas
 
     func testAllWordsPresent() {
         XCTAssertEqual(explain("cinetique chimie",
@@ -43,20 +41,6 @@ final class HitExplanationTests: XCTestCase {
                                fuzzyDistance: 1),
                        .fuzzy(typed: "converslon", found: "conversion",
                               distance: 1))
-    }
-
-    func testSemanticOnlyWhenTheLexicalChannelDidNotFindThePage() {
-        XCTAssertEqual(explain("tarte aux pommes",
-                               text: "Chapitre 3 — thermodynamique.",
-                               lexRank: nil, vecRank: 4),
-                       .semanticOnly)
-    }
-
-    func testBothChannels() {
-        XCTAssertEqual(explain("catalyse",
-                               text: "La catalyse heterogene.",
-                               lexRank: 2, vecRank: 7),
-                       .both(terms: ["catalyse"]))
     }
 
     // MARK: - Accents, casse, frontières de mot
@@ -206,13 +190,6 @@ final class HitExplanationTests: XCTestCase {
                                     fuzzyDistance: 1, textIsWholePage: false))
     }
 
-    func testAnExcerptOfAHybridHitFoundByBothChannels() {
-        XCTAssertEqual(
-            HitExplanation(words: words("catalyse"), text: "…du reacteur…",
-                           lexRank: 3, vecRank: 8, textIsWholePage: false),
-            .both(terms: ["catalyse"]))
-    }
-
     // MARK: - L'objet `why` du JSON
 
     func testJSONShape() {
@@ -232,23 +209,22 @@ final class HitExplanationTests: XCTestCase {
         XCTAssertEqual(fuzzy["found"] as? String, "conversion")
         XCTAssertEqual(fuzzy["distance"] as? Int, 1)
 
-        let semantic = HitExplanation.json(.semanticOnly)
-        XCTAssertEqual(semantic["kind"] as? String, "semantic")
-        XCTAssertEqual(semantic.count, 1)
-
-        XCTAssertEqual(HitExplanation.json(.both(terms: ["x"]))["kind"] as? String,
-                       "both")
     }
 
     // MARK: - Le conseil du cœur
 
-    func testNoLexicalMatchAdviceHasNoJargonAndNoNumber() {
-        let advice = SearchAdvice.noLexicalMatch
-        XCTAssertFalse(advice.isEmpty)
-        XCTAssertFalse(advice.contains(where: \.isNumber))
-        for jargon in ["cosine", "vector", "semantic", "z ", "sigma"] {
-            XCTAssertFalse(advice.lowercased().contains(jargon),
-                           "le conseil ne doit pas dire « \(jargon) »")
+    /// Les trois phrases que les surfaces reprennent telles quelles ne disent
+    /// aucun mot de technicien et aucun chiffre : elles s'affichent sous les
+    /// résultats, là où le public de Fouine les lit.
+    func testTheAdviceHasNoJargonAndNoNumber() {
+        for advice in [SearchAdvice.quorum, SearchAdvice.fuzzyFallback,
+                       SearchAdvice.fuzzyExpanded] {
+            XCTAssertFalse(advice.isEmpty)
+            XCTAssertFalse(advice.contains(where: \.isNumber))
+            for jargon in ["bm25", "fts5", "index", "rowid", "quorum"] {
+                XCTAssertFalse(advice.lowercased().contains(jargon),
+                               "le conseil ne doit pas dire « \(jargon) »")
+            }
         }
     }
 }

@@ -1,11 +1,11 @@
 // SearchAdvice.swift — ce que le moteur a le droit de CONSEILLER à l'appelant.
 // Propriété : A-Core. Audit A1m-08, idée 1.
 //
-// UNE SEULE PHRASE POUR L'INSTANT, et une seule raison d'exister : elle est
-// écrite ici, en anglais, parce que trois surfaces la rendent — la sortie texte
-// de `fouine search`, le champ `note` de `fouine_search` (MCP) et, TRADUITE, la
-// ligne d'état de l'application. Trois copies d'une même phrase avaient déjà
-// commencé à diverger ailleurs dans ce dépôt (§4.3).
+// CES PHRASES SONT ÉCRITES ICI, en anglais, parce que trois surfaces les
+// rendent — la sortie texte de `fouine search`, le champ `note` de
+// `fouine_search` (MCP) et, TRADUITES, la ligne d'état de l'application. Trois
+// copies d'une même phrase avaient déjà commencé à diverger ailleurs dans ce
+// dépôt (§4.3).
 //
 // POURQUOI CE CONSEIL PLUTÔT QU'UNE OPTIMISATION. Mesuré le 04/09/2026 sur la
 // base de production (390 114 pages), chaque ligne coup sur coup :
@@ -41,49 +41,6 @@ public enum SearchAdvice {
     /// jargon.
     public static let veryCommonWord =
         "very common word — add a second word to narrow the search"
-
-    /// Le conseil qui accompagne une recherche par le sens dont le canal
-    /// LEXICAL n'a rien trouvé (`HybridResults.lexTotalPages == 0`) alors que
-    /// des résultats sont rendus.
-    ///
-    /// CE N'EST PAS UN FILTRE, et le distinguo est mesuré (lot U1, R-04). Le
-    /// protocole du 03/09/2026 (`Tools/ranking`, 40 requêtes sur la base de
-    /// production) a essayé d'écarter les résultats « hallucinés » par un seuil
-    /// de cosinus : les cinq requêtes absurdes s'étalent de 0,7975 à 0,8517,
-    /// et des requêtes parfaitement pertinentes tombent DANS cette plage
-    /// (« spinodale » 0,8188, « loi de Hess » 0,8280). Un seuil à 0,82 tuerait
-    /// la seconde et laisserait passer trois des cinq premières.
-    ///
-    /// Ce qui tient, en revanche : les cinq requêtes absurdes n'ont AUCUNE page
-    /// lexicale. Deux paraphrases légitimes non plus — d'où une phrase et non
-    /// un filtre. On dit d'où viennent ces résultats, et l'utilisateur juge :
-    /// c'est exactement le rôle que `defaultVectorFloor` refuse à un plancher.
-    ///
-    /// ANGLAIS, comme tout ce que la CLI et le serveur MCP impriment ;
-    /// l'application a sa propre phrase, traduite et sans jargon.
-    public static let noLexicalMatch =
-        "none of your words is in your documents — these results come from meaning alone"
-
-    /// La même situation, quand certains mots SONT dans l'index mais jamais
-    /// ensemble sur une page (lot MC1). Complétée par `wordsPresent`.
-    ///
-    /// POURQUOI DEUX PHRASES. `lexTotalPages == 0` ne dit pas « aucun de vos
-    /// mots n'existe » : il dit « aucune page ne les porte TOUS ». Mesuré le
-    /// 13/09/2026 sur la base de production, `dossier:Livres distribution des
-    /// temps de séjour dans un réacteur réel` : zéro page lexicale, et
-    /// « réacteur » dans 22 documents de `Livres`. La phrase affirmait donc le
-    /// contraire de ce que l'index contient — le plus sûr moyen de faire
-    /// conclure à un corpus muet et d'arrêter de chercher.
-    public static let noLexicalMatchTogether =
-        "no page carries your words together — these results come from meaning alone"
-
-    /// La phrase à dire, selon ce que l'index porte réellement. Liste vide :
-    /// aucun mot n'existe, l'ancienne phrase est juste.
-    public static func noLexicalMatch(wordsPresent words: [String]) -> String {
-        guard !words.isEmpty else { return noLexicalMatch }
-        return noLexicalMatchTogether
-            + " (words present: " + words.joined(separator: ", ") + ")"
-    }
 
     /// Le conseil qui accompagne un REPLI EN FLOU : la recherche exacte n'a rien
     /// rendu, Fouine a rejoué la requête en tolérant les fautes sur tout l'index

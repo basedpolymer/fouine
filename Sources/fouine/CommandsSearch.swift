@@ -3,15 +3,11 @@
 import Foundation
 import ArgumentParser
 import FouineCore
-import FouineEmbed
 
 /// Le CONTRAT GELÉ d'un résultat (§4.3), en un seul endroit — constat CM-22.
-///
-/// `docs/cli.md` annonce les clés hybrides « en plus » ; le mode hybride en
-/// RETIRAIT quatre : `total_pages` et `total_docs` à la racine, `folder` et
-/// `engine` par résultat. Un script qui lit `hits[].folder` cassait dès que
-/// l'utilisateur ajoutait `--hybrid`. Deux constructeurs voisins ont divergé
-/// parce que rien ne les obligeait à se ressembler : il n'y en a plus qu'un.
+/// UN SEUL constructeur : deux constructeurs voisins avaient divergé parce que
+/// rien ne les obligeait à se ressembler, et un script qui lisait
+/// `hits[].folder` cassait selon le mode de recherche.
 enum SearchJSON {
 
     /// `score` est ARRONDI À 4 DÉCIMALES (constat CM-21) : la CLI publiait
@@ -20,9 +16,8 @@ enum SearchJSON {
     /// au premier changement de FTS5. C'est la même grandeur, et désormais le
     /// même arrondi, que le `bm25` de l'outil MCP.
     ///
-    /// `score` est le seul champ OPTIONNEL : un résultat rendu par le seul
-    /// canal sémantique n'a pas de score bm25, et en inventer un — 0, par
-    /// exemple — serait un chiffre faux dans un contrat gelé.
+    /// `score` reste OPTIONNEL dans la signature : le contrat gelé l'annonce
+    /// ainsi, et inventer un 0 serait un chiffre faux.
     /// - Parameters:
     ///   - relevancePct: la pertinence RELATIVE (`HitRelevance`) — celle que la
     ///     sortie texte imprime depuis toujours et que le JSON taisait.
@@ -162,42 +157,6 @@ struct SearchCommand: ParsableCommand {
             help: "What surrounds the matched words in a snippet: guillemets (default), brackets, asterisks or none.")
     var mark: MarkArg = .guillemets
 
-    @Flag(name: .long,
-          help: "RRF merge with the semantic search (needs the model and vectors produced by `fouine embed`).")
-    var hybrid = false
-
-    /// `--hybrid=auto` N'EST PAS EXPRIMABLE en ArgumentParser (lot CL2) : une
-    /// option à valeur FACULTATIVE n'existe pas dans la bibliothèque, et
-    /// transformer `--hybrid` en `@Option` aurait fait avaler le mot suivant —
-    /// `fouine search --hybrid azote` aurait cherché « --hybrid=azote ». D'où
-    /// un drapeau séparé, qui dit la même chose : fusionne si le modèle et les
-    /// vecteurs sont là, cherche en plein texte sinon, et ce n'est PAS une
-    /// panne (aucune sortie 3, aucun avertissement — c'est ce qui a été
-    /// demandé).
-    @Flag(name: .customLong("hybrid-auto"),
-          help: "Merge with the semantic search when the model and the vectors are there, and search full text otherwise, without failing.")
-    var hybridAuto = false
-
-    @Option(name: .long,
-            help: "Depth of the merged lists in hybrid mode (200 by default).")
-    var depth: Int = HybridSearch.defaultDepth
-
-    @Option(name: .customLong("vec-floor"),
-            help: "Drop semantic hits whose margin z is below this (0 disables, the default).")
-    var vecFloor: Double = HybridSearch.defaultVectorFloor
-
-    @Option(name: .customLong("lex-weight"),
-            help: "Weight of the lexical list in the RRF merge (1 by default).")
-    var lexWeight: Double = 1
-
-    @Option(name: .customLong("vec-weight"),
-            help: "Weight of the semantic list in the RRF merge (1 by default).")
-    var vecWeight: Double = 1
-
-    @Flag(name: .customLong("vec-center"),
-          help: "Subtract the corpus mean vector before comparing (calibration).")
-    var vecCenter = false
-
     @Flag(name: .customLong("no-proximity"),
           help: "Disable the phrase, proximity and file-name ranking bonuses (calibration).")
     var noProximity = false
@@ -222,10 +181,6 @@ struct SearchCommand: ParsableCommand {
           help: "Leave tables of contents and indexes where the ranking puts them (calibration).")
     var noDemoteTOC = false
 
-    @Flag(name: .customLong("raw-semantic-ranks"),
-          help: "Hybrid: fuse the semantic ranks as they are, without rescaling them to the vector coverage (calibration).")
-    var rawSemanticRanks = false
-
     /// Une requête que l'analyseur refuse est une ERREUR D'USAGE, pas une
     /// panne : `ValidationError` sort en 64 et affiche l'usage, comme un
     /// argument manquant (§4.3, `docs/cli.md` § codes de sortie). Elle sortait
@@ -246,15 +201,6 @@ struct SearchCommand: ParsableCommand {
         // `--offset` : sortie 64.
         guard limit >= 0 else {
             throw ValidationError("Limit must be non-negative.")
-        }
-        guard depth > 0 else {
-            throw ValidationError("Depth must be positive.")
-        }
-        guard lexWeight >= 0, vecWeight >= 0 else {
-            throw ValidationError("Weights must be non-negative.")
-        }
-        guard lexWeight > 0 || vecWeight > 0 else {
-            throw ValidationError("At least one of --lex-weight / --vec-weight must be positive.")
         }
         // Une date illisible est une erreur d'ARGUMENT (64), pas une recherche
         // sans borne : filtrer sur rien du tout en silence ferait annoncer un
@@ -330,90 +276,23 @@ struct SearchCommand: ParsableCommand {
             q.typedFormBoost = !noTypedForm
             // LES DEUX RÉGLAGES DU LOT RK2, ARMÉS PAR DÉFAUT depuis le
             // 11/09/2026 (AUDIT-RK2 : jugés sur 149 candidats, +0,052 nDCG@10
-            // ensemble, p < 0,001). Livrés désarmés, ils sont devenus des
-            // options de calibration comme les quatre ci-dessus : `--no-*`
-            // les éteint pour le banc.
-            //
-            // EN HYBRIDE AUSSI, depuis le lot MN1 — décision du 14/09/2026,
-            // réversible. Le quorum était désarmé dans ce mode parce que
-            // `HybridResults` ne transportait pas le drapeau : la fusion
-            // relâchait le ET sans que rien ne le dise, ce qui est exactement
-            // ce que `SearchAdvice.quorum` existe pour éviter. Le drapeau
-            // voyage depuis le lot MC2 (`HybridResults.quorum`), le serveur MCP
-            // l'arme en hybride depuis ce jour-là, et deux surfaces qui disent
-            // deux choses des mêmes résultats sont pires qu'une convention
-            // discutable : on garde CELLE DU SERVEUR. Ce qui la fonde : le
-            // quorum a été jugé au banc en LEXICAL (790 jugements, +0,031
-            // nDCG@10, 6 victoires / 43 égalités / 0 défaite) ; en hybride,
-            // il reste à rejouer à couverture pleine — d'où « réversible », et
-            // `--no-quorum` qui l'éteint dans les deux modes.
+            // ensemble, p < 0,001, 790 jugements pour le quorum seul :
+            // +0,031, 6 victoires / 43 égalités / 0 défaite). Livrés désarmés,
+            // ils sont devenus des options de calibration comme les quatre
+            // ci-dessus : `--no-*` les éteint pour le banc.
             q.quorum = !noQuorum
             q.demoteTableOfContents = !noDemoteTOC
-            // Filtres de DOCUMENT (lot U2) : ils portent sur tout l'index, et
-            // le chemin hybride les applique donc aux deux canaux comme
-            // `dossier:` et `ext:`.
+            // Filtres de DOCUMENT (lot U2) : ils portent sur tout l'index.
             q.langs = lang
             q.modifiedAfter = since.flatMap { DateWindow.startOfDay(iso8601: $0) }
             // Filtre de PAGE (lot P3), le seul : la provenance est une
-            // propriété de la page, pas du document. Le chemin hybride le
-            // porte lui aussi, sur ses deux canaux.
+            // propriété de la page, pas du document.
             q.sources = source?.value
             // Les marqueurs de surlignage (lot CL2) : le défaut est inchangé,
             // et `TranscriptTime` lit l'ouvrant pour savoir où commence le mot
             // trouvé — d'où la valeur portée par la requête plutôt que par un
             // paramètre de sortie.
             q.snippetMarkers = mark.value
-            // RK-01 : une requête à phrase exacte ne consulte pas le sens.
-            // Le refus est prononcé ICI, avant de charger le modèle et l'index
-            // vectoriel (une seconde de mur pour rien), et la sortie rendue est
-            // la sortie LEXICALE complète — facettes, pagination, canal des
-            // noms —, exactement comme le repli faute de modèle. `--raw-fts`
-            // n'a pas d'analyseur : ses guillemets appartiennent à FTS5.
-            var disarmed: SemanticDisarmReason? =
-                wantsHybrid && !rawFTS && QueryParser.asksForExactPhrase(query)
-                ? .exactPhrase : nil
-            if let disarmed { CLI.warn(disarmed.advice) }
-            // Le PÉRIMÈTRE du sens, quand il peut changer quelque chose (lot
-            // CL2, constat PM-06) : sans cela, `dossier:M2SU --hybrid` chargeait
-            // le modèle et l'index vectoriel — quatre secondes — pour comparer
-            // zéro vecteur, puis annonçait la couverture GLOBALE comme si elle
-            // décrivait le dossier demandé.
-            //
-            // IL N'A LIEU QUE S'IL PEUT CHANGER QUELQUE CHOSE : sans filtre de
-            // document, le périmètre EST l'index, la fusion en connaît déjà les
-            // chiffres, et les deux comptes coûtaient **240 ms** mesurés sur la
-            // base de production (1 747 → 1 984 ms sur `réacteur piston`) pour
-            // réapprendre ce que l'on savait. Même garde que le serveur MCP.
-            var scope: SemanticScope?
-            if wantsHybrid, disarmed == nil, q.filtersDocuments {
-                scope = try Self.semanticScope(store: store, q: q,
-                                               negative: negative)
-                // `filtered` compte dans la condition : un index qui n'a PAS UN
-                // vecteur n'est pas un périmètre mal choisi, et son refus (3,
-                // ou le repli de `--hybrid-auto`) dit déjà le bon geste.
-                if scope?.vectors == 0, scope?.filtered == true {
-                    disarmed = .noVectorsInScope
-                }
-            }
-            // Rien à encoder (`nom:rapport` seul, lot QP1) : la recherche reste
-            // lexicale, sans avertissement — il n'y avait pas de sens à chercher.
-            if wantsHybrid, disarmed == nil, rawFTS || !semanticText.isEmpty {
-                switch try runHybrid(store: store, q: q, negative: negative,
-                                     scope: scope) {
-                case .handled:
-                    return
-                case .fallback:
-                    break
-                }
-            }
-            if disarmed == .noVectorsInScope, let scope {
-                // LA PHRASE CHIFFRÉE, celle qui porte le geste — la même que
-                // `note` côté serveur MCP, parce que c'est la MÊME fonction
-                // depuis le lot MN1. La raison générique
-                // (`SemanticDisarmReason.advice`) dirait deux fois le même fait.
-                CLI.warn(SemanticDisarmReason.noVectorsInScopeNote(
-                    scope, folders: q.folders))
-            }
             let results = try store.search(q, excludingDocsMatching: negative)
             let hasMore = results.hits.count > limit
             let trimmedHits = Array(results.hits.prefix(limit))
@@ -433,7 +312,7 @@ struct SearchCommand: ParsableCommand {
             // se lisent (« Villeurbanne » n'est pas « Villeurbane »), et
             // quelqu'un qui lit du JSON dans son terminal doit le voir aussi.
             // stderr laisse la sortie exploitable telle quelle par un tube — la
-            // même règle que l'avertissement de couverture du mode hybride.
+            // même règle que les autres avertissements de contexte.
             if results.fuzzyFallback { CLI.warn(SearchAdvice.fuzzyFallback) }
             // LE QUORUM SE DIT AU MÊME ENDROIT, et pour la même raison : ce qui
             // suit les pages strictes ne porte pas tous les mots demandés.
@@ -448,8 +327,7 @@ struct SearchCommand: ParsableCommand {
 
             if json {
                 try emitJSON(store: store, results: trimmedResults, facets: facets,
-                             offset: offset, hasMore: hasMore, disarmed: disarmed,
-                             scope: scope)
+                             offset: offset, hasMore: hasMore)
             } else {
                 try emitText(store: store, results: trimmedResults, facets: facets)
             }
@@ -488,132 +366,6 @@ struct SearchCommand: ParsableCommand {
         }
     }
 
-    // MARK: - Hybride (fusion RRF lexical + sémantique, §12)
-
-    /// Le mode hybride a-t-il répondu ?
-    private enum HybridOutcome {
-        /// La fusion a écrit sa sortie ; il n'y a plus rien à faire.
-        case handled
-        /// Le canal du sens n'a pas pu servir : l'appelant enchaîne sur le
-        /// plein texte.
-        case fallback
-    }
-
-    /// `--hybrid` ou `--hybrid-auto` : la fusion a été DEMANDÉE.
-    private var wantsHybrid: Bool { hybrid || hybridAuto }
-
-    /// Ce que le canal du sens voit du périmètre demandé, AVANT tout chargement
-    /// (lot CL2, constat PM-06).
-    ///
-    /// Deux comptes quand rien ne filtre — le coût est nul, il n'y a rien à
-    /// recompter ; deux lectures par document autorisé quand un filtre porte,
-    /// soit ~30 ms sur 1 883 documents. C'est à payer avant les quatre secondes
-    /// du modèle et de l'index vectoriel, pas après.
-    static func semanticScope(store: GRDBStore, q: SearchQuery,
-                              negative: String?) throws -> SemanticScope {
-        let vectors = try store.vectorisedPageCount()
-        let pages = try store.indexedPageCount()
-        // Aucun vecteur DU TOUT : le périmètre n'y est pour rien, et ce cas a
-        // son propre message (et sa propre sortie) plus bas.
-        guard vectors > 0 else {
-            return SemanticScope(vectors: 0, pagesIndexed: pages, filtered: false)
-        }
-        return try HybridSearch.scope(store: store, query: q,
-                                      excludingDocsMatching: negative,
-                                      vectors: vectors, pagesIndexed: pages)
-    }
-
-    /// Rend `.fallback` quand le modèle sémantique n'est pas installé :
-    /// l'appelant enchaîne alors sur la recherche plein texte.
-    ///
-    /// C'est ce que `docs/cli.md` promet depuis `doctor` — « sans lui, `embed`
-    /// refuse de partir et `search --hybrid` retombe sur le plein texte » —,
-    /// et ce que le code ne faisait pas : il sortait en 1. Le repli est
-    /// ANNONCÉ sur l'erreur standard, jamais silencieux, et le JSON porte
-    /// `hybrid: false` pour qu'un script sache ce qu'il a réellement obtenu.
-    /// Une base SANS VECTEUR reste une erreur : le modèle est là, il n'y a
-    /// qu'à lancer `fouine embed`, et taire ce cas cacherait le geste.
-    ///
-    /// `--hybrid-auto` est l'exception, et c'est toute sa raison d'être : les
-    /// deux manques y sont SILENCIEUX et sans erreur — l'appelant a demandé
-    /// « fusionne si tu peux », et lui répondre par un avertissement ou par la
-    /// sortie 3 serait répondre à une autre demande.
-    private func runHybrid(store: GRDBStore, q: SearchQuery,
-                           negative: String?,
-                           scope: SemanticScope?) throws -> HybridOutcome {
-        let directory = EmbedPaths.modelDirectory()
-        guard EmbedPaths.modelAvailable(at: directory) else {
-            if !hybridAuto {
-                CLI.warn("--hybrid ignored: the semantic model is missing from "
-                         + "\(directory.path) — `fouine model download` installs "
-                         + "it. Falling back to full-text search.")
-            }
-            return .fallback
-        }
-        let t0 = DispatchTime.now().uptimeNanoseconds
-        let engine = try E5Encoder(modelDir: directory)
-        let tModel = Double(DispatchTime.now().uptimeNanoseconds - t0) / 1_000_000
-
-        let t1 = DispatchTime.now().uptimeNanoseconds
-        var index = try VectorIndex(store: store, dim: engine.dimension)
-        if vecCenter { index = index.centered() }
-        let tIndex = Double(DispatchTime.now().uptimeNanoseconds - t1) / 1_000_000
-
-        guard index.count > 0 else {
-            if hybridAuto { return .fallback }
-            throw FouineError.databaseFailure(
-                "no vector in the database — run `fouine embed` first")
-        }
-        let results = try HybridSearch.run(
-            store: store, engine: engine, index: index, query: q,
-            excludingDocsMatching: negative, rawQuery: semanticText,
-            typedQuery: rawFTS ? "" : query,
-            limit: limit, offset: offset, depth: depth,
-            lexWeight: lexWeight, vecWeight: vecWeight, vecFloor: vecFloor,
-            coverageScaling: !rawSemanticRanks,
-            modelLoadMS: tModel, indexLoadMS: tIndex,
-            // Le périmètre a déjà été lu pour décider de charger le modèle : le
-            // repasser évite de le recompter (deux lectures par document).
-            scope: scope)
-        // La couverture est dite AVANT les résultats — c'est le contexte dans
-        // lequel ils se lisent, pas une note de bas de page (C2-02). Elle est
-        // celle du PÉRIMÈTRE depuis le lot CL2 : annoncer « 67,9 % » sur un
-        // dossier vectorisé à 3 % décrivait un autre corpus que celui cherché.
-        let seen = results.scope
-        if seen.pagesIndexed > 0, seen.coveragePct < 50 {
-            CLI.warn(String(format: "semantic channel covers %.1f %% of the pages",
-                            seen.coveragePct)
-                     + " \(seen.filtered ? "searched here" : "in the index")"
-                     + " (\(seen.vectors) / \(seen.pagesIndexed))"
-                     + " — hybrid results are drawn from that subset;"
-                     + " `fouine embed` extends it")
-        }
-        // LE REPLI EN FLOU AUSSI EN HYBRIDE (lot RK1) : le canal lexical de la
-        // fusion passe par `GRDBStore.search`, donc il repliait déjà — sans que
-        // ce mode le dise. Même phrase, même canal de sortie que le lexical.
-        if results.fuzzyFallback { CLI.warn(SearchAdvice.fuzzyFallback) }
-        // LE QUORUM AUSSI, pour la même raison et depuis le lot MN1 : il est
-        // désormais armé dans ce mode, donc les pages qui suivent la tête ne
-        // portent pas forcément tous les mots — et c'est le contexte dans
-        // lequel la liste se lit, pas une note de bas de page.
-        if results.quorum { CLI.warn(SearchAdvice.quorum) }
-        // CE QUE L'INDEX PORTE VRAIMENT (lot MC1). La phrase « aucun de vos
-        // mots » se disait sur le seul « aucune page ne les porte tous » : on
-        // lit donc, et seulement dans ce cas, lesquels existent.
-        let present = results.lexTotalPages == 0 && !results.hits.isEmpty
-            ? try store.wordsPresent(q, excludingDocsMatching: negative) : []
-        if json {
-            try emitHybridJSON(store: store, results)
-        } else {
-            emitHybridText(results, wordsPresent: present)
-        }
-        return .handled
-    }
-
-    /// Texte envoyé au modèle : la même fonction que l'application et le
-    /// serveur MCP (`QueryParser.semanticText`, lot QP1).
-    private var semanticText: String { QueryParser.semanticText(query) }
-
     /// Les mots POSITIFS de la requête, pour l'objet `why` (A1-08).
     ///
     /// `--raw-fts` en rend AUCUN, et c'est juste : la chaîne part telle quelle
@@ -633,11 +385,9 @@ struct SearchCommand: ParsableCommand {
     /// lexical les porte tous, par construction ; `terms_missing` n'apparaît
     /// donc jamais ici, seule l'application (qui lit la page) peut le dire.
     private func why(words: [QueryWord], text: String, fuzzyDistance: Int,
-                     lexRank: Int? = nil, vecRank: Int? = nil,
                      tableOfContents: Bool = false,
                      quorum: Bool = false) -> [String: Any]? {
         HitExplanation(words: words, text: text, fuzzyDistance: fuzzyDistance,
-                       lexRank: lexRank, vecRank: vecRank,
                        textIsWholePage: false, quorum: quorum)
             .map { HitExplanation.json($0, tableOfContents: tableOfContents) }
     }
@@ -721,208 +471,6 @@ struct SearchCommand: ParsableCommand {
         return Decorations(textPages: textPages, times: times)
     }
 
-    private func emitHybridText(_ results: HybridResults,
-                                wordsPresent: [String] = []) {
-        var timing = String(format: "in %.2f ms", results.elapsedMS)
-        if let m = results.modelLoadMS, let idx = results.indexLoadMS {
-            timing = String(format: "in %.2f ms (model load %.2f ms, index load %.2f ms)",
-                            results.elapsedMS, m, idx)
-        }
-        let coverage = results.pagesIndexed > 0
-            ? "(\(results.vectors) vectors, "
-              + String(format: "%.1f %% of pages)", results.coveragePct)
-            : "(\(results.vectors) vectors)"
-        print("\(results.hits.count) hybrid hit(s) — lexical: "
-              + "\(results.lexTotalPages) page(s) / \(results.lexTotalDocs) "
-              + "document(s), semantic only: \(results.semanticOnly), "
-              + "\(timing) \(coverage)")
-        // AUCUNE page ne porte les mots, et il y a pourtant des résultats :
-        // c'est du sens seul, et le dire est la seule chose honnête à faire
-        // (R-04 ; pas de filtre, cf. `SearchAdvice.noLexicalMatch`).
-        if results.lexTotalPages == 0, !results.hits.isEmpty {
-            print(SearchAdvice.noLexicalMatch(wordsPresent: wordsPresent))
-        }
-        for hit in results.hits {
-            var channels: [String] = []
-            if let r = hit.lexRank { channels.append("lex#\(r)") }
-            if let r = hit.vecRank {
-                // La MARGE, pas le cosinus (C2-13) : « cos 0.85 » se lit comme
-                // « 85 % de pertinence » alors que tous les cosinus du corpus
-                // tiennent dans 0,78-0,88. Le cosinus reste dans le JSON pour
-                // qui sait ce qu'il en fait.
-                channels.append("sem#\(r) " + String(format: "z%+.1f", hit.z ?? 0))
-            }
-            print("")
-            // `doc_id` est un `Int64` : `%d` de `String(format:)` le lirait sur
-            // 32 bits, comme la taille de `backup` (CM-05). Les entiers passent
-            // par l'interpolation ; seul le `rrf` reste formaté.
-            print("• [\(hit.docID)] \(hit.path) p.\(hit.page) — "
-                  + String(format: "rrf %.4f", hit.rrf)
-                  + " · " + channels.joined(separator: " · "))
-            let excerpt = (hit.lexical?.snippet ?? hit.preview)
-                .replacingOccurrences(of: "\n", with: " ")
-            print("    \(excerpt)")
-        }
-    }
-
-    /// L'objet `semantic_stats` du JSON hybride. Il est PERMANENT : c'est
-    /// l'outil qui permet de calibrer un plancher de marge sans deviner, et
-    /// c'est aussi ce qui permet à un appelant (script, futur serveur MCP) de
-    /// savoir si le canal sémantique avait quelque chose à dire. Le cosinus
-    /// seul, lui, ne le dit pas — c'est tout le constat C2-01.
-    ///
-    /// Quatre décimales sur μ et σ : la bande utile d'e5-small tient dans
-    /// 0,10 de cosinus, deux décimales l'écraseraient.
-    /// `semantic_scope`, aux clés du serveur MCP : ce que le canal du sens voit
-    /// de la recherche DEMANDÉE. « 0 sur 31 986, filtré » est une phrase ;
-    /// « 67,85 % » n'en est pas une quand le dossier cherché n'a pas un vecteur.
-    private static func scopeJSON(_ scope: SemanticScope) -> [String: Any] {
-        ["pages": scope.pagesIndexed,
-         "vectorised": scope.vectors,
-         "filtered": scope.filtered]
-    }
-
-    private static func semanticStatsJSON(_ s: SemanticStats) -> [String: Any] {
-        var out: [String: Any] = [
-            "mu": JSONNumber.rounded(s.mu, places: 4),
-            "sigma": JSONNumber.rounded(s.sigma, places: 4),
-            "scanned": s.scanned,
-            "zero_vectors": s.zeroVectors,
-        ]
-        if let c = s.cosMax { out["cos_max"] = JSONNumber.rounded(Double(c), places: 4) }
-        if let z = s.zMax { out["z_max"] = JSONNumber.rounded(z, places: 2) }
-        if let z = s.zAt10 { out["z_at_10"] = JSONNumber.rounded(z, places: 2) }
-        if let z = s.zAt200 { out["z_at_200"] = JSONNumber.rounded(z, places: 2) }
-        return out
-    }
-
-    private func emitHybridJSON(store: GRDBStore,
-                                _ results: HybridResults) throws {
-        let words = explanationWords
-        // Le lien a besoin du VOLUME, que `HybridHit` ne porte pas ; `folder`
-        // et `engine` viennent des mêmes sondes que le mode lexical (CM-22) —
-        // une par document sur la clé primaire, une seule pour les pages.
-        var rows: [Int64: DocRow] = [:]
-        var folders: [Int64: String] = [:]
-        for id in Set(results.hits.map(\.docID)) {
-            let row = try store.docRow(id: id)
-            rows[id] = row
-            folders[id] = row?.record.topFolder ?? ""
-        }
-        let meta = try store.pageMeta(
-            for: results.hits.map { (docID: $0.docID, page: $0.page) })
-        // EN HYBRIDE, LA PERTINENCE SE LIT SUR LE RRF et non sur le `bm25`
-        // (`HitRelevance`, lot MC2) : une page trouvée par le seul canal du
-        // sens n'a pas de `bm25`, et la moitié d'une liste hybride serait sans
-        // pourcentage.
-        let relevance = HitRelevance.percentages(rrf: results.hits.map(\.rrf))
-        let sources = results.hits.map { hit -> PageSource in
-            let rowid = Schema.ftsRowID(docID: hit.docID, page: hit.page)
-            return hit.lexical?.source ?? meta[rowid]?.source ?? .native
-        }
-        let extras = try decorations(
-            store: store,
-            pages: zip(results.hits, sources).map {
-                (docID: $0.docID, page: $0.page, source: $1,
-                 snippet: $0.lexical?.snippet ?? $0.preview)
-            },
-            rows: rows)
-        let hits: [[String: Any]] = results.hits.enumerated().map { rank, hit in
-            let rowid = Schema.ftsRowID(docID: hit.docID, page: hit.page)
-            let snippet = hit.lexical?.snippet ?? hit.preview
-            let time = extras.time(docID: hit.docID, page: hit.page)
-            let label = extras.label(docID: hit.docID, page: hit.page, rows: rows)
-            var entry = SearchJSON.hit(
-                docID: hit.docID, path: hit.path,
-                folder: folders[hit.docID] ?? "", page: hit.page,
-                score: hit.lexical?.score,
-                // Un résultat purement sémantique porte quand même la
-                // PROVENANCE de sa page : elle est lue sur `page_src`, comme en
-                // lexical, et non déduite du canal qui l'a trouvée.
-                source: GRDBStore.sourceLabel(sources[rank].rawValue),
-                engine: GRDBStore.engineLabel(meta[rowid]?.engine ?? .none),
-                fuzzyDistance: hit.lexical?.fuzzyDistance ?? 0,
-                snippet: snippet,
-                link: Self.link(rows[hit.docID], docID: hit.docID, page: hit.page,
-                                time: time),
-                relevancePct: relevance[rank], time: time,
-                slide: label.slide, embeddedImage: label.embeddedImage)
-            entry["rrf"] = JSONNumber.rounded(hit.rrf, places: 6)
-            entry["semantic_only"] = hit.lexical == nil
-            if let r = hit.lexRank { entry["lex_rank"] = r }
-            if let r = hit.vecRank { entry["vec_rank"] = r }
-            if let c = hit.cosine {
-                entry["cosine"] = JSONNumber.rounded(Double(c), places: 3)
-            }
-            if let z = hit.z { entry["z"] = JSONNumber.rounded(z, places: 2) }
-            if let why = self.why(words: words,
-                                  text: hit.lexical?.snippet ?? hit.preview,
-                                  fuzzyDistance: hit.lexical?.fuzzyDistance ?? 0,
-                                  lexRank: hit.lexRank, vecRank: hit.vecRank,
-                                  // `partial` ET NON `exact` EN HYBRIDE AUSSI
-                                  // (lot MN1) : le quorum y est armé, et `why`
-                                  // annonçait « exact » avec neuf mots sur une
-                                  // page qui en porte trois.
-                                  quorum: results.quorum) {
-                entry["why"] = why
-            }
-            return entry
-        }
-        var payload: [String: Any] = [
-            "query": query,
-            "offset": results.offset,
-            "has_more": results.hasMore,
-            "hybrid": true,
-            "elapsed_ms": JSONNumber.rounded(results.elapsedMS, places: 2),
-            // LES DEUX CLÉS DU SCHÉMA GELÉ, RENDUES (CM-22). Elles valent les
-            // totaux LEXICAUX — la seule population que l'on sache compter :
-            // le canal sémantique rend un voisinage, pas un ensemble de pages
-            // appariées. `lex_total_*` restent, à l'identique, pour qui les
-            // lit déjà.
-            "total_pages": results.lexTotalPages,
-            "total_docs": results.lexTotalDocs,
-            "lex_total_pages": results.lexTotalPages,
-            "lex_total_docs": results.lexTotalDocs,
-            "semantic_only": results.semanticOnly,
-            "semantic_floor": results.semanticFloor,
-            "semantic_kept": results.semanticKept,
-            "vectors": results.vectors,
-            "pages_indexed": results.pagesIndexed,
-            // L'échelle des rangs sémantiques dans la fusion (lot R1) : 1 quand
-            // tout est vectorisé ou avec --raw-semantic-ranks.
-            "semantic_rank_scale": JSONNumber.rounded(results.semanticRankScale, places: 2),
-            // `coveragePct` EST DÉJÀ un pourcentage (vectors × 100 / pages) :
-            // le multiplier de nouveau publiait « 1718.86 » pour 17,2 % de
-            // couverture, mesuré sur la base de production (A1m-01).
-            //
-            // C'est celle du PÉRIMÈTRE depuis le lot CL2, comme côté serveur :
-            // `vectors` et `pages_indexed` disent l'index entier, `semantic_scope`
-            // dit ce que la recherche demandée voit. Les trois valent la même
-            // chose quand aucun filtre de document ne porte.
-            "semantic_coverage_pct": JSONNumber.percentage(results.scope.coveragePct,
-                                                           places: 2),
-            "semantic_scope": Self.scopeJSON(results.scope),
-            "hits": hits,
-        ]
-        if let source { payload["source"] = source.rawValue }
-        // La MÊME clé additive qu'en lexical (lot MP1) : le repli agissait déjà
-        // sur le canal lexical de la fusion, il se lit maintenant dans les deux
-        // modes.
-        if results.fuzzyFallback { payload["fuzzy_fallback"] = true }
-        // LE QUORUM, MÊME CLÉ ET MÊME RÈGLE QU'EN LEXICAL (lot MN1) : présente
-        // seulement quand il a eu lieu, et un script qui lit les deux modes n'a
-        // plus à savoir lequel relâche le ET.
-        if results.quorum { payload["quorum"] = true }
-        if let m = results.modelLoadMS {
-            payload["model_load_ms"] = JSONNumber.rounded(m, places: 2)
-        }
-        if let idx = results.indexLoadMS {
-            payload["index_load_ms"] = JSONNumber.rounded(idx, places: 2)
-        }
-        payload["semantic_stats"] = Self.semanticStatsJSON(results.semantic)
-        try CLI.printJSON(payload)
-    }
-
     // MARK: - Sorties
 
     private func metadata(_ store: GRDBStore, _ results: SearchResults)
@@ -947,9 +495,7 @@ struct SearchCommand: ParsableCommand {
 
     private func emitJSON(store: GRDBStore, results: SearchResults,
                           facets: [(String, Int)]?,
-                          offset: Int, hasMore: Bool,
-                          disarmed: SemanticDisarmReason? = nil,
-                          scope: SemanticScope? = nil) throws {
+                          offset: Int, hasMore: Bool) throws {
         let (folders, engines, rows) = try metadata(store, results)
         let words = explanationWords
         // LE MÊME TYPE QUE LA SORTIE TEXTE ET QUE LE SERVEUR (`HitRelevance`) :
@@ -964,9 +510,8 @@ struct SearchCommand: ParsableCommand {
             let rowid = Schema.ftsRowID(docID: hit.docID, page: hit.page)
             let time = extras.time(docID: hit.docID, page: hit.page)
             let label = extras.label(docID: hit.docID, page: hit.page, rows: rows)
-            // Le MÊME constructeur qu'en hybride (CM-21, CM-22) : `score` y est
-            // arrondi, et aucune des deux sorties ne peut plus perdre une clé
-            // que l'autre porte.
+            // LE constructeur du contrat gelé (CM-21, CM-22) : `score` y est
+            // arrondi une fois pour toutes.
             var entry = SearchJSON.hit(
                 docID: hit.docID, path: hit.path,
                 folder: folders[hit.docID] ?? "", page: hit.page,
@@ -1027,25 +572,6 @@ struct SearchCommand: ParsableCommand {
         // les totaux diffèrent seraient indiscernables dans un journal.
         if let source { payload["source"] = source.rawValue }
         if results.totalsApproximate { payload["totals_approximate"] = true }
-        // `hybrid` n'apparaît que si l'utilisateur l'a DEMANDÉ : à `false`, il
-        // dit qu'il y a eu repli faute de modèle. Une recherche ordinaire garde
-        // exactement les clés du §4.3, sans champ de plus.
-        if wantsHybrid { payload["hybrid"] = false }
-        // LE PÉRIMÈTRE DU SENS, MÊME QUAND LE SENS N'A PAS SERVI (lot CL2) :
-        // c'est le repli qui a le plus besoin de l'expliquer — « 0 vecteur sur
-        // 31 986 pages, filtré » dit pourquoi la réponse est lexicale. Les deux
-        // clés ne sortent que si la fusion a été demandée ET qu'un filtre de
-        // document a fait lire le périmètre : une recherche ordinaire garde le
-        // §4.3 intact, et un repli sans filtre ne paie pas deux comptes pour
-        // republier ce que `vectors` et `pages_indexed` diraient.
-        if wantsHybrid, let scope {
-            payload["semantic_coverage_pct"] =
-                JSONNumber.percentage(scope.coveragePct, places: 2)
-            payload["semantic_scope"] = Self.scopeJSON(scope)
-        }
-        // POURQUOI le repli, quand ce n'est pas le modèle qui manque (RK-01) :
-        // `hybrid: false` seul ferait croire à une installation incomplète.
-        if let disarmed { payload["hybrid_disarmed"] = disarmed.rawValue }
         if let facets, let key = facet {
             var buckets: [String: Int] = [:]
             for (name, count) in facets { buckets[name] = count }

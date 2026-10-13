@@ -147,8 +147,8 @@ public struct ExtractLimits: Sendable {
     public var pageSplitChars: Int = 4_000      // pagination des formats non paginés
     /// Plafond du NOMBRE de pages d'un format re-paginé (constat MO-01). Le
     /// plafond de texte (50 Mio) laissait un `.docx` de 80 Kio — 80 Mio de « A »
-    /// compressés — produire 13 108 pages de bruit, soit ~26 000 fenêtres
-    /// vectorielles identiques. Les formats NATIVEMENT paginés (pdf, djvu, cbz,
+    /// compressés — produire 13 108 pages de bruit. Les formats NATIVEMENT
+    /// paginés (pdf, djvu, cbz,
     /// images, médias) ont déjà le leur, `Schema.maxPage` ; c'est ici le leur
     /// pour les autres. 5 000 pages valent 20 Mio de texte : au-delà, ce n'est
     /// plus un document, et les pages 1…5 000 restent indexées.
@@ -263,7 +263,7 @@ public struct DocRecord: Sendable {
 /// mtime —, il a seulement été renommé ou déplacé.
 ///
 /// Tout ce qui dérive du chemin est porté ici, et rien d'autre : le texte, les
-/// pages, la couche OCR, la file d'attente et les vecteurs ne sont pas touchés.
+/// pages, la couche OCR et la file d'attente ne sont pas touchées.
 /// C'est toute la raison d'être de ce type — un `removeDoc` + `upsertDoc` les
 /// détruirait, et c'est ce que Fouine faisait jusqu'au 04/09/2026.
 public struct DocRelocation: Sendable {
@@ -418,7 +418,7 @@ public struct SearchQuery: Sendable {
     /// sont deux clauses `NOT IN` sur `docs` ; `-nom:X` écarte les documents
     /// dont `docs_fts` répond à X ; `-chemin:X` ceux dont le chemin contient X.
     /// Vides = aucun effet, et le SQL est alors celui d'avant, au caractère
-    /// près. Le canal vectoriel de l'hybride les applique aussi.
+    /// près.
     public var folderExcludes: [String] = []
     public var extExcludes: [String] = []
     public var nameExcludes: [String] = []
@@ -437,16 +437,10 @@ public struct SearchQuery: Sendable {
     public var snippetMarkers: (open: String, close: String) = ("«", "»")
 
     /// Vrai quand le filtre de provenance ne retire rien. La garde de tout le
-    /// chemin : ni jointure, ni clause, ni tamis vectoriel.
+    /// chemin : ni jointure, ni clause.
     public var keepsAllSources: Bool {
         guard let sources, !sources.isEmpty else { return true }
         return sources.count >= PageSource.allCases.count
-    }
-
-    /// Cette provenance passe-t-elle le filtre ? Sert au canal vectoriel, qui
-    /// tamise des rowids au lieu d'écrire une clause SQL.
-    public func keeps(_ source: PageSource) -> Bool {
-        keepsAllSources || (sources?.contains(source) ?? true)
     }
 
     /// Cette requête restreint-elle l'ensemble des DOCUMENTS ?
@@ -703,7 +697,7 @@ public struct CrawlSummary: Sendable {
     /// Documents RETROUVÉS AILLEURS (schéma v6, constat A3-02) : ni ajoutés ni
     /// retirés, seulement renommés ou déplacés. Compté à part parce que c'est
     /// exactement ce qui, avant le lot K6, apparaissait comme `removed` + `added`
-    /// et coûtait la reprise complète de l'OCR et des vecteurs.
+    /// et coûtait la reprise complète de l'OCR.
     public let moved: Int
     public init(seen: Int, added: Int, updated: Int, removed: Int, skipped: Int,
                 moved: Int = 0) {

@@ -73,11 +73,6 @@ struct LicensesCommand: ParsableCommand {
                licence: "MIT (plus the licences of its bundled components)",
                copyright: "Copyright (c) 2006-2013 Andy Matuschak and others",
                url: "https://github.com/sparkle-project/Sparkle"),
-        Notice(name: "multilingual-e5-small",
-               version: "—",
-               licence: "MIT",
-               copyright: "Copyright (c) Microsoft Corporation",
-               url: "https://huggingface.co/intfloat/multilingual-e5-small"),
     ]
 
     func run() {
@@ -113,9 +108,6 @@ struct LicensesCommand: ParsableCommand {
             print("    \(notice.copyright)")
             print("    \(notice.url)")
         }
-        print("")
-        print("  The multilingual-e5-small model is NOT redistributed with the app:")
-        print("  it is an optional 220 MB download you ask for explicitly.")
         print("")
 
         guard let file = Self.thirdPartyFile() else {

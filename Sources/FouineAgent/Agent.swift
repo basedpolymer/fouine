@@ -66,8 +66,6 @@ public enum AgentAction: Equatable, Sendable {
     case sleep(seconds: Int)
     case runExtraction(rootIDs: Set<Int64>)
     case runOCRBatch(budgetMinutes: Int, jobs: Int, queuedPages: Int)
-    /// UN lot de préparation de la recherche par le sens (lot AG1, PR-21).
-    case runEmbedBatch(budgetMinutes: Int, pagesLeft: Int)
     case publishStatus(phase: AgentStatusRecord.Phase, detail: String, done: Int?, total: Int?)
     case notifyQueueDrained
     case enforceLogRotation
@@ -88,8 +86,6 @@ final class Agent: @unchecked Sendable {
     let settings: Settings
     /// L'état publié dans `agent_status` (audit F7).
     let status: AgentStatusWriter
-    /// Le moteur d'inférence, chargé à la demande et rendu au repos (AG1).
-    let embedder: AgentEmbedder
     private let onExit: @Sendable (Int32) -> Void
     private var isOpen = false
 
@@ -98,11 +94,6 @@ final class Agent: @unchecked Sendable {
                                      qos: .utility)
     private let control = DispatchQueue(label: "io.github.basedpolymer.fouine.agent.control",
                                         qos: .utility)
-    /// La sonde de progression de la préparation du sens a SA file : elle
-    /// tourne pendant que `control` sert l'horloge, et deux `DispatchSource`
-    /// sur la même file série s'attendent l'un l'autre.
-    let embedProbeQueue = DispatchQueue(
-        label: "io.github.basedpolymer.fouine.agent.embed.probe", qos: .utility)
     private let mutex = NSLock()
 
     // État protégé par `mutex`.
@@ -123,11 +114,6 @@ final class Agent: @unchecked Sendable {
     private var lastVerdict: String?
     /// Dernière ligne « licence: trial over » écrite (lot L1C).
     private var lastLicenceNoticeAt: Date?
-    /// Conditions du §5.7 relues PENDANT un lot de vecteurs, et la date de ce
-    /// relevé : `shouldStop` est consulté toutes les quelques secondes, et
-    /// chaque évaluation lance `pmset` en sous-processus (§6.2).
-    private var embedConditionsOK = true
-    private var embedConditionsAt = Date.distantPast
     private var timer: DispatchSourceTimer?
     /// Période courante de l'horloge. Mémorisée pour ne reprogrammer la source
     /// que si `agent.pollSeconds` a réellement changé.
@@ -142,7 +128,6 @@ final class Agent: @unchecked Sendable {
         self.settings = settings
         self.status = status
         self.pipeline = AgentPipeline(store: store, log: log, settings: settings, status: status)
-        self.embedder = AgentEmbedder(log: log)
         self.onExit = onExit
     }
 
@@ -164,7 +149,6 @@ final class Agent: @unchecked Sendable {
         settings: SettingsSnapshot,
         ocrQueueLength: Int,
         pendingRoots: Set<Int64> = [],
-        embed: AgentEmbedSituation = .none,
         licenceAllowsIndexing: Bool = true
     ) -> (action: AgentAction, nextState: AgentState) {
         var nextState = state
@@ -174,7 +158,7 @@ final class Agent: @unchecked Sendable {
 
         // 0. L'ESSAI EST-IL FINI ? (lot L1C) Avant tout le reste, et avant
         //    toute sonde : un agent en fin d'essai ne fait RIEN — ni
-        //    extraction, ni OCR, ni préparation du sens. Il ne réclame rien
+        //    extraction, ni OCR. Il ne réclame rien
         //    non plus : il n'y a pas de notification, pas de badge, pas de
         //    fenêtre. C'est l'application qui porte le message, là où quelqu'un
         //    peut le lire et agir ; le journal, lui, sert au dépanneur qui se
@@ -201,32 +185,6 @@ final class Agent: @unchecked Sendable {
         //    agent au repos passerait pour « enregistré mais muet ». Seule la
         //    notification de file vidée est unique (audit F7).
         if ocrQueueLength == 0 {
-            // 2 bis. LA RECHERCHE PAR LE SENS, APRÈS L'OCR (lot AG1, PR-21).
-            //     L'ordre n'est pas un détail : `completeOCR` invalide les
-            //     vecteurs de la page qu'il réécrit, et une page vectorisée
-            //     avant sa reconnaissance le serait deux fois. La file d'OCR
-            //     vide est donc une CONDITION, pas une préférence.
-            let meaning = meaningVerdict(embed: embed, conditions: conditions)
-            if meaning == .go {
-                var actions: [AgentAction] = []
-                // La file d'OCR est vide : la notification de fin part comme
-                // elle serait partie sans préparation du sens.
-                if !nextState.hasNotifiedQueueDrained {
-                    nextState.hasNotifiedQueueDrained = true
-                    actions.append(.notifyQueueDrained)
-                }
-                nextState.lastVerdict = meaning.note
-                nextState.lockHeldBySelf = true
-                actions.append(.publishStatus(
-                    phase: .preparingMeaning,
-                    detail: AgentStatusDetail.pagesLeft(embed.pagesLeft),
-                    done: 0, total: embed.pagesLeft))
-                actions.append(.runEmbedBatch(
-                    budgetMinutes: settings.agentEmbedBudgetMinutes,
-                    pagesLeft: embed.pagesLeft))
-                return (.sequence(actions), nextState)
-            }
-
             var actions: [AgentAction] = [
                 .publishStatus(phase: .idle, detail: AgentStatusDetail.queueDrained, done: nil, total: nil)
             ]
@@ -236,9 +194,6 @@ final class Agent: @unchecked Sendable {
                 actions.append(.notifyQueueDrained)
             }
             actions.append(.sleep(seconds: settings.agentPollSeconds))
-            // Le refus PORTE SON NOM : sans cela, un agent dont le modèle
-            // manque ne préparerait rien et ne le dirait nulle part.
-            if let why = meaning.note { nextState.lastVerdict = why }
             return (.sequence(actions), nextState)
         }
 
@@ -268,51 +223,6 @@ final class Agent: @unchecked Sendable {
                          queuedPages: ocrQueueLength)
         ]
         return (.sequence(actions), nextState)
-    }
-
-    /// Faut-il préparer la recherche par le sens maintenant ? Décision PURE
-    /// (lot AG1, PR-21). Elle suppose la file d'OCR déjà vide : c'est l'appelant
-    /// qui le garantit.
-    static func meaningVerdict(embed: AgentEmbedSituation,
-                               conditions: AgentConditions.Verdict)
-        -> AgentEmbedVerdict {
-        guard embed.enabled else { return .nothingToDo }
-        guard embed.modelInstalled else { return .noModel }
-        guard embed.pagesLeft > 0 else { return .nothingToDo }
-        if embed.campaignHeldByAnother { return .campaignBusy }
-        guard conditions.ok else {
-            return .waiting(conditions.blockers.joined(separator: "; "))
-        }
-        return .go
-    }
-
-    /// Décision post-lot de vecteurs : plus rien à faire, budget épuisé, ou
-    /// arrêt. Le pendant exact de `postBatchTick` pour l'OCR.
-    static func postEmbedBatchTick(
-        state: AgentState,
-        outcome: EmbedBatchOutcome,
-        remainingPages: Int,
-        settings: SettingsSnapshot
-    ) -> (action: AgentAction, nextState: AgentState) {
-        var nextState = state
-        nextState.lockHeldBySelf = false
-        if nextState.isStopping { return (.none, nextState) }
-
-        switch outcome {
-        case .budgetExhausted:
-            // Rien à publier : le tic suivant re-décide, conditions comprises.
-            return (.none, nextState)
-        case .completed, .stopped:
-            nextState.lastVerdict = outcome == .completed
-                ? "meaning: every indexed page is ready"
-                : "meaning: batch stopped"
-            let actions: [AgentAction] = [
-                .publishStatus(phase: .idle, detail: AgentStatusDetail.queueDrained,
-                               done: nil, total: nil),
-                .sleep(seconds: settings.agentPollSeconds),
-            ]
-            return (.sequence(actions), nextState)
-        }
     }
 
     /// Décision post-lot d'OCR : file vidée ou budget épuisé.
@@ -872,17 +782,11 @@ final class Agent: @unchecked Sendable {
         let (heldBySelf, unreadable, rootsPending, prevVerdict) = locked {
             (lockHeldBySelf, unreadableLabels, pending, lastVerdict)
         }
-        // Ce que l'agent sait de la préparation du sens (AG1). Sondé ICI, hors
-        // de `tick` qui reste pure — et pas du tout quand le réglage est
-        // éteint ou que l'OCR a encore du travail.
-        let embed = embedSituation(settings: current, ocrQueued: queued)
-        let meaningWantsToWork = embed.enabled && embed.modelInstalled
-            && embed.pagesLeft > 0 && !embed.campaignHeldByAnother
         // Les sondes du §5.7 (`pmset -g therm` en sous-processus, IOKit) ne se
         // paient que s'il y a du travail : file vide ou extraction en attente,
         // `tick` ne consulte pas le verdict, on ne le calcule pas (§6.2).
         let verdict: AgentConditions.Verdict
-        if (queued > 0 || meaningWantsToWork) && rootsPending.isEmpty {
+        if queued > 0 && rootsPending.isEmpty {
             verdict = AgentConditions.evaluate(lock: AgentPaths.lockURL(),
                                                lockHeldBySelf: heldBySelf,
                                                unreadableRoots: unreadable,
@@ -906,7 +810,6 @@ final class Agent: @unchecked Sendable {
             settings: current,
             ocrQueueLength: queued,
             pendingRoots: rootsPending,
-            embed: embed,
             // Le fichier de licence est relu À CHAQUE RÉVEIL, et pas mémorisé :
             // une clé activée depuis l'application doit remettre l'agent au
             // travail au tic suivant, sans redémarrage de launchd. Une lecture
@@ -916,13 +819,6 @@ final class Agent: @unchecked Sendable {
             licenceAllowsIndexing: Self.licenceAllowsIndexing()
         )
         locked { lastLicenceNoticeAt = nextState.lastLicenceNoticeAt }
-        // LE MOTEUR NE SURVIT PAS À UN TIC QUI NE PRÉPARE RIEN (AG1). ~90 Mio
-        // gardés sur une machine à 8 Gio pour un travail qu'on ne fait plus,
-        // c'est le genre de démon qu'on finit par éteindre.
-        if !Self.leadsToEmbedBatch(action) { embedder.release() }
-        // Conditions du lot à venir : la sonde d'interruption repart de ce
-        // relevé plutôt que de lancer `pmset` dans la seconde qui suit.
-        locked { embedConditionsOK = verdict.ok; embedConditionsAt = Date() }
         // `lastVerdict` n'est PAS recopié depuis `nextState` : c'est `note()`,
         // dans `execute`, qui le pose — et qui ne journalise qu'au CHANGEMENT.
         // Le poser avant ferait taire le journal (« OCR waiting — … », « OCR
@@ -972,8 +868,6 @@ final class Agent: @unchecked Sendable {
             } catch {
                 log.error("OCR: \(AgentText.describe(error))")
             }
-        case .runEmbedBatch(let minutes, let pages):
-            runEmbedBatch(budgetMinutes: minutes, pagesLeft: pages)
         case .publishStatus(let phase, let detail, let done, let total):
             if !detail.isEmpty {
                 // Le journal est ANGLAIS (docs/i18n.md) : le jeton s'y rend,
@@ -1029,7 +923,7 @@ final class Agent: @unchecked Sendable {
         return timer
     }
 
-    // MARK: - Préparation du sens : ce que l'exécutant doit à la décision (AG1)
+    // MARK: - Licence
 
     /// Le verdict de licence, lu sur le disque (lot L1C).
     ///
@@ -1040,64 +934,6 @@ final class Agent: @unchecked Sendable {
     static func licenceAllowsIndexing() -> Bool {
         let url = LicenseStore.fileURL(databaseURL: AgentPaths.databaseURL())
         return LicenseState.compute(file: LicenseStore.load(at: url)).allowsIndexing
-    }
-
-    /// L'action mène-t-elle à un lot de vecteurs ? (Une `sequence` en porte un.)
-    static func leadsToEmbedBatch(_ action: AgentAction) -> Bool {
-        switch action {
-        case .runEmbedBatch: return true
-        case .sequence(let actions): return actions.contains(where: leadsToEmbedBatch)
-        default: return false
-        }
-    }
-
-    /// L'état courant, tel que les décisions post-lot le demandent.
-    func currentAgentState() -> AgentState {
-        locked {
-            AgentState(phase: .preparingMeaning,
-                       lastVerdict: lastVerdict,
-                       hasNotifiedQueueDrained: true,
-                       pollPeriod: timerPeriod,
-                       lockHeldBySelf: lockHeldBySelf,
-                       isStopping: stopping)
-        }
-    }
-
-    /// Coupe le lot en cours quand l'arrêt est demandé ou qu'une condition du
-    /// §5.7 tombe. Les conditions sont relues au plus toutes les 30 s : chaque
-    /// évaluation lance `pmset` en sous-processus, et `shouldStop` est consulté
-    /// entre deux lots d'inférence, c'est-à-dire toutes les cinq secondes.
-    func shouldStopEmbedding() -> Bool {
-        if isStopping { return true }
-        let (ok, at) = locked { (embedConditionsOK, embedConditionsAt) }
-        guard Date().timeIntervalSince(at) >= 30 else { return !ok }
-        let (held, unreadable) = locked { (lockHeldBySelf, unreadableLabels) }
-        let verdict = AgentConditions.evaluate(
-            lock: AgentPaths.lockURL(), lockHeldBySelf: held,
-            unreadableRoots: unreadable,
-            policy: AgentConditions.Policy(settings.snapshot()))
-        locked { embedConditionsOK = verdict.ok; embedConditionsAt = Date() }
-        if !verdict.ok {
-            log.info("meaning: stopping the batch — "
-                     + verdict.blockers.joined(separator: "; "))
-        }
-        return !verdict.ok
-    }
-
-    /// Point de repos après un lot de vecteurs.
-    func releaseWriteLockAfterEmbed() { releaseWriteLock() }
-
-    /// Horodate la fin du lot : c'est ce que `fouine status` relit pour dire
-    /// « last batch … » quand l'agent n'est pas en train de travailler à la
-    /// seconde où on le regarde. Écriture hors `fouine.lock` (settings).
-    func markEmbedBatchDone() {
-        do {
-            try store.writeSetting(SettingKeys.agentLastEmbedBatchAt.key,
-                                   String(Int(Date().timeIntervalSince1970)))
-        } catch {
-            log.warn("meaning: could not record the end of the batch: "
-                     + AgentText.describe(error))
-        }
     }
 
     /// Journalise un état d'attente une seule fois, tant qu'il ne change pas :

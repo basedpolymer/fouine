@@ -10,29 +10,7 @@
 import Foundation
 import XCTest
 import FouineCore
-import FouineEmbed
 @testable import FouineApp
-
-/// Le modèle CoreML réel, chargé UNE fois pour toute la suite (~2,5 s sur i5 ;
-/// lot I2 : `SeedTests` le chargeait trois fois). `nil` quand il n'est pas
-/// installé — les tests qui en dépendent se sautent en disant le geste.
-enum SharedModel {
-    private static let loaded = LoadedEncoder {
-        try E5Encoder(modelDir: EmbedPaths.modelDirectory())
-    }
-
-    static func encoder() throws -> E5Encoder? {
-        guard EmbedPaths.modelAvailable(at: EmbedPaths.modelDirectory()) else {
-            return nil
-        }
-        return try loaded.result.get()
-    }
-
-    private final class LoadedEncoder: @unchecked Sendable {
-        let result: Result<E5Encoder, Error>
-        init(_ make: () throws -> E5Encoder) { result = Result(catching: make) }
-    }
-}
 
 /// Une base neuve, dans son propre dossier (donc son propre `fouine.lock`),
 /// et le `StoreService` de l'app branché dessus. La base de PRODUCTION n'est

@@ -188,23 +188,6 @@
         }
       }
     },
-    "%@ of %@ pages are ready": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ of %@ pages are ready"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pages prêtes : %1$@ sur %2$@"
-          }
-        }
-      }
-    },
     "%@ of %@ pages · See them all": {
       "extractionState": "manual",
       "localizations": {
@@ -703,107 +686,6 @@
         }
       }
     },
-    "%lld merged page(s) in %lld document(s)": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%#@pages@ in %#@documents@"
-          },
-          "substitutions": {
-            "documents": {
-              "argNum": 2,
-              "formatSpecifier": "lld",
-              "variations": {
-                "plural": {
-                  "one": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg document"
-                    }
-                  },
-                  "other": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg documents"
-                    }
-                  }
-                }
-              }
-            },
-            "pages": {
-              "argNum": 1,
-              "formatSpecifier": "lld",
-              "variations": {
-                "plural": {
-                  "one": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg merged page"
-                    }
-                  },
-                  "other": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg merged pages"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%#@pages@ dans %#@documents@"
-          },
-          "substitutions": {
-            "documents": {
-              "argNum": 2,
-              "formatSpecifier": "lld",
-              "variations": {
-                "plural": {
-                  "one": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg document"
-                    }
-                  },
-                  "other": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg documents"
-                    }
-                  }
-                }
-              }
-            },
-            "pages": {
-              "argNum": 1,
-              "formatSpecifier": "lld",
-              "variations": {
-                "plural": {
-                  "one": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg page fusionnée"
-                    }
-                  },
-                  "other": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg pages fusionnées"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "%@ of %@": {
       "extractionState": "manual",
       "localizations": {
@@ -1171,47 +1053,6 @@
         }
       }
     },
-    "%lld page(s) left to prepare": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld page left to prepare"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld pages left to prepare"
-                }
-              }
-            }
-          }
-        },
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld page à préparer"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld pages à préparer"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "%lld page(s) left to read": {
       "extractionState": "manual",
       "localizations": {
@@ -1395,47 +1236,6 @@
         }
       }
     },
-    "%lld page(s) ready for meaning search: results combine word search and meaning search.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld page ready for meaning search: results combine word search and meaning search."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld pages ready for meaning search: results combine word search and meaning search."
-                }
-              }
-            }
-          }
-        },
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld page prête pour la recherche par le sens : les résultats combinent la recherche par mots et la recherche par le sens."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld pages prêtes pour la recherche par le sens : les résultats combinent la recherche par mots et la recherche par le sens."
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "%lld page(s) still to recognise": {
       "extractionState": "manual",
       "localizations": {
@@ -1511,23 +1311,6 @@
         }
       }
     },
-    "%@, %@ — %@ of %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@, %@ — %@ of %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@, %@ — %@ sur %@"
-          }
-        }
-      }
-    },
     "%@, display filters applied": {
       "extractionState": "manual",
       "localizations": {
@@ -1599,23 +1382,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@, page %2$lld"
-          }
-        }
-      }
-    },
-    "%@, revision %@, %@ on disk": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@, revision %@, %@ on disk"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@, révision %@, %@ sur le disque"
           }
         }
       }
@@ -1900,47 +1666,6 @@
         }
       }
     },
-    "%lld merged pages": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld merged page"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld merged pages"
-                }
-              }
-            }
-          }
-        },
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld page fusionnée"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld pages fusionnées"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "%lld of %@": {
       "extractionState": "manual",
       "localizations": {
@@ -2033,47 +1758,6 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld pages trouvées"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "%lld pages found by meaning alone": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld page found by meaning alone"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld pages found by meaning alone"
-                }
-              }
-            }
-          }
-        },
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld page trouvée par le sens seul"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld pages trouvées par le sens seul"
                 }
               }
             }
@@ -3264,40 +2948,6 @@
         }
       }
     },
-    "Also prepare search by meaning in the background": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Also prepare search by meaning in the background"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Préparer aussi la recherche par le sens en arrière-plan"
-          }
-        }
-      }
-    },
-    "Also search by meaning": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Also search by meaning"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chercher aussi par le sens"
-          }
-        }
-      }
-    },
     "Also write down what is said in them": {
       "extractionState": "manual",
       "localizations": {
@@ -3311,23 +2961,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mettre aussi par écrit ce qui est dit"
-          }
-        }
-      }
-    },
-    "An archive of %@. Fouine checks its size and its SHA-256 fingerprint before installing anything: one byte out of place and nothing is installed.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "An archive of %@. Fouine checks its size and its SHA-256 fingerprint before installing anything: one byte out of place and nothing is installed."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Une archive de %@. Fouine vérifie sa taille et son empreinte SHA-256 avant d’installer quoi que ce soit : un octet de travers et rien n’est installé."
           }
         }
       }
@@ -3430,23 +3063,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Applications"
-          }
-        }
-      }
-    },
-    "approximate result, found by meaning": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "approximate result, found by meaning"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "résultat approché, trouvé par le sens"
           }
         }
       }
@@ -4076,23 +3692,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vérifiée le %@"
-          }
-        }
-      }
-    },
-    "Checking search by meaning…": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Checking search by meaning…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vérification de la recherche par le sens…"
           }
         }
       }
@@ -4896,23 +4495,6 @@
         }
       }
     },
-    "Deletes the model folder. Search by meaning stops working; the pages already prepared stay in the index.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deletes the model folder. Search by meaning stops working; the pages already prepared stay in the index."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Supprime le dossier du modèle. La recherche par le sens s’arrête ; les pages déjà préparées restent dans l’index."
-          }
-        }
-      }
-    },
     "Details…": {
       "extractionState": "manual",
       "localizations": {
@@ -5202,57 +4784,6 @@
         }
       }
     },
-    "Download": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Download"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Télécharger"
-          }
-        }
-      }
-    },
-    "Download the model (%@)…": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Download the model (%@)…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Télécharger le modèle (%@)…"
-          }
-        }
-      }
-    },
-    "Download the model for search by meaning": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Download the model for search by meaning"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Télécharger le modèle de la recherche par le sens"
-          }
-        }
-      }
-    },
     "Drop folders from the Finder here to have them indexed.": {
       "extractionState": "manual",
       "localizations": {
@@ -5385,23 +4916,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chaque image doit être lue une par une : sur un gros dossier de photos, cela peut occuper Fouine des heures."
-          }
-        }
-      }
-    },
-    "Every page is ready.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Every page is ready."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Toutes les pages sont prêtes."
           }
         }
       }
@@ -6120,40 +5634,6 @@
         }
       }
     },
-    "Fouine asks for the file and gives its own name and version number. It sends no cookie, no identifier and no address of a page you came from, and keeps nothing of the exchange afterwards.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fouine asks for the file and gives its own name and version number. It sends no cookie, no identifier and no address of a page you came from, and keeps nothing of the exchange afterwards."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fouine demande le fichier et donne son nom et son numéro de version. Elle n’envoie aucun cookie, aucun identifiant, aucune adresse de provenance, et ne garde rien de l’échange ensuite."
-          }
-        }
-      }
-    },
-    "Fouine can open two connections, and this is one of them. The other one looks for a new version. Nothing about your documents, your searches or your Mac is sent.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fouine can open two connections, and this is one of them. The other one looks for a new version. Nothing about your documents, your searches or your Mac is sent."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fouine sait ouvrir deux connexions, et voici l’une d’elles. L’autre cherche une nouvelle version. Rien de vos documents, de vos recherches ou de votre Mac n’est envoyé."
-          }
-        }
-      }
-    },
     "Fouine cannot find “%@”": {
       "extractionState": "manual",
       "localizations": {
@@ -6562,23 +6042,6 @@
         }
       }
     },
-    "Fouine is already preparing the meaning of your documents, in another window or in Terminal. Wait for that work to finish.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fouine is already preparing the meaning of your documents, in another window or in Terminal. Wait for that work to finish."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fouine prépare déjà le sens de vos documents, dans une autre fenêtre ou dans le Terminal. Attendez la fin de ce travail."
-          }
-        }
-      }
-    },
     "Fouine is not allowed to read %@. Results already indexed stay searchable, but preview and indexing are impossible. To allow it: %@": {
       "extractionState": "manual",
       "localizations": {
@@ -6783,23 +6246,6 @@
         }
       }
     },
-    "Fouine reads every page once more to make search by meaning possible. Nothing leaves this Mac.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fouine reads every page once more to make search by meaning possible. Nothing leaves this Mac."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fouine relit chaque page une fois de plus pour rendre la recherche par le sens possible. Rien ne quitte ce Mac."
-          }
-        }
-      }
-    },
     "Fouine reads the text of photographed documents; shop signs, labels and decorative lettering often escape it.": {
       "extractionState": "manual",
       "localizations": {
@@ -6915,23 +6361,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fouine démarre avec votre session et reste dans la barre des menus, sans ouvrir de fenêtre."
-          }
-        }
-      }
-    },
-    "Fouine takes care of it in the background, when the Mac is plugged in and idle.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fouine takes care of it in the background, when the Mac is plugged in and idle."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fouine s’en occupe toute seule, quand l’ordinateur est branché et au repos."
           }
         }
       }
@@ -7106,40 +6535,6 @@
         }
       }
     },
-    "Found by meaning: none of your words is on this page.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Found by meaning: none of your words is on this page."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trouvée par le sens : aucun de vos mots n’est sur cette page."
-          }
-        }
-      }
-    },
-    "Found by your words and by meaning.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Found by your words and by meaning."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trouvé par vos mots et par le sens."
-          }
-        }
-      }
-    },
     "Found with a close spelling: %@ → %@.": {
       "extractionState": "manual",
       "localizations": {
@@ -7310,23 +6705,6 @@
         }
       }
     },
-    "github.com, then release-assets.githubusercontent.com. GitHub hands the file over to a second address, so two of them show up if you watch your connections. That is normal.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "github.com, then release-assets.githubusercontent.com. GitHub hands the file over to a second address, so two of them show up if you watch your connections. That is normal."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "github.com, puis release-assets.githubusercontent.com. GitHub confie le fichier à une seconde adresse : deux adresses apparaissent donc si vous surveillez vos connexions. C’est normal."
-          }
-        }
-      }
-    },
     "Go to the search field": {
       "extractionState": "manual",
       "localizations": {
@@ -7357,23 +6735,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Combien de temps dure chaque lot de pages scannées, en minutes. Fouine vérifie que le Mac est libre avant chaque lot."
-          }
-        }
-      }
-    },
-    "How long each stretch of that preparation lasts, in minutes.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "How long each stretch of that preparation lasts, in minutes."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Durée de chaque tranche de cette préparation, en minutes."
           }
         }
       }
@@ -7803,40 +7164,6 @@
         }
       }
     },
-    "Installed model": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Installed model"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modèle installé"
-          }
-        }
-      }
-    },
-    "Installing the model": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Installing the model"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Installation du modèle"
-          }
-        }
-      }
-    },
     "It is outside the folders Fouine watches, so Fouine will not open it.": {
       "extractionState": "manual",
       "localizations": {
@@ -7850,23 +7177,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Il est en dehors des dossiers que Fouine surveille : Fouine ne l’ouvrira pas."
-          }
-        }
-      }
-    },
-    "It keeps the Mac busy for a while: plug it in. You can stop at any time and resume later.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "It keeps the Mac busy for a while: plug it in. You can stop at any time and resume later."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cela occupe le Mac un moment : branchez-le. Vous pouvez arrêter à tout instant et reprendre plus tard."
           }
         }
       }
@@ -8292,23 +7602,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Plus tard"
-          }
-        }
-      }
-    },
-    "Leave spreadsheets out of search by meaning: a page of figures teaches it nothing, and those pages stay findable word for word.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Leave spreadsheets out of search by meaning: a page of figures teaches it nothing, and those pages stay findable word for word."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Laisser les tableurs en dehors de la recherche par le sens : une page de chiffres ne lui apprend rien, et ces pages restent trouvables au mot près."
           }
         }
       }
@@ -8769,108 +8062,6 @@
         }
       }
     },
-    "Meaning is not used when you ask for an exact phrase.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Meaning is not used when you ask for an exact phrase."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le sens n’est pas consulté pour une phrase exacte."
-          }
-        }
-      }
-    },
-    "meaning-search model: %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "meaning-search model: %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "modèle de recherche par le sens : %@"
-          }
-        }
-      }
-    },
-    "Model": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Model"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modèle"
-          }
-        }
-      }
-    },
-    "Model installed.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Model installed."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modèle installé."
-          }
-        }
-      }
-    },
-    "Model not installed — Settings ▸ Search by meaning ▸ “Download the model”.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Model not installed — Settings ▸ Search by meaning ▸ “Download the model”."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modèle non installé — Réglages ▸ Recherche par le sens ▸ « Télécharger le modèle »."
-          }
-        }
-      }
-    },
-    "Model present": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Model present"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modèle présent"
-          }
-        }
-      }
-    },
     "Modification date (newest first)": {
       "extractionState": "manual",
       "localizations": {
@@ -8935,23 +8126,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "plus de %lld fois"
-          }
-        }
-      }
-    },
-    "multilingual-e5-small, an open model published by Microsoft under the MIT licence. It works out which pages talk about the same thing as your search, here on this Mac: no search and no document ever leaves it.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "multilingual-e5-small, an open model published by Microsoft under the MIT licence. It works out which pages talk about the same thing as your search, here on this Mac: no search and no document ever leaves it."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "multilingual-e5-small, un modèle ouvert publié par Microsoft sous licence MIT. Il trouve les pages qui parlent de la même chose que votre recherche, ici, sur ce Mac : aucune recherche, aucun document n’en sort."
           }
         }
       }
@@ -9296,40 +8470,6 @@
         }
       }
     },
-    "no page is ready for meaning search yet — Settings ▸ Search by meaning prepares them": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "no page is ready for meaning search yet — Settings ▸ Search by meaning prepares them"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "aucune page n’est encore prête pour la recherche par le sens — Réglages ▸ Recherche par le sens les prépare"
-          }
-        }
-      }
-    },
-    "No page is ready for meaning search yet — Settings ▸ Search by meaning prepares them.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No page is ready for meaning search yet — Settings ▸ Search by meaning prepares them."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aucune page n’est encore prête pour la recherche par le sens — Réglages ▸ Recherche par le sens les prépare."
-          }
-        }
-      }
-    },
     "no readable file in this folder": {
       "extractionState": "manual",
       "localizations": {
@@ -9398,23 +8538,6 @@
         }
       }
     },
-    "No term of the query appears on them.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No term of the query appears on them."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aucun terme de la requête ne s’y trouve."
-          }
-        }
-      }
-    },
     "No text was written down for this passage.": {
       "extractionState": "manual",
       "localizations": {
@@ -9445,40 +8568,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aucune adresse de mise à jour n’est configurée dans cette copie de Fouine."
-          }
-        }
-      }
-    },
-    "None of your words appears in your documents: these results are suggested by meaning only.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "None of your words appears in your documents: these results are suggested by meaning only."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aucun de vos mots n’apparaît dans vos documents : ces résultats sont proposés par le sens seulement."
-          }
-        }
-      }
-    },
-    "None of your words is on this page, but it deals with the same subject.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "None of your words is on this page, but it deals with the same subject."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aucun de vos mots n’est sur cette page, mais elle parle du même sujet."
           }
         }
       }
@@ -9887,23 +8976,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Une fois par semaine"
-          }
-        }
-      }
-    },
-    "One step left: Fouine must read every page once more to prepare search by meaning. Nothing leaves this Mac, and you can stop and start again whenever you like: it picks up where it left off. Until the first pages are ready, the switch above stays greyed out.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "One step left: Fouine must read every page once more to prepare search by meaning. Nothing leaves this Mac, and you can stop and start again whenever you like: it picks up where it left off. Until the first pages are ready, the switch above stays greyed out."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Il reste une étape : Fouine doit relire chaque page une fois de plus pour préparer la recherche par le sens. Rien ne quitte ce Mac, et vous pouvez arrêter puis recommencer quand vous voulez : la préparation reprend où elle s’était arrêtée. Tant qu’aucune page n’est prête, l’interrupteur ci-dessus reste grisé."
           }
         }
       }
@@ -10333,23 +9405,6 @@
         }
       }
     },
-    "Open the folder": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open the folder"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ouvrir le dossier"
-          }
-        }
-      }
-    },
     "Open the preview in its own window": {
       "extractionState": "manual",
       "localizations": {
@@ -10537,23 +9592,6 @@
         }
       }
     },
-    "Opens the main window and asks how long Fouine may work on it.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Opens the main window and asks how long Fouine may work on it."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ouvre la fenêtre principale et demande combien de temps Fouine peut y consacrer."
-          }
-        }
-      }
-    },
     "Opens the window that shows what the index contains and what Fouine is doing.": {
       "extractionState": "manual",
       "localizations": {
@@ -10686,23 +9724,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pages"
-          }
-        }
-      }
-    },
-    "Pages found by meaning alone: none of the words you typed appears on them.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pages found by meaning alone: none of the words you typed appears on them."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pages trouvées par le sens seul : aucun des mots tapés n’y figure."
           }
         }
       }
@@ -10985,142 +10006,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Écouter l’enregistrement à partir d’ici"
-          }
-        }
-      }
-    },
-    "Preparation interrupted. Nothing is lost: it picks up where it stopped.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Preparation interrupted. Nothing is lost: it picks up where it stopped."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Préparation interrompue. Rien n’est perdu : elle reprendra où elle s’est arrêtée."
-          }
-        }
-      }
-    },
-    "Prepare": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Prepare"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Préparer"
-          }
-        }
-      }
-    },
-    "Prepare search by meaning": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Prepare search by meaning"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Préparer la recherche par le sens"
-          }
-        }
-      }
-    },
-    "Prepare search by meaning little by little in the background, once every scanned page has been read.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Prepare search by meaning little by little in the background, once every scanned page has been read."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Préparer la recherche par le sens petit à petit en arrière-plan, une fois toutes les pages scannées lues."
-          }
-        }
-      }
-    },
-    "Prepare search by meaning…": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Prepare search by meaning…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Préparer la recherche par le sens…"
-          }
-        }
-      }
-    },
-    "Preparing search by meaning": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Preparing search by meaning"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Préparation de la recherche par le sens"
-          }
-        }
-      }
-    },
-    "Preparing search by meaning — getting ready…": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Preparing search by meaning — getting ready…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Préparation de la recherche par le sens — mise en route…"
-          }
-        }
-      }
-    },
-    "preparing the meaning search: the first one takes a few seconds…": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "preparing the meaning search: the first one takes a few seconds…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "préparation de la recherche par le sens : la première prend quelques secondes…"
           }
         }
       }
@@ -11894,40 +10779,6 @@
         }
       }
     },
-    "Remove the model?": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remove the model?"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Supprimer le modèle ?"
-          }
-        }
-      }
-    },
-    "Remove the model…": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remove the model…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Supprimer le modèle…"
-          }
-        }
-      }
-    },
     "Remove this filter": {
       "extractionState": "manual",
       "localizations": {
@@ -12404,23 +11255,6 @@
         }
       }
     },
-    "Revision %@ · %@ on disk": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Revision %@ · %@ on disk"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Révision %@ · %@ sur le disque"
-          }
-        }
-      }
-    },
     "Runs this query again.": {
       "extractionState": "manual",
       "localizations": {
@@ -12608,23 +11442,6 @@
         }
       }
     },
-    "Says what will be contacted, and what will be sent, before anything leaves this Mac.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Says what will be contacted, and what will be sent, before anything leaves this Mac."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dit ce qui sera contacté, et ce qui sera envoyé, avant que quoi que ce soit ne quitte ce Mac."
-          }
-        }
-      }
-    },
     "Scanned pages carry most wrong letters. When a search finds nothing, Fouine also tries close spellings in every document.": {
       "extractionState": "manual",
       "localizations": {
@@ -12757,231 +11574,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chercher pendant que je tape"
-          }
-        }
-      }
-    },
-    "Search by meaning": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search by meaning"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recherche par le sens"
-          }
-        }
-      }
-    },
-    "Search by meaning could not be prepared.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search by meaning could not be prepared."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La recherche par le sens n’a pas pu être préparée."
-          }
-        }
-      }
-    },
-    "Search by meaning is ready: %lld page(s) prepared, nothing left.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Search by meaning is ready: %lld page prepared, nothing left."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Search by meaning is ready: %lld pages prepared, nothing left."
-                }
-              }
-            }
-          }
-        },
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "La recherche par le sens est prête : %lld page préparée, plus rien en attente."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "La recherche par le sens est prête : %lld pages préparées, plus rien en attente."
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "Search by meaning is unavailable (%@). Fouine looked for your words only.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search by meaning is unavailable (%@). Fouine looked for your words only."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La recherche par le sens est indisponible (%@). Fouine n’a cherché que vos mots."
-          }
-        }
-      }
-    },
-    "Search by meaning: %lld page(s) prepared · %@ left": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Search by meaning: %lld page prepared · %@ left"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Search by meaning: %lld pages prepared · %@ left"
-                }
-              }
-            }
-          }
-        },
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Recherche par le sens : %lld page préparée · %@ restantes"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Recherche par le sens : %lld pages préparées · %@ restantes"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "Search by meaning: %lld page(s) prepared. The count of what is left is unavailable (the database did not answer).": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Search by meaning: %lld page prepared. The count of what is left is unavailable (the database did not answer)."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Search by meaning: %lld pages prepared. The count of what is left is unavailable (the database did not answer)."
-                }
-              }
-            }
-          }
-        },
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Recherche par le sens : %lld page préparée. Le compte de ce qu’il reste est indisponible (la base n’a pas répondu)."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Recherche par le sens : %lld pages préparées. Le compte de ce qu’il reste est indisponible (la base n’a pas répondu)."
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "Search by meaning: being prepared": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search by meaning: being prepared"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recherche par le sens : en préparation"
-          }
-        }
-      }
-    },
-    "Search by meaning: not installed": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search by meaning: not installed"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recherche par le sens : non installée"
-          }
-        }
-      }
-    },
-    "Search by meaning: ready": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search by meaning: ready"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recherche par le sens : prête"
           }
         }
       }
@@ -13220,23 +11812,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cherche dans le texte de vos documents et rend les pages qui correspondent."
-          }
-        }
-      }
-    },
-    "searching by meaning…": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "searching by meaning…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "recherche par le sens…"
           }
         }
       }
@@ -13945,47 +12520,6 @@
         }
       }
     },
-    "Stopped: %lld page(s) prepared, %@ left. Nothing is lost, starting again picks up here.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Stopped: %1$lld page prepared, %2$@ left. Nothing is lost, starting again picks up here."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Stopped: %1$lld pages prepared, %2$@ left. Nothing is lost, starting again picks up here."
-                }
-              }
-            }
-          }
-        },
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Arrêté : %1$lld page préparée, %2$@ restantes. Rien n’est perdu, la reprise repartira d’ici."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Arrêté : %1$lld pages préparées, %2$@ restantes. Rien n’est perdu, la reprise repartira d’ici."
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "stopping": {
       "extractionState": "manual",
       "localizations": {
@@ -14057,40 +12591,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Arrêt — « %@ » se termine…"
-          }
-        }
-      }
-    },
-    "stopping — the current batch is finishing…": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "stopping — the current batch is finishing…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "arrêt — le lot en cours se termine…"
-          }
-        }
-      }
-    },
-    "Stops the transfer at once. Nothing is installed, and the partial archive is deleted.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stops the transfer at once. Nothing is installed, and the partial archive is deleted."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Interrompt le transfert immédiatement. Rien n’est installé, et l’archive partielle est supprimée."
           }
         }
       }
@@ -14261,23 +12761,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cette requête ne porte aucun identifiant, rien sur ce Mac et rien sur vos documents : Fouine télécharge un fichier et compare un numéro de version."
-          }
-        }
-      }
-    },
-    "The %@ of the model folder are deleted. Search by meaning stops working until you download the model again. The pages already prepared stay in the index, ready for the day you install it back.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The %@ of the model folder are deleted. Search by meaning stops working until you download the model again. The pages already prepared stay in the index, ready for the day you install it back."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les %@ du dossier du modèle sont supprimés. La recherche par le sens s’arrête jusqu’à un nouveau téléchargement. Les pages déjà préparées restent dans l’index, prêtes pour le jour où vous réinstallerez le modèle."
           }
         }
       }
@@ -14588,6 +13071,23 @@
         }
       }
     },
+    "The index and its working files. Rebuilding it means reading and recognising every document again, which can take hours.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The index and its working files. Rebuilding it means reading and recognising every document again, which can take hours."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’index et ses fichiers de travail. Le refaire demande de relire et de reconnaître tous vos documents, ce qui peut prendre des heures."
+          }
+        }
+      }
+    },
     "The index file is damaged. Restore a backup if you have one; otherwise delete the file and Fouine will rebuild the index (this can take a long time).": {
       "extractionState": "manual",
       "localizations": {
@@ -14601,23 +13101,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Le fichier de l’index est abîmé. Restaurez une sauvegarde si vous en avez une ; sinon supprimez le fichier, et Fouine reconstruira l’index (cela peut être long)."
-          }
-        }
-      }
-    },
-    "The index is already busy. Wait for the current job to finish.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The index is already busy. Wait for the current job to finish."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "L’index est déjà occupé. Attendez la fin du travail en cours."
           }
         }
       }
@@ -14741,23 +13224,6 @@
         }
       }
     },
-    "The index is being updated by another program. Fouine is waiting for it to finish.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The index is being updated by another program. Fouine is waiting for it to finish."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "L’index est mis à jour par un autre programme. Fouine attend qu’il ait fini."
-          }
-        }
-      }
-    },
     "The index is being updated. Try again in a moment.": {
       "extractionState": "manual",
       "localizations": {
@@ -14805,23 +13271,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "L’index continue de se mettre à jour tout seul après la fermeture de Fouine."
-          }
-        }
-      }
-    },
-    "The index, its working files and the model for search by meaning. Rebuilding it means reading and recognising every document again, which can take hours.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The index, its working files and the model for search by meaning. Rebuilding it means reading and recognising every document again, which can take hours."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "L’index, ses fichiers de travail et le modèle de la recherche par le sens. Le reconstruire, c’est relire et reconnaître chaque document : cela peut prendre des heures."
           }
         }
       }
@@ -14877,57 +13326,6 @@
         }
       }
     },
-    "the meaning search is not ready yet": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "the meaning search is not ready yet"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "la recherche par le sens n’est pas encore prête"
-          }
-        }
-      }
-    },
-    "The meaning search only adds its best pages: it has no total to announce.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The meaning search only adds its best pages: it has no total to announce."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La recherche par le sens n’ajoute que ses meilleures pages : elle n’a pas de total à annoncer."
-          }
-        }
-      }
-    },
-    "The meaning search only covers the pages prepared for it.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The meaning search only covers the pages prepared for it."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La recherche par le sens ne couvre que les pages préparées pour elle."
-          }
-        }
-      }
-    },
     "The message comes from Fouine itself: if Fouine is closed when the last page is read, there is none.": {
       "extractionState": "manual",
       "localizations": {
@@ -14941,74 +13339,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Le message vient de Fouine : si Fouine est fermée quand la dernière page est lue, il n’y en a pas."
-          }
-        }
-      }
-    },
-    "the model archive is not published yet for this version of Fouine (404): try again later, or install it from a local copy.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "the model archive is not published yet for this version of Fouine (404): try again later, or install it from a local copy."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "l’archive du modèle n’est pas encore publiée pour cette version de Fouine (404) : réessayez plus tard, ou installez-la depuis une copie locale."
-          }
-        }
-      }
-    },
-    "The model has not been downloaded yet — Settings ▸ Search by meaning.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The model has not been downloaded yet — Settings ▸ Search by meaning."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le modèle n’a pas encore été téléchargé — Réglages ▸ Recherche par le sens."
-          }
-        }
-      }
-    },
-    "The model is not included in the application: it weighs as much as Fouine itself, and people who never search by meaning would carry it for nothing. Fouine downloads it when you ask, and checks the file before installing it.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The model is not included in the application: it weighs as much as Fouine itself, and people who never search by meaning would carry it for nothing. Fouine downloads it when you ask, and checks the file before installing it."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le modèle n’est pas livré avec l’application : il pèse autant que Fouine elle-même, et ceux qui ne cherchent jamais par le sens l’emporteraient pour rien. Fouine le télécharge quand vous le demandez, et vérifie le fichier avant de l’installer."
-          }
-        }
-      }
-    },
-    "The model must be installed first.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The model must be installed first."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le modèle doit d’abord être installé."
           }
         }
       }
@@ -15118,23 +13448,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "The model is missing": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The model is missing"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le modèle est absent"
           }
         }
       }
@@ -16088,23 +14401,6 @@
         }
       }
     },
-    "Total of the word search alone. The meaning search only adds its best pages: it has no total to announce.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Total of the word search alone. The meaning search only adds its best pages: it has no total to announce."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Total de la recherche par mots seule. La recherche par le sens n’ajoute que ses meilleures pages : elle n’a pas de total à annoncer."
-          }
-        }
-      }
-    },
     "transcribed from the audio": {
       "extractionState": "manual",
       "localizations": {
@@ -16193,23 +14489,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Arrête l’indexation en arrière-plan, supprime l’index et les réglages que vous choisissez, et met Fouine à la corbeille. Aucun dossier indexé n’est touché."
-          }
-        }
-      }
-    },
-    "Two addresses are contacted: github.com, then release-assets.githubusercontent.com.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Two addresses are contacted: github.com, then release-assets.githubusercontent.com."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deux adresses sont contactées : github.com, puis release-assets.githubusercontent.com."
           }
         }
       }
@@ -16346,23 +14625,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fautes de frappe"
-          }
-        }
-      }
-    },
-    "unexpected size: %@ received, %@ expected. The transfer stopped early.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "unexpected size: %@ received, %@ expected. The transfer stopped early."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "taille inattendue : %@ reçus, %@ attendus. Le transfert s’est arrêté trop tôt."
           }
         }
       }
@@ -16748,23 +15010,6 @@
         }
       }
     },
-    "What Fouine sends, in detail": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "What Fouine sends, in detail"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ce que Fouine envoie, en détail"
-          }
-        }
-      }
-    },
     "What Fouine skips in “%@”": {
       "extractionState": "manual",
       "localizations": {
@@ -16795,74 +15040,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ce que Fouine ignore…"
-          }
-        }
-      }
-    },
-    "What is contacted": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "What is contacted"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ce qui est contacté"
-          }
-        }
-      }
-    },
-    "What is downloaded": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "What is downloaded"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ce qui est téléchargé"
-          }
-        }
-      }
-    },
-    "What is received, and checked": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "What is received, and checked"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ce qui est reçu, et vérifié"
-          }
-        }
-      }
-    },
-    "What is sent": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "What is sent"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ce qui est envoyé"
           }
         }
       }
@@ -16935,23 +15112,6 @@
         }
       }
     },
-    "when everything is ready": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "when everything is ready"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "jusqu’à ce que tout soit prêt"
-          }
-        }
-      }
-    },
     "When Fouine may work on its own is set in Settings ▸ Indexing ▸ When to update automatically.": {
       "extractionState": "manual",
       "localizations": {
@@ -16965,23 +15125,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Les moments où Fouine peut travailler seule se règlent dans Réglages ▸ Indexation ▸ Quand mettre à jour automatiquement."
-          }
-        }
-      }
-    },
-    "When the Mac is plugged in and idle, a few minutes at a time, once every scanned page has been read.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "When the Mac is plugged in and idle, a few minutes at a time, once every scanned page has been read."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quand l’ordinateur est branché et au repos, par courtes tranches, une fois toutes les pages scannées lues."
           }
         }
       }
@@ -17016,23 +15159,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Au premier dossier ajouté, macOS vous demandera l’autorisation d’y accéder. Sans cette autorisation, Fouine ne peut pas l’indexer."
-          }
-        }
-      }
-    },
-    "Where it is installed": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Where it is installed"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Où il est installé"
           }
         }
       }
@@ -17084,40 +15210,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "dont le nom contient « %@ »"
-          }
-        }
-      }
-    },
-    "Word search alone: %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Word search alone: %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recherche par mots seule : %@"
-          }
-        }
-      }
-    },
-    "Word search and meaning search combined: the %@ best pages, and no more. Refine the query or the filters to see other pages, or turn “Also search by meaning” off to browse the whole list.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Word search and meaning search combined: the %@ best pages, and no more. Refine the query or the filters to see other pages, or turn “Also search by meaning” off to browse the whole list."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recherche par mots et par le sens combinées : les %@ meilleures pages, pas davantage. Affinez la requête ou les filtres pour voir d’autres pages, ou éteignez « Chercher aussi par le sens » pour parcourir toute la liste."
           }
         }
       }
@@ -17186,23 +15278,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "La mise par écrit de cet enregistrement s’est interrompue : la reconnaissance vocale ne répondait plus. Fouine réessaiera si le fichier change, ou quand une mise à jour améliorera la reconnaissance vocale."
-          }
-        }
-      }
-    },
-    "wrong SHA-256 fingerprint: the archive was refused and deleted. Expected %@, got %@.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "wrong SHA-256 fingerprint: the archive was refused and deleted. Expected %@, got %@."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "empreinte SHA-256 incorrecte : archive refusée et supprimée. Attendu %@, obtenu %@."
           }
         }
       }
@@ -17588,23 +15663,6 @@
         }
       }
     },
-    "checking the fingerprint": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "checking the fingerprint"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "vérification de l’empreinte"
-          }
-        }
-      }
-    },
     "computing…": {
       "extractionState": "manual",
       "localizations": {
@@ -17686,57 +15744,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "date ↓"
-          }
-        }
-      }
-    },
-    "download cancelled": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "download cancelled"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "téléchargement annulé"
-          }
-        }
-      }
-    },
-    "download interrupted: %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "download interrupted: %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "téléchargement interrompu : %@"
-          }
-        }
-      }
-    },
-    "downloading": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "downloading"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "téléchargement"
           }
         }
       }
@@ -18197,57 +16204,6 @@
         }
       }
     },
-    "inference: %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "inference: %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "inférence : %@"
-          }
-        }
-      }
-    },
-    "installation failed: %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "installation failed: %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "installation impossible : %@"
-          }
-        }
-      }
-    },
-    "installing": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "installing"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "installation"
-          }
-        }
-      }
-    },
     "loading…": {
       "extractionState": "manual",
       "localizations": {
@@ -18261,40 +16217,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "chargement…"
-          }
-        }
-      }
-    },
-    "malformed archive: %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "malformed archive: %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "archive mal formée : %@"
-          }
-        }
-      }
-    },
-    "model address not supported: “%@” — https:// or file:// only": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "model address not supported: “%@” — https:// or file:// only"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "adresse de modèle non prise en charge : « %@ » — https:// ou file:// seulement"
           }
         }
       }
@@ -18329,23 +16251,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "jamais"
-          }
-        }
-      }
-    },
-    "not enough space on %@: %@ needed, %@ free": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "not enough space on %@: %@ needed, %@ free"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "place insuffisante sur %@ : %@ nécessaires, %@ disponibles"
           }
         }
       }
@@ -18707,40 +16612,6 @@
         }
       }
     },
-    "the model is already installed (revision %@)": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "the model is already installed (revision %@)"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "le modèle est déjà installé (révision %@)"
-          }
-        }
-      }
-    },
-    "the server answered %@ — try again later.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "the server answered %@ — try again later."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "le serveur a répondu %@ — réessayez plus tard."
-          }
-        }
-      }
-    },
     "this document": {
       "extractionState": "manual",
       "localizations": {
@@ -18754,23 +16625,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "ce document"
-          }
-        }
-      }
-    },
-    "unexpected model: the archive carries %@ r%@, this version of Fouine expects %@ r%@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "unexpected model: the archive carries %@ r%@, this version of Fouine expects %@ r%@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "modèle inattendu : l’archive porte %@ r%@, cette version de Fouine attend %@ r%@"
           }
         }
       }
@@ -18792,40 +16646,6 @@
         }
       }
     },
-    "unpacking": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "unpacking"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "décompression"
-          }
-        }
-      }
-    },
-    "unpacking failed: %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "unpacking failed: %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "décompression impossible : %@"
-          }
-        }
-      }
-    },
     "unreadable file": {
       "extractionState": "manual",
       "localizations": {
@@ -18839,23 +16659,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "fichier illisible"
-          }
-        }
-      }
-    },
-    "unreadable model address: “%@”": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "unreadable model address: “%@”"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "adresse de modèle illisible : « %@ »"
           }
         }
       }
@@ -19043,57 +16846,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Votre dossier personnel entier ne peut pas être ajouté : il contient vos fichiers système, les caches et l’index de Fouine. Choisissez un dossier à l’intérieur : Documents, Bureau, un dossier de livres…"
-          }
-        }
-      }
-    },
-    "Your words are in your documents, but never together on the same page: these results are suggested by meaning only.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your words are in your documents, but never together on the same page: these results are suggested by meaning only."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vos mots sont bien dans vos documents, mais jamais ensemble sur une même page : ces résultats sont proposés par le sens."
-          }
-        }
-      }
-    },
-    "· %@ sem.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "· %@ sem."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "· %@ sém."
-          }
-        }
-      }
-    },
-    "· by words: %@ p. / %@ doc.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "· by words: %@ p. / %@ doc."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "· par mots : %1$@ p. / %2$@ doc."
           }
         }
       }
@@ -19734,74 +17486,6 @@
         }
       }
     },
-    "It is far closer to the meaning of your search than the other pages.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "It is far closer to the meaning of your search than the other pages."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Elle est bien plus proche du sens de votre recherche que les autres pages."
-          }
-        }
-      }
-    },
-    "It is clearly closer to the meaning of your search than the other pages.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "It is clearly closer to the meaning of your search than the other pages."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Elle est nettement plus proche du sens de votre recherche que les autres pages."
-          }
-        }
-      }
-    },
-    "It is closer to the meaning of your search than the other pages.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "It is closer to the meaning of your search than the other pages."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Elle est plus proche du sens de votre recherche que les autres pages."
-          }
-        }
-      }
-    },
-    "It is a little closer to the meaning of your search than the other pages.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "It is a little closer to the meaning of your search than the other pages."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Elle est un peu plus proche du sens de votre recherche que les autres pages."
-          }
-        }
-      }
-    },
     "Close spelling: %lld letters apart from your search": {
       "extractionState": "manual",
       "localizations": {
@@ -20010,23 +17694,6 @@
         }
       }
     },
-    "Meaning search sees only %@ out of %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Meaning search sees only %@ out of %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La recherche par le sens ne voit encore que %@ sur %@"
-          }
-        }
-      }
-    },
     "Modified in": {
       "extractionState": "manual",
       "localizations": {
@@ -20231,23 +17898,6 @@
         }
       }
     },
-    "Search by meaning too": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search by meaning too"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chercher aussi par le sens"
-          }
-        }
-      }
-    },
     "See them all": {
       "extractionState": "manual",
       "localizations": {
@@ -20295,23 +17945,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "La date de dernière modification du fichier, pas la date du document."
-          }
-        }
-      }
-    },
-    "The meaning search only covers the pages prepared for it. Settings ▸ Meaning search explains how to extend it.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The meaning search only covers the pages prepared for it. Settings ▸ Meaning search explains how to extend it."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La recherche par le sens ne couvre que les pages préparées pour elle. Réglages ▸ Recherche par le sens explique comment l’étendre."
           }
         }
       }
@@ -20380,23 +18013,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dans les résultats"
-          }
-        }
-      }
-    },
-    "· meaning search sees only %@ pages out of %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "· meaning search sees only %@ pages out of %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "· la recherche par le sens ne voit encore que %@ pages sur %@"
           }
         }
       }

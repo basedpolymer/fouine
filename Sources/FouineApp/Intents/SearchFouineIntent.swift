@@ -6,10 +6,9 @@
 // fenêtre au premier plan, et l'y amener volerait le clavier à qui travaillait.
 // C'est « Ouvrir dans Fouine » qui ouvre — et lui seul.
 //
-// LEXICALE, JAMAIS HYBRIDE, pour la même raison que le panneau de la barre des
-// menus (INT-M1) : le canal sémantique charge un modèle CoreML (~2,5 s la
-// première fois) et Raccourcis coupe une action qui traîne. La recherche par le
-// sens reste dans la fenêtre, où l'attente s'explique.
+// UNE SEULE REQUÊTE, ET RIEN DE PLUS (INT-M1) : Raccourcis coupe une action
+// qui traîne, et une action d'automatisation n'a pas à faire ce que la fenêtre
+// fait mieux.
 
 import Foundation
 import AppIntents

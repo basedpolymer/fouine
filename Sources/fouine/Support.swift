@@ -4,7 +4,6 @@
 import Foundation
 import ArgumentParser
 import FouineCore
-import FouineEmbed
 import FouineIndex
 
 enum CLI {
@@ -54,7 +53,7 @@ enum CLI {
     /// écrit, il n'était simplement pas appelé ici.
     ///
     /// La CRÉATION reste le geste explicite de `root add`, `index`, `crawl`,
-    /// `extract`, `ocr`, `embed`, `config set`, `maintain` et de l'application.
+    /// `extract`, `ocr`, `config set`, `maintain` et de l'application.
     /// Le refus porte la phrase d'`openReadOnly` — celle qui nomme le geste —
     /// et sort en **3** (`FouineError.databaseFailure`, § 4.3 : « échec de
     /// base »), le même code que le serveur MCP rend déjà pour le même refus.
@@ -151,14 +150,7 @@ enum CLI {
     /// détenteur : « la base est en cours d'écriture par l'agent (pid 1234)
     /// depuis 10:32 ».
     static func describe(_ error: Error) -> String {
-        // `FouineEmbedError` porte sa phrase dans `description` mais n'est pas
-        // `LocalizedError` : `IndexText.describe` retombait donc sur
-        // `NSError.localizedDescription` et `fouine embed` sans modèle affichait
-        // « The operation couldn't be completed. (FouineEmbedError error 0.) »
-        // au lieu du geste à faire. Rattrapé ici plutôt que dans FouineEmbed,
-        // dont ce fichier-là est en cours de remaniement par ailleurs.
-        if let embed = error as? FouineEmbedError { return embed.description }
-        return IndexText.describe(error)
+        IndexText.describe(error)
     }
 
     static func die(_ error: Error) -> Never {

@@ -14,7 +14,7 @@ engine, so it stays in one language, like `git` or `brew`. French is available
 in the app, which follows the system language (see [`i18n.md`](i18n.md)).
 
 **A read never creates an index.** `search`, `status`, `doctor` (without
-`--deep`), `root list`, `config list`, `config get` and `embed --status` open
+`--deep`), `root list`, `config list` and `config get` open
 the database read-only and refuse to run if it does not exist:
 
 ```
@@ -25,7 +25,7 @@ fouine: database: no Fouine index at /tmp/typo.db — index some folders first (
 
 The command exits with code 3 and leaves nothing on disk: no database, no
 folder, no lock, no `-wal`. Only `root add`, `index`, `crawl`, `extract`, `ocr`,
-`embed`, `config set`, `maintain` and the app create an index. On a new machine,
+`config set`, `maintain` and the app create an index. On a new machine,
 `fouine status` therefore reports that there is no index and what to run,
 instead of showing an empty one.
 
@@ -33,7 +33,6 @@ instead of showing an empty one.
 - [Overview](#overview)
 - [Folders and volumes](#folders-and-volumes)
 - [Indexing](#indexing)
-- [Search by meaning](#search-by-meaning)
 - [Settings](#settings)
 - [Notes from other applications](#notes-from-other-applications)
 - [Searching](#searching)
@@ -84,12 +83,9 @@ USAGE: fouine <subcommand>
 | `fouine extract` | extract the text of the documents found |
 | `fouine ocr` | run text recognition on scanned pages |
 | `fouine index` | `crawl --delta` then `extract` |
-| `fouine embed` | produce the meaning vectors of the pages |
-| `fouine model` | install and manage the meaning model |
 | `fouine search` | search the index |
 | `fouine list` | browse the indexed documents, without searching |
 | `fouine read` | read the indexed text of one page |
-| `fouine similar` | list the pages closest in meaning to a given page |
 | `fouine config` | read and write the settings shared by app, CLI and agent |
 | `fouine status` | state of the index and of the folders |
 | `fouine doctor` | diagnosis: volumes, effective read, recognition queue |
@@ -181,7 +177,7 @@ root ignore add` ([below](#fouine-root-ignore-listaddremove-idlabel-rule---json)
 which keeps the rule in Fouine's index and writes nothing into the folder, or a
 `.fouineignore` file you put at the top of a root yourself. Both are read at the
 start of every pass, and a document that becomes excluded leaves the index, with
-its pages, its OCR and its vectors, at the next one. The three forms and what
+its pages and its OCR, at the next one. The three forms and what
 they cover: [formats](formats.md#excluding-a-folder-or-a-file-type-fouineignore).
 
 ### `fouine root remove <id|label> [--purge]`
@@ -287,7 +283,7 @@ $ fouine crawl
 
 The report line has a sixth term, `· moved N`, only when there is one: documents
 found elsewhere, renamed or moved. Those are neither added nor removed, and
-nothing attached to them (text, recognition, queue, vectors) is redone.
+nothing attached to them (text, recognition, queue) is redone.
 
 ### `fouine extract [--jobs N] [--budget-minutes M] [--only <doc>]`
 
@@ -363,137 +359,6 @@ such as a language added.
 
 ```sh
 fouine ocr requeue --no-lines --limit 500 --json
-```
-
----
-
-## Search by meaning
-
-### `fouine embed [--budget-minutes N] [--batch N] [--folder <label>] [--include-tables] [--model-dir <folder>] [--status] [--bench N]`
-
-Produces the meaning vectors of the pages, which `search --hybrid` uses. The
-campaign is incremental and resumable: only incomplete pages are processed, and
-any page whose text changes (re-extraction, recognition) is due again. Ctrl-C
-stops cleanly.
-
-**Only one campaign runs at a time.** The campaign lock `fouine-embed.lock`,
-next to the database, is held for the life of the process: a second `fouine
-embed` on the same index exits with code 3 and "a vectorisation campaign is
-already running (pid N, since HH:MM)". This is not the write lock, which is
-released after each batch on purpose so the app can index during a twenty-hour
-campaign; that is why `doctor` answers "write lock: free" in the middle of one.
-`--status` and `--bench` do not take it: one only reads, the other does not even
-open the database.
-
-The background agent may be the one holding it: with `agent.prepareMeaning` on
-(it is off by default), the agent prepares meaning itself, ten minutes at a time.
-A campaign started by hand during one of its batches exits with code 3 and "the
-background agent is preparing meaning — it will stop by itself; or turn the
-setting off (`fouine config set agent.prepareMeaning false`)".
-
-A page has up to three windows of 1 400 characters (see
-[searching](search.md)), so the log counts windows as well as pages, and a page
-is "complete" only once all of its windows exist.
-
-- `--status` prints vector coverage and exits, producing nothing:
-
-  ```
-  $ fouine embed --status
-  indexed pages: 390114
-  vectorised pages: 64872 (16.6%)
-    complete (every window): 3696
-    first window only: 61176
-    incomplete pages left: 386418
-  vectors (windows): 71460
-  model: multilingual-e5-small r1, dim 384
-  windows: up to 3 per page, 1400 char(s) every 1300
-  windows per page (measured here): 2.13
-  remaining: ~819440 window(s) at 6.36 win/s (last run) -> ~35.8 h
-    (throughput measured on the run of 2026-09-04T09:22:50Z)
-  ```
-
-  The end of a campaign is projected from measurements. The throughput of the
-  last pass is recorded at the end of each `fouine embed`, and the number of
-  windows per page is measured on this database: 2.13 on the reference corpus,
-  but a corpus of short notes fits one window per page, and projecting 2.13 onto
-  it would announce twice the work. Until a pass has run, the line gives the
-  command to run instead of an invented figure: "no throughput measured yet —
-  run `fouine embed` once".
-- `--batch`: pages per inference batch, 24 by default.
-- `--folder <label>`: prepare only this folder; can be repeated. An unknown label
-  is refused (exit 64) with the list of real ones, before the model is even
-  loaded. Without it, the campaign starts with the pinned folders
-  (`roots.pinned`, the same setting the app calls "read their scanned pages
-  first") and then covers the rest of the index. This matters because the
-  selection follows the order in which documents were found, so without it a
-  pinned folder added late could sit at zero vectors while an older folder was at
-  73 %. The log announces each phase. The background agent follows the same
-  order, since it runs the same campaign. In both cases spreadsheets stay out of
-  the inference unless `--include-tables` is given: `--folder` chooses where the
-  campaign works, never what it encodes.
-- `--include-tables`: also vectorise spreadsheets (`csv`, `tsv`, `xls`, `xlsx`,
-  `xlsm`, `ods`, `numbers`), which are skipped by default (see below).
-- `--model-dir`: by default
-  `~/Library/Application Support/Fouine/models/e5-small`, or `FOUINE_MODEL_DIR`.
-- `--bench N` runs inference on N synthetic windows without opening the database
-  or writing anything, to measure the model's throughput on this machine and
-  compare `FOUINE_EMBED_COMPUTE` back-ends. It also prints the breakdown of
-  loading (`load: vocabulary … + CoreML … = …`), which shows where to optimise.
-
-Spreadsheets, and pages that are tables of numbers, get a null vector. A vector
-built from a column of figures describes nothing: it is close to every other
-table in the corpus and to nothing useful, and it takes a place in every search
-by meaning. These pages are therefore counted as done, without inference, and
-can still be found word for word by the lexical channel. The setting
-`embed.skip_spreadsheets` (true by default) controls this for the command and
-for the agent alike; `--include-tables` disarms it for one campaign. This is a
-quality decision, not a disk one: on the measured corpus it saves about 21 MB,
-where the budget was already 110 MB over before any vectorisation.
-
-Install the model with `fouine model download`; without it, the command says so
-and gives that command. Inference is CPU-heavy: run it with recognition paused,
-or in slices with `--budget-minutes`.
-
-```sh
-caffeinate -i fouine embed --budget-minutes 60
-```
-
-### `fouine model <download|status|remove>`
-
-Installs and manages the meaning model. Together with the app's update check and
-licence activation, this is one of the few Fouine commands that opens a
-connection, and it never does so without being asked: `embed`, `search
---hybrid`, `doctor` and indexing never download anything. See
-[privacy](privacy.md).
-
-```
-fouine model download [--url <address>] [--force]
-fouine model status [--json]
-fouine model remove
-```
-
-`download` first prints the address, the hosts contacted (`github.com`, then
-`release-assets.githubusercontent.com`, since GitHub serves its assets through a
-redirect), the size and the destination. It then downloads, checks the size and
-the SHA-256, and installs. There is no interactive question: typing the command
-is the consent. A model already installed is not reinstalled without `--force`,
-and the command exits 0 with a message.
-
-- `--url`: another source, `https://` and `file://` only. A `file://` pointing at
-  an archive copied onto a USB stick opens no connection.
-- `--force`: reinstalls over an existing model. The old one is removed only once
-  the new one is complete; a wrong fingerprint leaves the existing one intact.
-- `status --json` returns `installed`, `path`, `bytes`, `model_id`, `revision`,
-  `url`.
-- `remove` deletes the model directory. Running it twice in a row is not an
-  error.
-
-Any failure exits with code 1: asset not published (404), wrong fingerprint,
-malformed archive, not enough disk space. In all of those cases nothing is
-installed, the existing model is intact, and no temporary file is left behind.
-
-```sh
-fouine model download
 ```
 
 ---
@@ -582,9 +447,6 @@ Erases the row: the value goes back to the default (or to the environment).
 | `agent.requireAC` | boolean | `true` | `FOUINE_AGENT_REQUIRE_AC` |
 | `agent.pauseOnLowPower` | boolean | `true` | `FOUINE_AGENT_PAUSE_LOW_POWER` |
 | `agent.pauseOnThermal` | boolean | `true` | `FOUINE_AGENT_PAUSE_ON_THERMAL` |
-| `agent.prepareMeaning` | boolean | `false` | `FOUINE_AGENT_PREPARE_MEANING` |
-| `agent.embedBudgetMinutes` | 1–120 | 10 | `FOUINE_AGENT_EMBED_BUDGET_MINUTES` |
-| `embed.skip_spreadsheets` | boolean | `true` | `FOUINE_EMBED_SKIP_SPREADSHEETS` |
 | `roots.pinned` | identifiers | *(empty)* | `FOUINE_PINNED_ROOTS` |
 | `notifications.onQueueDrained` | boolean | `false` | `FOUINE_NOTIFY_QUEUE_DRAINED` |
 | `spotlight.enabled` | boolean | `true` | `FOUINE_SPOTLIGHT` |
@@ -664,23 +526,7 @@ absent; the command-line option takes precedence.
 rest of the queue. `set` and `reset` also re-prioritise the pages already
 queued, under the write lock (measured: 21 730 pages in 0.18 s). It is the only
 `config` subcommand that can fail with code 3 because the agent is writing; the
-setting itself is already recorded, and the next indexing pass applies it. It
-also sets the order of the meaning campaign: the pinned folders are prepared
-first, then the rest of the index (`fouine embed`, the agent).
-
-`embed.skip_spreadsheets` leaves spreadsheets out of the meaning vectors, and is
-true by default: a vector built from a column of numbers describes nothing and
-would take a place in every search by meaning. Those pages can still be found
-word for word. `fouine embed --include-tables` overrides it for one campaign.
-
-`agent.prepareMeaning` hands the production of vectors, what `fouine embed`
-does, to the agent. It is false by default since 1.0.1: the app's "Prepare
-search by meaning…" button or the checkbox in Settings ▸ Indexing turns it on.
-When it is on, a batch of `agent.embedBudgetMinutes` minutes starts when the
-recognition queue is empty, the model is installed, pages are left to prepare,
-and the six conditions of the agent hold. `fouine status` gives its state (line
-`meaning`), and `fouine doctor` warns when the setting is on while the model is
-missing.
+setting itself is already recorded, and the next indexing pass applies it.
 
 `agent.pauseOnThermal` covers both thermal conditions, since they mean the same
 thing: the machine is hot.
@@ -796,20 +642,12 @@ fouine sources enable notes && fouine index
 | `--fuzzy <off\|auto\|on>` | fuzzy search (`auto` by default) |
 | `--fuzzy-scope <ocr\|all>` | scope of fuzzy search (`ocr` by default) |
 | `--mark <guillemets\|brackets\|asterisks\|none>` | what surrounds the matched words in a snippet (`guillemets` by default) |
-| `--hybrid` | RRF merge with meaning search (needs the model and vectors) |
-| `--hybrid-auto` | merge with meaning search when the model and the vectors are there, and search full text otherwise, without failing |
-| `--depth N` | depth of the merged lists in hybrid mode (200 by default) |
-| `--vec-floor Z` | drop semantic results whose margin `z` is below this (**0** by default, disarmed) |
-| `--lex-weight W` | weight of the lexical list in the RRF merge (1) |
-| `--vec-weight W` | weight of the semantic list in the RRF merge (1) |
-| `--vec-center` | subtract the corpus mean vector before comparing (calibration) |
 | `--no-proximity` | disarm the three ranking bonuses: exact phrase, nearby words, file name (calibration) |
 | `--no-morphology` | search the words as typed, without singular and plural (calibration) |
 | `--no-diversity` | do not demote the fourth and later pages of the same document (calibration) |
 | `--no-typed-form` | do not promote pages carrying the words as typed over those carrying only an inflected form (calibration) |
 | `--no-quorum` | require every word on the same page even when fewer than ten pages carry them all (calibration) |
 | `--no-demote-toc` | leave tables of contents and indexes where the ranking puts them (calibration) |
-| `--raw-semantic-ranks` | hybrid: fuse the semantic ranks as they are, without rescaling them to vector coverage (calibration) |
 
 The query syntax is described in [searching](search.md). The `dossier:`, `ext:`,
 `pres:`, `nom:`, `texte:` and `chemin:` prefixes belong to the query language:
@@ -856,8 +694,7 @@ fouine search 'enthalpy' --lang en --since 2024-01-01 --facet lang
 ```
 
 `--lang` and `--since` are real filters, like `folder:` and `ext:`: they enter
-the query, the announced totals follow them, and `--hybrid` applies them to both
-channels. The language is the one detected at indexing; documents too short or
+the query and the announced totals follow them. The language is the one detected at indexing; documents too short or
 too mixed have none, and you select them with `--lang und`. The date of
 `--since` means the start of the day, in local time, and a malformed date is an
 argument error (exit 64) rather than an unbounded search.
@@ -941,51 +778,6 @@ apart from a quotation. The four values are those of the assistant server's
 `marks`, and the default does not change, because snippets are part of the
 frozen schema.
 
-`--hybrid` without the model installed does not stop: it prints a warning on
-standard error and falls back to full-text search, which needs no model. The JSON
-then carries `"hybrid": false`, so a script knows what it actually got. A
-database with no vector, on the other hand, stays an error (exit 3): the model is
-there, only `fouine embed` is missing, and hiding the case would hide the command
-to run.
-
-**`--hybrid-auto` never fails on either count.** It merges when the model and the
-vectors are there, searches full text otherwise, and prints nothing about it:
-exit 0, `"hybrid": false` in the JSON. That is what a script needs when it does
-not know whether meaning search has been prepared on this Mac. It is a separate
-flag rather than `--hybrid=auto` because an option with an *optional* value
-cannot be expressed: `--hybrid azote` would have taken the query as its value.
-
-A scope with no vector in it loads nothing. Without this check, `dossier:Courses
---hybrid` would spend about four seconds loading the model and the vector index
-to compare zero vectors (the folder has none), and then report the coverage of
-the whole index, 67.85 %, as though it described that folder. The scope is read
-first, from two counts: when it has no vector, the answer is the full-text one,
-complete, with `"hybrid": false`, `hybrid_disarmed: "no_vectors_in_scope"`, and
-this line on standard error:
-
-```
-$ fouine search 'dossier:Courses reactor' --hybrid --json
-fouine: warning — no vectorised page in this scope (folder Courses: 0 of 31986) — `fouine embed --folder Courses` prepares it
-```
-
-`semantic_coverage_pct` is then the coverage of the scope, and `semantic_scope`
-(`pages`, `vectorised`, `filtered`) describes what the meaning channel sees of
-the search that was asked. Both keys are the assistant server's. Every hybrid
-answer carries them; a full-text answer carries them when a document filter
-(`dossier:`, `ext:`, `nom:`, `chemin:`, `--in`, `--lang`, `--since`) actually
-narrowed the scope. The count is not taken otherwise, because without a filter
-the scope *is* the index, and `vectors` / `pages_indexed` already describe it.
-Reading the scope costs a few milliseconds against about four seconds saved; the
-unfiltered search pays nothing at all.
-
-An exact-phrase query does not use meaning. `"ideal gas" --hybrid` returns the
-full-text search, complete (facets, name matches, fallback), and prints on
-standard error: `meaning search not used: the query asks for an exact phrase`.
-The JSON carries `hybrid: false` and `hybrid_disarmed: "exact_phrase"`, because
-`hybrid: false` alone would suggest an incomplete installation. The model is not
-loaded: measured on a real index, 2 688 ms → 33 ms. `--raw-fts` is not
-concerned, since the parser never sees the string.
-
 When the exact search returns nothing, the query runs once more, tolerating typos
 across all documents, and the command reports it on standard error, in both
 modes: `No exact match — showing close spellings from every document.` The JSON
@@ -1003,9 +795,8 @@ one origin stay strict. A folder, an extension, a language or a date do not
 disarm it: otherwise the same question could return 28 pages on its own and zero
 under `dossier:Livres`. About eighty French and English function words are never
 required, and a question with more than six meaningful words keeps the six
-longest. It applies with `--hybrid` too, because the merge's lexical channel
-runs the same pass, and the assistant server reports it the same way, so both
-surfaces agree about the same results. `--no-quorum` disarms it in both modes.
+longest. The assistant server reports it the same way, so both surfaces agree
+about the same results. `--no-quorum` disarms it.
 The `why` of a result from the loosened pass reads `partial`, never `exact`: the
 page does not contain every word.
 
@@ -1045,8 +836,7 @@ $ fouine search IP2022 --limit 5
 `snippet`, `link`, `time_seconds`, `slide`, `embedded_image`, `why`) and, with
 `--facet`, `facets`. Extra keys appear when they apply: `fuzzy_fallback: true`,
 `name_matches[]` (`doc_id`, `path`, `folder`, `link`, the link pointing at page 1
-of the document), `quorum: true`, and `hybrid_disarmed` (with `hybrid: false`)
-when a quoted phrase set the semantic channel aside. Beyond 50 000 matched pages,
+of the document), `quorum: true`. Beyond 50 000 matched pages,
 `total_pages` is capped at 50 000 and the boolean `totals_approximate: true` is
 present; in the text output the totals carry a "> " prefix and an advice line
 follows: `very common word — add a second word to narrow the search`.
@@ -1058,19 +848,15 @@ at the first change in FTS5.
 `bm25` carries that same number under the assistant server's name, and `score`
 is deprecated: "score" does not say which scale it uses, while `bm25` names it.
 `score` stays, because the schema is frozen, and will be dropped no earlier than
-1.1; use `bm25` in anything new. Unlike `score`, `bm25` is always present, and
-`null` for a page returned by the semantic channel alone, because a missing key
-tells a script nothing.
+1.1; use `bm25` in anything new. Unlike `score`, `bm25` is always present,
+because a missing key tells a script nothing.
 
 `relevance_pct` is the percentage the text output prints: this hit's score as a
 share of the best-scoring hit of this reply, 0 to 100. It is relative, never
 absolute, and it cannot be compared from one query to the next: 100 means
-"nothing here scores higher", not "the answer". In hybrid mode it is based on the
-`rrf` rather than on the `bm25`, since half a hybrid list has no `bm25` at all.
-The order of the list can differ from it: under a quorum pass, the pages that
-contain every word stay first even when a looser page scores better. The text
-output prints it for full-text searches only, where the two channels share a
-scale.
+"nothing here scores higher", not "the answer". The order of the list can differ
+from it: under a quorum pass, the pages that contain every word stay first even
+when a looser page scores better.
 
 Three keys say what a page really is, and they are always present, `null` when
 they do not apply. `slide` is the slide number for a `.pptx` or `.odp`: cite the
@@ -1081,21 +867,6 @@ in seconds from the start, for a transcribed page only: a page covers ten
 minutes of speech, so "page 1" of a two-hour video is useless as a reference.
 The moment is read from the timestamp that precedes the matched word, or else
 from the start of the page.
-
-**Hybrid keys are added, never substituted.** In hybrid mode, `total_pages` and
-`total_docs` hold the lexical totals (`lex_total_pages`, `lex_total_docs`, which
-are also present): that is the only population that can be counted, since the
-semantic channel returns a neighbourhood rather than a set of matched pages. Only
-`score` stays reserved to results the lexical channel found (`semantic_only:
-false`), because a bm25 invented for a page returned by meaning alone would be a
-false number. Hybrid mode adds `hybrid`, `offset`, `has_more`, `lex_total_pages`,
-`lex_total_docs`, `semantic_only`, `semantic_floor`, `semantic_kept`, `vectors`,
-`pages_indexed`, `semantic_coverage_pct`, `semantic_scope`,
-`semantic_rank_scale`, `semantic_stats`, possibly `model_load_ms` and
-`index_load_ms`, and, per hit, `rrf`, `lex_rank`, `vec_rank`, `cosine`, `z`.
-`quorum: true` appears there under the same rule as in full text, only when the
-pass took place, so a script reading both modes does not need to know which one
-loosens the AND.
 
 `link` is the page's deep link: `fouine://open?path=<absolute
 path>&page=<n>`, which you can paste into a dissertation or an email, and which
@@ -1112,47 +883,13 @@ minutes earlier. Every other page cites the page.
 the words, and `terms_found` lists them), `partial` (the page contains only some
 of them, as every result of a quorum pass; `terms_found` lists what the snippet
 shows and `terms_missing` is absent), `fuzzy` (a close spelling: `typed`,
-`found`, `distance`), `semantic` (none of your words, meaning alone) or `both`.
-It is computed on the snippet rather than on the page read again: it costs
+`found`, `distance`). It is computed on the snippet rather than on the page
+read again: it costs
 nothing, and the snippet is what the caller has in front of them. Hence one
 rule: it never concludes that a word is missing. A lexical hit contains every
 positive word, which is what `a AND b` means, and the snippet often shows only
 one. `terms_missing` therefore comes only from the app, which reads the whole
 page. The `why` key is absent when the snippet supports no verdict.
-
-In hybrid mode, when no page contains the words (`lex_total_pages: 0`) and
-results come out anyway, the text output adds a line, which depends on what the
-index holds: `none of your words is in your documents — these results come from
-meaning alone` when none of the words exists anywhere, and `no page carries your
-words together — these results come from meaning alone (words present: reactor,
-residence)` when they do exist but never on one page. A nine-word question under
-`dossier:Livres` can have one of its words in 22 documents of that very folder,
-so the first sentence alone would be false in that case. The line is not a
-filter; the measurements behind it are in [searching](search.md).
-
-`semantic_stats` describes the population the vector sweep went through for THIS
-query: `mu` and `sigma` (mean and standard deviation of the cosines, over
-non-null vectors, with pages too short counted separately in `zero_vectors`),
-`cos_max`, the margins `z_max`, `z_at_10`, `z_at_200`, and `scanned`. It is the
-tool for calibrating the ranking, and it is permanent. `cosine` is kept for those
-who know what to do with it, and **it is not relevance**: on a real corpus every
-cosine of this model sits between 0.78 and 0.88 and follows the shape of the
-query. What the text output shows, and what a caller should read, is `z`, the
-margin in standard deviations.
-
-```
-$ fouine search 'catalysis' --hybrid --limit 2
-fouine: warning — semantic channel covers 16.6 % of the pages (64872 / 390114) — hybrid results are drawn from that subset; `fouine embed` extends it
-2 hybrid hit(s) — lexical: 784 page(s) / 108 document(s), semantic only: 1, in 1697.47 ms (64872 vectors, 16.6 % of pages)
-
-• [130] …/Advanced Inorganic Chemistry 6e - Cotton.pdf p.1180 — rrf 0.0164 · sem#1 z+5.0
-    Chapter 21 FUNDAMENTAL REACTION STEPS OF TRANSITION METAL CATALYZED REACTIONS…
-
-• [922] …/01_Catalysis course.pdf p.2 — rrf 0.0164 · lex#1
-    Différents types de «catalyse» «catalyse» «Catalyse» homogène…
-```
-
-The coverage warning appears only under 50 % of pages vectorised.
 
 ### `fouine list [options]`
 
@@ -1193,17 +930,15 @@ In `--json`, the keys are exactly those of the assistant server's
 `fouine_list_documents`, so a script written for the assistant reads the CLI
 without changes: `documents`, `total`, `has_more`, `truncated`, and per document
 `doc_id`, `path`, `link`, `folder`, `ext`, `pages`, `modified`, `state`,
-`doc_date`, `error`, `ocr_pages` and `vectorised_pages`. `modified` is in ISO
+`doc_date`, `error` and `ocr_pages`. `modified` is in ISO
 8601, in the machine's time zone. Only `abs_path` is missing here, and the `link`
 carries it.
 
 `error` gives the reason a document is missing from the results ("iWork document
 without a QuickLook preview", "encrypted PDF"), and is `null` otherwise, which is
 the normal case. It is also written at the end of the table line, right after the
-state, so a failure needs no second command to be understood. `vectorised_pages`
-counts the pages of that document that search by meaning can see: it is the only
-way to notice that a whole folder is at zero while the overall coverage shows two
-thirds. `ocr_pages` counts the pages whose text was read from the image, which is
+state, so a failure needs no second command to be understood. `ocr_pages`
+counts the pages whose text was read from the image, which is
 what tells a scan from a typed document; a page transcribed from speech does not
 count there, since it has its own origin. The `link` names the document, with no
 page, because a listing does not claim to have found one. `truncated` is always
@@ -1259,52 +994,6 @@ A page that exists but has no indexed text is a success with an empty text and a
 document does not have, or an unknown `doc_id`, is a usage error (exit 64), and
 the message gives the real number of pages of the document.
 
-### `fouine similar <doc_id> <page> [options]`
-
-Lists the pages closest in meaning to a given page, read from the vectors already
-in the index. It never loads the model, so it answers in milliseconds; the
-trade-off is that a page not vectorised yet has no neighbours, and the command
-exits with code 1 and says so, with the command to run (`fouine embed`).
-
-| Option | Effect |
-|---|---|
-| `--limit N` | neighbours returned (**10**, ceiling 50) |
-| `--folder <label>` | restrict to one folder; an unknown label is refused with 64 |
-| `--ext <ext>` | restrict to one extension, without the dot |
-| `--no-exclude-same-document` | keep the neighbours that come from the same document (excluded by default) |
-| `--min-cosine C` | floor, 0 to 1 (**0**: no floor) |
-| `--preview-chars N` | characters of preview per neighbour (200) |
-| `--encode` | when this page has no vector, encode it now; this loads the model |
-| `--json` | JSON output |
-
-The cosine is not a measure of relevance. Measured on a real corpus, every value
-sits between 0.78 and 0.88, and the position inside that band follows the shape
-of the text more than its subject, which is why the floor defaults to 0. The keys
-of `--json` are those of `fouine_similar_pages`: `neighbours` (each with
-`doc_id`, `page`, `path`, `abs_path`, `folder`, `ext`, `link`, `cosine`,
-`preview`), `vector_count`, `coverage_pct`, `model_id`, `revision`,
-`source_has_vector`, `source_vector`, `note`, `elapsed_ms`.
-
-`--encode` is the only way this command loads the model, and it is off by
-default. A whole folder can sit at zero vectors until the campaign reaches it
-(measured on a real index, one root had 0 vectors for 139 638 pages), and "no
-neighbour" then reads as "nothing resembles this page", which is wrong.
-`--encode` pays the encoding for *this* page: about 2 s the first time. The
-vector is the one the campaign would have produced (same windows, same
-null-vector rules, same quantisation), otherwise the cosines could not be
-compared with anything. `source_has_vector` describes the index and stays false
-in that case; `source_vector` gives the origin of the vector used: `stored`,
-`computed`, or `null` when there is none. Without the option, the refusal (exit
-1) names the option.
-
-```
-$ fouine similar 1 50 --limit 3
-  0.864  [1] Users/mathis/Books/Chemistry/Cotton.pdf · page 214
-         the crystal field splitting of an octahedral complex…
-```
-
----
-
 ## Diagnosis
 
 ### `fouine status [--json] [--unreadable]`
@@ -1321,11 +1010,7 @@ It also gives:
   changed. A status whose process has disappeared, or which has not changed for
   five minutes, is marked **PROCESS GONE** or **STALE STATUS**, because a
   progress bar frozen for two days would mislead more than it informs;
-- the effective settings and where they come from (see `fouine config`);
-- the vectorisation campaign in progress, if there is one: the line
-  "vectorisation: running (pid N, since HH:MM)" appears only while the campaign
-  lock is held. It answers "is my campaign still running?", which the write lock
-  cannot, since it is released between batches.
+- the effective settings and where they come from (see `fouine config`).
 
 ```
 $ fouine status
@@ -1333,8 +1018,7 @@ documents   total 1 · extracted 1 · failed 0 · skipped 0 · language unknown 
 pages       indexed 1 · native 1 · ocr_accurate 0
 OCR pages   doubtful 0 (0 < conf < 0.6) · no recognised line 0
 OCR queue   0 page(s)
-vectors     0 page(s) vectorised, 0 vector(s) (0 page(s) complete — hybrid search, `fouine embed`)
-database    274992 bytes (275 kB · 5.0 KiB/page · at full meaning coverage ~0.28 MB (0 % of the 2.5 GB budget) · budget reached near 9,048,000 pages) — /Users/…/fouine.db
+database    274992 bytes (275 kB · 5.0 KiB/page · 0 % of the 2.5 GB budget · budget reached near 9,048,000 pages) — /Users/…/fouine.db
 agent       no report published yet — run `fouine doctor` to check background agent status
 roots:
   [1] Corpus  /Users/…/corpus
@@ -1361,10 +1045,6 @@ still to be determined. The text output shows that number at the end of the
 per indexing pass, and `fouine maintain --detect-languages` brings it to zero at
 once.
 
-`semantic_campaign` is `null` when no campaign is running, and `{"pid": N,
-"since": "<ISO 8601>"}` when a campaign holds the lock. The key is always
-present, so a script does not need to tell "absent" from "no campaign".
-
 `write_lock` has exactly the shape `doctor --json` uses: `status`
 (`free`/`held`/`stale`), `held`, `probe` (the fact, `free` or `held`) and, when a
 holder is known, `role`, `pid`, `since`. `status`, `doctor` and the assistant
@@ -1377,18 +1057,13 @@ The SPEC allows 2.5 GB of index (criterion P5, decimal GB, as the Finder
 counts). The line gives the real projection rather than a linear extrapolation:
 
 ```
-database    2151145472 bytes (2.15 GB · 5.1 KiB/page · at full meaning coverage ~2.27 GB (91 % of the 2.5 GB budget) · budget reached near 451,000 pages) — /Users/…/fouine.db
+database    2151145472 bytes (2.15 GB · 5.1 KiB/page · 86 % of the 2.5 GB budget · budget reached near 475,000 pages) — /Users/…/fouine.db
 ```
 
-- `at full meaning coverage` adds the vectors of the indexed pages that do not
-  have theirs yet: 2.15 GB today, ~2.27 GB once `fouine embed` has finished, with
-  the same corpus. The geometry is a constant rather than a measurement: sweeping
-  `page_vec` to measure it costs 1.5 s on a real index and moves the projection
-  by less than 5 %.
 - `budget reached near N pages` is the page count at which the budget would be
-  reached, at the "complete vectors" cost per page (5.5 KiB/page on the
+  reached, at the cost per page measured on THIS index (5.1 KiB/page on the
   reference corpus, 8.3 KiB/page on a corpus of letters).
-- The line needs no new read: all three numbers are already computed.
+- The line needs no new read: both numbers are already computed.
 
 In JSON, the additive object `disk_budget`:
 
@@ -1396,10 +1071,9 @@ In JSON, the additive object `disk_budget`:
 |---|---|
 | `bytes` | size of the database today (= `db_bytes`) |
 | `budget_bytes` | `2500000000` |
-| `bytes_at_full_vectors` | the projection at full coverage |
-| `ratio_now`, `ratio_at_full_vectors` | fractions of the budget, three decimals |
+| `ratio_now` | fraction of the budget, three decimals |
 | `pages_at_budget` | pages at which the budget would be reached; `null` on an empty index |
-| `level` | `ok` (< 80 %), `near` (80–100 %), `over` (≥ 100 %), read on `ratio_at_full_vectors` |
+| `level` | `ok` (< 80 %), `near` (80–100 %), `over` (≥ 100 %), read on `ratio_now` |
 
 **Nothing stops at 100 %**: `level` is a warning. `fouine doctor` gives the same
 information in one sentence, with what to do, and only when `level` is not `ok`.
@@ -1438,11 +1112,6 @@ Run it first when in doubt. It returns:
   could keep "the index is being written" on screen forever. In JSON: the
   `write_lock` object. A `stale` lock does not invalidate `ok`;
 - the presence of djvulibre, with what to do when it is missing;
-- the presence of the meaning model: "present (revision N)" or "MISSING —
-  `fouine model download` installs it". Without it, `embed` refuses to start and
-  `search --hybrid` falls back to full text with a warning. In JSON:
-  `semantic_model` (boolean), `semantic_model_path`, `semantic_model_vectors`,
-  `semantic_model_revision`;
 - the state of the background agent, from the status table and `launchctl
   print`: registration, service state, failure to launch (`spawn failed
   (EX_CONFIG)`) or prolonged silence, with the matching fix. In JSON: the
@@ -1479,23 +1148,7 @@ Run it first when in doubt. It returns:
 `--deep` adds a thorough check of the database. It runs `PRAGMA quick_check`,
 verifies the integrity of the FTS5 tables, reports the number and size of pages,
 the fragmentation of the free list, the size of the write-ahead log, the
-journalling mode, and the consistency of the vector table, counting and naming
-the rows no version of the pump could have written:
-
-| category | what it is |
-|---|---|
-| `foreign_slot` | window slot out of range: no version of the pump could have written it |
-| `orphan_page` | the row points at no indexed page |
-| `broken_sentinel` | the page claims to be complete although its first window is missing, so `fouine embed` would never take it back |
-
-A row counted here is folded by the semantic channel onto some page: when that
-page exists, search returns a path, a page number and a snippet that look
-perfectly credible for a page unrelated to the query. The fix is `fouine
-maintain --repair`, then `fouine embed` to produce the missing vectors again. In
-JSON, the `database.vectors` object (`rows`, `inconsistent`, a count per
-category, `samples`, `elapsed_ms`); an inconsistency sets `ok` to `false` without
-changing the exit code, since the repair is a separate step rather than a
-failure of the command that reports it. `--deep` also publishes
+journalling mode, and the integrity of the document names. `--deep` publishes
 `database.doc_names` (`docs`, `names`, `consistent`), the gap between the
 documents and the table of their names. A gap deprives documents of their name
 ranking bonus; it corrupts no result, so it does not set `ok` to `false`. The
@@ -1534,7 +1187,6 @@ write lock     : free
 OCR queue      : 0 page(s)
 text-layer probe : available
 djvulibre      : /usr/local/bin/djvused
-semantic model : MISSING — `fouine model download` installs it
 background agent : not registered
 application    : /Applications/Fouine.app
 
@@ -1548,7 +1200,7 @@ A `disk budget` line is added after `database` only when the index reaches 80 %
 of the expected size:
 
 ```
-disk budget    : 86 % now, 91 % at full meaning coverage of the 2.5 GB budget — nothing stops at 100 %; free space with `fouine maintain --vacuum`, or remove folders you no longer need
+disk budget    : 86 % of the 2.5 GB budget — nothing stops at 100 %; free space with `fouine maintain --vacuum`, or remove folders you no longer need
 ```
 
 Under 80 %, `doctor` prints nothing about it, since mentioning a limit to someone
@@ -1609,18 +1261,13 @@ after the compaction, before the size is measured. Measured right after the
 `VACUUM`, the sum of the three files would count the rewritten database twice,
 and the command would report a growth instead of the space reclaimed.
 
-- `--repair` deletes from the vector table the rows `doctor --deep` reports (the
-  three categories above), before the optimisations, in the same transaction and
-  under the same lock. Pages that lose their completeness marker are "to
-  vectorise" again, and `fouine embed` picks them up with nothing else to do. It
-  also rebuilds the table of document names from the documents (a few thousand
-  rows, instantaneous), and clears the recognition failure mark of documents that
-  have no scanned page and nothing queued; an earlier full re-reading could set
-  that mark on pages transcribed from audio. A scanned page that really is
-  unreadable keeps its mark. Output: the count per category, the number of pages
-  queued again, and the line `OCR failure marks cleared`; in JSON, the
-  `vector_repair` object and the integer `ocr_failures_cleared`. **Without the
-  option, `maintain` changes no data.**
+- `--repair` rebuilds the table of document names from the documents (a few
+  thousand rows, instantaneous), and clears the recognition failure mark of
+  documents that have no scanned page and nothing queued; an earlier full
+  re-reading could set that mark on pages transcribed from audio. A scanned page
+  that really is unreadable keeps its mark. Output: the line `OCR failure marks
+  cleared`; in JSON, the integer `ocr_failures_cleared`. **Without the option,
+  `maintain` changes no data.**
 - `--detect-languages` determines the language of documents that have none. A
   document's language is written at extraction, and a scanned document has no
   text then: its language only comes after recognition. Nothing is extracted
@@ -1664,9 +1311,8 @@ maintenance completed in 2840.1 ms:
 Shows who owns what, without leaving the terminal. It prints the version, the
 holder (Mathis Demory), Fouine's source-available licence, the address of the
 sources, then one notice per redistributed component: GRDB.swift (MIT),
-swift-argument-parser (Apache-2.0), Sparkle (MIT, plus the licences of its own
-components), and the `multilingual-e5-small` model (MIT, Microsoft), which is
-used but not shipped in the app.
+swift-argument-parser (Apache-2.0) and Sparkle (MIT, plus the licences of its
+own components).
 
 Whether the full text follows depends on where the binary runs from:
 
@@ -1745,7 +1391,7 @@ Contact the seller with the e-mail you used to buy it.` for any other refusal.
 Both exit with code 7, and the seller's raw text follows as a warning.
 
 **Commands that write to the index refuse to run once the trial is over**:
-`crawl`, `extract`, `index`, `ocr`, `embed`, with one line and exit 6:
+`crawl`, `extract`, `index`, `ocr`, with one line and exit 6:
 
 ```
 fouine: Trial over: enter a licence key (fouine license activate <key>) or buy
@@ -1755,8 +1401,7 @@ works.
 
 `search`, `list`, `status`, `doctor`, `mcp`, `backup`, `config`, `root` and
 `maintain` work in every state: the end of the trial stops updates to the index,
-and what is already in it stays available. `embed --status` and `embed --bench`
-keep working for the same reason.
+and what is already in it stays available.
 
 Here is everything that goes out on the network. `activate` sends the key and the
 name of this computer (the name you will see in your customer portal, to
@@ -1795,8 +1440,7 @@ of a query or of a snippet; `FOUINE_MCP_LOG` is `quiet`, `info` (default) or
 `debug`.
 
 There are five tools: `fouine_status` (health and coverage), `fouine_search`
-(full text and meaning, returns pages), `fouine_read_page` (the indexed text of a
-page, in slices), `fouine_similar_pages` (the semantic neighbours of a page,
+(returns pages), `fouine_read_page` (the indexed text of a page, in slices),
 without loading the model) and `fouine_list_documents` (what is indexed, and why
 a document is not).
 
@@ -1807,8 +1451,8 @@ What is outside that list does not exist for this server: it is absent from
 `doc_id`, since an out-of-scope document gets exactly the refusal an unknown one
 gets. A `folder` outside the scope is refused with a message naming only the
 served roots. `fouine_status` then carries a `scope` object (`null` without the
-option); `documents` counts what is inside the scope, while `pages_indexed` and
-`vectors` still describe the whole index, which `scope.note` states.
+option); `documents` counts what is inside the scope, while `pages_indexed`
+still describes the whole index, which `scope.note` states.
 
 A label that names no root exits with code 64, before the server answers
 anything:
@@ -1822,12 +1466,6 @@ Error: unknown folder “Livre” — folders in this index: Livres, M2SU, Perso
 root ignore`, or a `.fouineignore` file) decide what is indexed at all (`fouine
 root list`, above). A folder that must never be searched, quoted or counted
 belongs in the second.
-
-The meaning model is loaded lazily, at the first hybrid call: a server doing only
-full-text search stays around 16 MiB, while the semantic mode needs a few hundred.
-That is why the resident server is worth it: hybrid search goes from 2.16 s on
-the first call to 0.32 s on the next, where `fouine search --hybrid` loads the
-model every time.
 
 ```sh
 claude mcp add --scope user fouine -- /usr/local/bin/fouine mcp --stdio
@@ -1928,7 +1566,7 @@ them failed or were skipped.
 | 3 | database failure, including locked by another process, index missing (a read command refuses rather than creating one), `FOUINE_DB` pointing at a folder, and a copy of the `.db` alone |
 | 4 | budget exhausted: the queue is consistent, run again to resume |
 | 5 | folder unreadable, missing, or no folder registered at all |
-| 6 | trial over: `crawl`, `extract`, `index`, `ocr` and `embed` refuse to update the index until a key is entered. Search keeps working |
+| 6 | trial over: `crawl`, `extract`, `index` and `ocr` refuse to update the index until a key is entered. Search keeps working |
 | 7 | licence key refused: unknown, disabled, expired, or already on 3 Macs. Deactivating a Mac that was already released is not a refusal: it cleans the file and exits 0 |
 | 8 | licence service unreachable: no network, or the relay does not answer. The trial continues and nothing is changed |
 | 64 | usage error: missing argument, folder refused by policy, query refused by the parser, unknown setting key, filter value the index contradicts (`--lang`, `--in`, `--only`, `roots.pinned`, `ocr.languages`), exclusion rule refused or not kept (`root ignore add`, `root ignore remove`) |
@@ -1941,11 +1579,7 @@ them failed or were skipped.
 |---|---|
 | `FOUINE_DB` | full path of the `.db` file to open. The lock is named after the database: `fouine.db` → `fouine.lock`, `copy.db` → `copy.lock` |
 | `FOUINE_MCP_LOG` | verbosity of the assistant server on stderr: `quiet`, `info` (default), `debug` |
-| `FOUINE_MODEL_DIR` | directory of the meaning model |
-| `FOUINE_MODEL_URL` | address of the model archive (`https://` or `file://`) |
-| `FOUINE_MODEL_SHA256` | expected fingerprint of the archive. Setting it means you vouch for the archive instead of Fouine |
 | `FOUINE_LICENSE_RELAY` | address of the licence relay, for testing against the seller's sandbox. This address receives your key, so only `https://…` or `http://127.0.0.1:<port>` is accepted; anything else is ignored with a warning and the real relay is used |
-| `FOUINE_EMBED_COMPUTE` | CoreML back-end for inference: `cpu`, `gpu`, or `all` (default). `all` is 1.7× faster on a campaign; `cpu` divides memory by nearly six and is faster on a single search |
 | `FOUINE_OCR_TIMEOUT` | guard on one Vision page, in seconds (120) |
 | `FOUINE_RENDER_TIMEOUT` | guard on rendering one page, in seconds (120) |
 | `FOUINE_PDF_TIMEOUT` | guard on extracting a PDF, in seconds (default: proportional to the page count) |
@@ -1963,8 +1597,7 @@ key: it takes precedence over the database, and `fouine config list` marks it
 real one. Two points can cost you time:
 
 - the write lock is named after the database, next to it (`copy.db` →
-  `copy.lock`, `copy-embed.lock` for a vectorisation campaign), so two copies in
-  one folder do not block each other;
+  `copy.lock`), so two copies in one folder do not block each other;
 - **a copy of the `.db` alone does not open for reading.** A Fouine database is
   in `journal_mode = wal`; without its `-wal` beside it, no read command opens it
   (exit 3). That is what happens after a `cp`, a Time Machine restore, or a
@@ -2011,7 +1644,6 @@ fouine search 'polymer' --facet ext                     # with a facet
 fouine search 'conversron' --fuzzy on --fuzzy-scope ocr # catch a recognition typo
 fouine search 'nitrogen' --in 109 --in 174 --json       # two documents, JSON output
 fouine search 'NEAR(nitrogen reduction, 3)' --raw-fts   # raw FTS5 syntax
-fouine search 'catalyst selectivity' --hybrid           # lexical plus meaning
 ```
 
 Browsing, without searching:
@@ -2024,7 +1656,7 @@ fouine list --state failed --state skipped              # what could not be read
 fouine list --limit 200 --offset 200 --json             # the second slice, for a script
 ```
 
-Recognition and vectors:
+Recognition:
 
 ```sh
 # Full pass, one folder first, two hours maximum
@@ -2037,8 +1669,4 @@ fouine ocr --only ~/Documents/Thesis/Scan.pdf
 fouine ocr export --pending --limit 500 \
        --render-png /tmp/renders --out /tmp/queue.jsonl
 fouine ocr import /tmp/result.jsonl
-
-# Meaning vectors
-fouine embed --status
-caffeinate -i fouine embed --budget-minutes 60
 ```

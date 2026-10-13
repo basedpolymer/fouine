@@ -44,39 +44,13 @@ final class WhyFieldTests: XCTestCase {
         XCTAssertTrue(why is NSNull)
     }
 
-    func testSemanticOnlyHitSaysSo() throws {
-        let why = SearchTool.why(HitExplanation.words(ofQuery: "tarte aux pommes"),
-                                 text: "Chapitre 3 — thermodynamique.",
-                                 fuzzyDistance: 0, lexRank: nil, vecRank: 2)
-        let object = try XCTUnwrap(why as? [String: Any])
-        XCTAssertEqual(object["kind"] as? String, "semantic")
-    }
-
-    // MARK: - La note honnête (R-04)
-
-    func testNoteAppearsWhenNoPageCarriesTheWords() {
-        XCTAssertEqual(SearchTool.noLexicalMatchNote(lexTotalPages: 0, hits: 3),
-                       SearchAdvice.noLexicalMatch)
-    }
-
-    func testNoteIsSilentWhenTheLexicalChannelFoundSomething() {
-        XCTAssertNil(SearchTool.noLexicalMatchNote(lexTotalPages: 12, hits: 3))
-    }
-
-    func testNoteIsSilentWhenThereIsNoResultAtAll() {
-        // Zéro résultat n'a pas besoin d'être expliqué par le canal sémantique :
-        // il n'y a rien à lire.
-        XCTAssertNil(SearchTool.noLexicalMatchNote(lexTotalPages: 0, hits: 0))
-    }
-
     func testNotesCumulate() {
-        let note = SearchTool.notes(
-            "only 3.0 % of pages are vectorised",
-            SearchTool.veryCommonWordNote(true),
-            SearchTool.noLexicalMatchNote(lexTotalPages: 0, hits: 1))
+        let note = SearchTool.notes(SearchTool.quorumNote(true),
+                                    SearchTool.veryCommonWordNote(true),
+                                    SearchTool.fuzzyFallbackNote(true))
         let text = try? XCTUnwrap(note)
         XCTAssertTrue(text?.contains(SearchAdvice.veryCommonWord) == true)
-        XCTAssertTrue(text?.contains(SearchAdvice.noLexicalMatch) == true)
+        XCTAssertTrue(text?.contains(SearchAdvice.quorum) == true)
         XCTAssertEqual(text?.components(separatedBy: " · ").count, 3)
     }
 }

@@ -22,7 +22,7 @@ final class AgentLicenseTests: XCTestCase {
         -> (action: AgentAction, nextState: AgentState) {
         Agent.tick(state: state, conditions: ok, clock: clock,
                    settings: settings, ocrQueueLength: queue,
-                   pendingRoots: pending, embed: .none,
+                   pendingRoots: pending,
                    licenceAllowsIndexing: licence)
     }
 

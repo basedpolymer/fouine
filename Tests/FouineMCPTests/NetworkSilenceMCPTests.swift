@@ -19,7 +19,7 @@
 //
 // Un écouteur TCP sur 127.0.0.1 (le harnais de `FouineExtractTests`, recopié
 // ici parce que les deux cibles de test ne partagent pas de code), une SÉANCE
-// COMPLÈTE des cinq outils, une seconde laissée au réseau, et zéro acceptation
+// COMPLÈTE des quatre outils, une seconde laissée au réseau, et zéro acceptation
 // affirmée.
 //
 // L'écouteur est vérifié par une contre-épreuve : sans elle, un écouteur cassé
@@ -184,15 +184,13 @@ final class NetworkSilenceMCPTests: XCTestCase {
     /// c'est précisément ce qu'on veut voir.
     func testAFullSessionOpensNoConnection() throws {
         let index = try TempIndex(documents: 3, pagesPerDocument: 4,
-                                  vectorisedPages: 6, failedDocuments: 1)
+                                  failedDocuments: 1)
         let server = try index.makeServer()
 
         let calls = [
             #"{"name":"fouine_status","arguments":{}}"#,
             #"{"name":"fouine_search","arguments":{"query":"electrolyse"}}"#,
-            #"{"name":"fouine_search","arguments":{"query":"enthalpie","mode":"hybrid"}}"#,
             #"{"name":"fouine_read_page","arguments":{"doc_id":1,"page":2,"context_pages":2}}"#,
-            #"{"name":"fouine_similar_pages","arguments":{"doc_id":1,"page":1,"exclude_same_document":false}}"#,
             #"{"name":"fouine_list_documents","arguments":{"state":"any"}}"#,
         ]
         _ = server.handle(Data(
@@ -209,7 +207,7 @@ final class NetworkSilenceMCPTests: XCTestCase {
         Thread.sleep(forTimeInterval: Self.silenceWindow)
         let seen = listener.connections
         XCTAssertTrue(seen.isEmpty,
-                      "séance complète des cinq outils : \(seen.count) connexion(s) "
+                      "séance complète des quatre outils : \(seen.count) connexion(s) "
                       + "acceptée(s) sur 127.0.0.1:\(listener.port) — \(seen)")
     }
 

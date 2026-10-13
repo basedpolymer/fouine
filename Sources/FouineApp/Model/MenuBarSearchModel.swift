@@ -2,17 +2,12 @@
 // Propriété : A-App. SPEC §5.6, amendement « mini-recherche ».
 //
 // POURQUOI UN SECOND MODÈLE DE RECHERCHE. `SearchModel` porte la fenêtre
-// entière : filtres, facettes, historique, session mémorisée, canal sémantique,
-// pagination, surlignage, explication du résultat sélectionné. Le panneau de la
+// entière : filtres, facettes, historique, session mémorisée, pagination,
+// surlignage, explication du résultat sélectionné. Le panneau de la
 // barre des menus n'a besoin d'aucune de ces choses, et surtout il ne doit RIEN
 // changer de l'état de la grande fenêtre — taper trois mots dans la barre des
 // menus ne doit pas effacer les filtres posés à côté, ni la requête qu'on y
 // avait laissée. Deux modèles, donc, et pas un drapeau dans le premier.
-//
-// LEXICAL SEULEMENT, JAMAIS L'HYBRIDE. Un panneau qui s'ouvre sous le curseur
-// doit répondre en moins de 100 ms ; le canal sémantique charge un modèle
-// CoreML (~2,5 s la première fois) et interroge un index vectoriel. La
-// recherche par le sens reste dans la fenêtre, où l'attente s'explique.
 //
 // La construction des lignes est une fonction PURE et statique (`rows(from:)`) :
 // c'est elle que les tests interrogent — troncature, ordre, plafond,

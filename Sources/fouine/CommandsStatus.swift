@@ -5,7 +5,6 @@ import Foundation
 import ArgumentParser
 import FouineCore
 import FouineExtract
-import FouineEmbed
 
 // MARK: - fouine status
 
@@ -39,12 +38,6 @@ struct StatusCommand: ParsableCommand {
             // noire », et le seul diagnostic était `tail -f` du journal.
             let settings = SettingsSnapshot(rows: try store.settingsRows())
             let agent = try store.agentStatus()
-            // « Ma campagne tourne-t-elle encore ? » (constat C2-11). Le verrou
-            // d'écriture ne répond pas à cette question — `embed` le rend après
-            // chaque lot —, celui de campagne si. Sonde pure : ni création, ni
-            // attente, `status` reste une lecture.
-            let campaign = store.databaseURL
-                .flatMap { EmbedCampaignLock.probe(databaseURL: $0) }
             // Le verrou d'écriture, SONDÉ (constat CM-26) : `doctor` et l'outil
             // MCP `fouine_status` publiaient l'objet, `status --json` non —
             // deux contrats, deux réponses à la même question. Sonde pure,
@@ -61,8 +54,8 @@ struct StatusCommand: ParsableCommand {
             let dbBytes = stats["db_bytes"] ?? 0
             let pagesIndexed = stats["pages_indexed"] ?? 0
             let bytesPerPage = pagesIndexed > 0 ? (dbBytes / pagesIndexed) : 0
-            // Le budget disque (MO-03), projeté À COUVERTURE SÉMANTIQUE PLEINE
-            // et non à l'état du jour : c'est la seule échéance qui intéresse.
+            // Le budget disque (MO-03) : à quel nombre de pages il serait
+            // franchi, au coût par page mesuré sur CETTE base.
             let forecast = Self.diskForecast(stats: stats)
 
             if json {
@@ -71,8 +64,7 @@ struct StatusCommand: ParsableCommand {
                 // `agent` s'ajoutent, ils ne remplacent rien.
                 for (k, v) in stats { payload[k] = v }
                 payload["bytes_per_page"] = bytesPerPage
-                // Clé ADDITIVE (MO-03) : ce que la base pèse, ce qu'elle
-                // pèsera à couverture sémantique pleine, et où le budget
+                // Clé ADDITIVE (MO-03) : ce que la base pèse et où le budget
                 // tombe. Rien ne s'arrête à 100 % — `level` est un
                 // avertissement, pas un état de panne.
                 payload["disk_budget"] = Self.diskBudgetJSON(forecast)
@@ -82,17 +74,9 @@ struct StatusCommand: ParsableCommand {
                 // Clé additive, comme `doctor --json` la porte déjà.
                 payload["db_path"] = store.databaseURL?.path ?? ""
                 payload["docs_without_language"] = withoutLanguage
-                // Clé AJOUTÉE (C2-11) : `null` quand aucune campagne ne tourne.
-                payload["semantic_campaign"] = campaign
-                    .map { ["pid": Int($0.pid), "since": $0.isoText] as [String: Any] }
-                    ?? NSNull()
                 // `write_lock` a EXACTEMENT la forme de celui de `doctor`
                 // (CM-26) : même constructeur, aucune divergence possible.
                 payload["write_lock"] = Self.writeLockJSON(lockStatus)
-                // Clé ADDITIVE (AG1) : ce que la mise à jour automatique fait
-                // de la recherche par le sens, et où elle en est.
-                payload["meaning_background"] = Self.meaningJSON(settings: settings,
-                                                                stats: stats)
                 payload["roots"] = reports.map(\.json)
                 payload["settings"] = settings.table().map(ConfigCommand.json)
                 payload["agent"] = Self.agentJSON(agent)
@@ -122,30 +106,13 @@ struct StatusCommand: ParsableCommand {
                   + "(0 < conf < \(GRDBStore.doubtfulConfidenceThreshold)) · "
                   + "no recognised line \(stats["pages_ocr_no_lines"] ?? 0)")
             print("OCR queue   \(stats["ocr_queue_len"] ?? 0) page(s)")
-            // DEUX nombres depuis le fenêtrage (schéma v5) : une page porte
-            // jusqu'à trois vecteurs, et « 1,1 M de vecteurs » sur 390 000
-            // pages se lirait comme une couverture de 280 %.
-            print("vectors     \(stats["pages_vec"] ?? 0) page(s) vectorised, "
-                  + "\(stats["vectors_vec"] ?? 0) vector(s) "
-                  + "(\(stats["pages_vec_complete"] ?? 0) page(s) complete — "
-                  + "hybrid search, `fouine embed`)")
-            if let campaign {
-                print("vectorisation: running (pid \(campaign.pid), "
-                      + "since \(campaign.clockText))")
-            }
-            // La préparation du sens confiée à la mise à jour automatique
-            // (lot AG1, PR-21) : sans cette ligne, rien en ligne de commande
-            // ne disait qui doit finir la campagne, ni si elle avance.
-            print("meaning     " + Self.meaningLine(settings: settings, stats: stats))
 
             var dbLine = "database    \(dbBytes) bytes"
             if bytesPerPage > 0 {
-                // La projection « 1 M / 4 M pages » (MO-03) était une règle de
-                // trois LINÉAIRE depuis l'état COURANT : elle annonçait
-                // « 4,9 GiB at 1 M » sur une base dont la campagne sémantique
-                // n'était qu'aux deux tiers — donc optimiste à court terme —
-                // et personne n'a un million de pages. Ce qui se joue est
-                // l'échéance du budget de la SPEC sur le corpus RÉEL.
+                // La projection « 1 M / 4 M pages » (MO-03) était une règle
+                // de trois LINÉAIRE vers un nombre de pages que personne n'a.
+                // Ce qui se joue est l'échéance du budget de la SPEC sur le
+                // corpus RÉEL.
                 dbLine += " (" + Self.diskBudgetLine(forecast,
                                                      bytesPerPage: bytesPerPage) + ")"
             }
@@ -180,58 +147,14 @@ struct StatusCommand: ParsableCommand {
         }
     }
 
-    // MARK: - Préparation du sens en arrière-plan (constat PR-21, lot AG1)
-
-    /// Pages indexées qui n'ont pas encore toutes leurs fenêtres. Le calcul vit
-    /// dans `StatusJSON` (FouineCore) depuis le lot MC4 : `fouine_status` le
-    /// publie aussi, et deux calculs du même chiffre finiraient par diverger.
-    static func meaningPagesLeft(_ stats: [String: Int]) -> Int {
-        StatusJSON.meaningPagesLeft(stats)
-    }
-
-    /// « background: on (10 min batches) · last batch 2026-09-11T09:12:03Z ·
-    /// 118302 page(s) left ».
-    static func meaningLine(settings: SettingsSnapshot,
-                            stats: [String: Int]) -> String {
-        var parts: [String] = []
-        parts.append(settings.agentPrepareMeaning
-                     ? "background: on (\(settings.agentEmbedBudgetMinutes) min batches)"
-                     : "background: off (agent.prepareMeaning)")
-        let at = settings.agentLastEmbedBatchAt
-        if at > 0 {
-            let date = Date(timeIntervalSince1970: at)
-            parts.append("last batch " + ISO8601DateFormatter().string(from: date))
-        } else if settings.agentPrepareMeaning {
-            parts.append("no batch yet")
-        }
-        let left = meaningPagesLeft(stats)
-        parts.append(left == 0 ? "every indexed page is ready"
-                               : "\(left) page(s) left")
-        return parts.joined(separator: " · ")
-    }
-
-    /// L'objet `meaning_background`, le MÊME dans `status --json`,
-    /// `doctor --json` et `fouine_status` (lot MC4).
-    static func meaningJSON(settings: SettingsSnapshot,
-                            stats: [String: Int]) -> [String: Any] {
-        StatusJSON.meaningJSON(settings: settings, stats: stats)
-    }
-
     // MARK: - Budget disque (constat MO-03)
 
     /// La projection du budget pour CETTE base. `status` et `doctor` la lisent
     /// ici tous les deux : deux calculs du même chiffre finiraient par ne plus
     /// dire la même chose.
     ///
-    /// AUCUNE LECTURE NOUVELLE : les trois nombres viennent de `stats()`, que
-    /// les deux commandes appellent déjà. La géométrie des fenêtres reste la
-    /// CONSTANTE du corpus de production (2,13) : la mesurer sur cette base
-    /// (`embedForecast`) coûte 1,5 s sur la base de production du 09/09/2026
-    /// — mesuré, `status --json` passe de 1,66 s à 3,19 s, médiane de trois
-    /// passes interleavées — parce que c'est un balayage de `page_vec` avec
-    /// sous-requête `EXISTS` sur 764 872 lignes. Ce que la mesure gagnerait :
-    /// moins de 5 % sur la projection (les vecteurs qui manquent pèsent ~5 %
-    /// de la base), donc aucun seuil.
+    /// AUCUNE LECTURE NOUVELLE : les deux nombres viennent de `stats()`, que
+    /// les deux commandes appellent déjà.
     static func diskForecast(stats: [String: Int]) -> DiskForecast {
         StatusJSON.diskForecast(stats: stats)
     }
@@ -240,9 +163,8 @@ struct StatusCommand: ParsableCommand {
     static func diskBudgetLine(_ f: DiskForecast, bytesPerPage: Int) -> String {
         var parts = [humanBytes(f.bytes),
                      String(format: "%.1f KiB/page", Double(bytesPerPage) / 1024.0)]
-        parts.append("at full meaning coverage ~\(humanBytes(f.bytesAtFullVectors)) "
-                     + "(\(percent(f.ratioAtFullVectors)) of the "
-                     + "\(humanBytes(f.budgetBytes)) budget)")
+        parts.append("\(percent(f.ratioOfBudgetNow)) of the "
+                     + "\(humanBytes(f.budgetBytes)) budget")
         if let pages = f.pagesAtBudget {
             // Arrondi au millier : « 450 823 pages » se lirait comme une
             // échéance calculée au document près, ce qu'elle n'est pas.
@@ -263,8 +185,7 @@ struct StatusCommand: ParsableCommand {
     /// 09/09/2026, n° 3).
     static func diskBudgetDoctorLine(_ f: DiskForecast) -> String? {
         guard f.warns else { return nil }
-        return "\(percent(f.ratioOfBudgetNow)) now, "
-            + "\(percent(f.ratioAtFullVectors)) at full meaning coverage of the "
+        return "\(percent(f.ratioOfBudgetNow)) of the "
             + "\(humanBytes(f.budgetBytes)) budget — nothing stops at 100 %; "
             + "free space with `fouine maintain --vacuum`, or remove folders "
             + "you no longer need"
@@ -500,13 +421,6 @@ struct DoctorCommand: ParsableCommand {
             // Cherché par chemins explicites, donc la réponse de doctor vaut
             // aussi pour l'app et pour l'agent, PATH minimal compris.
             let djvused = DjvuExtractor.tool()
-            // Le modèle sémantique manque en silence, exactement comme djvulibre :
-            // sans lui `fouine embed` refuse de partir et `--hybrid` retombe sur
-            // la recherche plein texte, sans qu'aucune commande ne dise pourquoi
-            // (audit D6). `doctor` le dit, et donne le geste.
-            let model = ModelDownloader.status()
-            // Les réglages, pour la ligne `meaning` (AG1) : une lecture de la
-            // table `settings`, la même que celle de `fouine status`.
             let settings = SettingsSnapshot(rows: try store.settingsRows())
 
             // L'agent d'arrière-plan (audit B1-05) : croisement launchctl + agent_status.
@@ -574,12 +488,6 @@ struct DoctorCommand: ParsableCommand {
                     // sa valeur n'a plus de branche « après câblage » (audit A12).
                     "extraction_probe": "available",
                     "djvused": djvused ?? "",
-                    // Le MÊME objet que `status --json` (AG1).
-                    "meaning_background": StatusCommand.meaningJSON(
-                        settings: settings, stats: stats),
-                    "semantic_model": model.installed,
-                    "semantic_model_path": model.directory.path,
-                    "semantic_model_vectors": stats["vectors_vec"] ?? 0,
                     "background_agent": Self.backgroundAgentJSON(
                         agentReport, idle: idle, logLastLine: logLine),
                     // Contrat J2 : `app_copies` est TOUJOURS un tableau (vide
@@ -602,18 +510,10 @@ struct DoctorCommand: ParsableCommand {
                     // se répare seul à la prochaine écriture (`ExclusiveLock.stamp`
                     // reprend le verrou en le journalisant). Le dire — `status:
                     // "stale"` — oui ; en faire une panne, non (lot I1).
-                    // `ok` tombe aussi sur une incohérence de `page_vec`
-                    // (audit A1m-05) : une ligne au rowid d'un autre schéma
-                    // fait rendre au canal sémantique une page réelle SANS
-                    // rapport avec la requête — c'est une panne, pas une
-                    // fragmentation. Le CODE DE SORTIE, lui, ne change pas :
-                    // la réparation est un geste (`maintain --repair`), pas un
-                    // échec de la commande qui la signale.
                     "ok": failing.isEmpty
                         && (deepReport == nil
                             || (deepReport!.quickCheck == "ok"
                                 && deepReport!.ftsIntegrity == "ok"
-                                && (deepReport!.vectors?.isClean ?? true)
                                 // Un écart `docs`/`docs_fts` ne fausse AUCUN
                                 // résultat : il prive seulement des documents
                                 // du bonus de nom (D-R3). Signalé, jamais une
@@ -630,10 +530,6 @@ struct DoctorCommand: ParsableCommand {
                 if let deepReport {
                     payload["database"] = deepReport.json
                 }
-                if let revision = model.revision {
-                    payload["semantic_model_revision"] = revision
-                }
-                if !model.installed { payload["semantic_model_guidance"] = ModelText.doctorAbsent }
                 if let guidance = copiesReport.guidance { payload["app_copies_guidance"] = guidance }
                 if djvused == nil { payload["djvulibre_guidance"] = Self.djvuGuidance }
                 // Le geste TCC n'a de sens que pour un REFUS de lecture ; un
@@ -668,21 +564,6 @@ struct DoctorCommand: ParsableCommand {
                 print("text-layer probe : available")
                 print("djvulibre      : "
                       + (djvused ?? "MISSING — \(Self.djvuGuidance)"))
-                print("semantic model : "
-                      + (model.installed
-                         ? ModelText.doctorPresent(revision: model.revision ?? 0)
-                         : ModelText.doctorAbsent))
-                // La MÊME ligne que `status` (AG1) : deux commandes ne doivent
-                // pas décrire différemment le même travail. Rien de plus, sauf
-                // la contradiction qu'un dépanneur doit voir — le réglage est
-                // armé et le modèle n'est pas là, donc rien ne se préparera
-                // jamais, en silence.
-                print("meaning        : "
-                      + StatusCommand.meaningLine(settings: settings, stats: stats))
-                if settings.agentPrepareMeaning, !model.installed {
-                    print("  what to do: prepare meaning is on but the model is "
-                          + "not installed — `fouine model download`")
-                }
                 var agentLine = agentReport.displayText
                 if let idle { agentLine += " — " + idle.text }
                 print("background agent : \(agentLine)")
@@ -722,20 +603,6 @@ struct DoctorCommand: ParsableCommand {
                                    deepReport.fragmentationPct, fragMo))
                     print("  WAL size           : \(deepReport.walBytes) bytes")
                     print("  journal mode       : \(deepReport.journalMode)")
-                    if let vectors = deepReport.vectors {
-                        print("  semantic vectors   : \(vectors.rows) row(s) in page_vec, "
-                              + "\(vectors.total) inconsistent")
-                        for kind in VectorAnomaly.Kind.allCases where vectors.count(kind) > 0 {
-                            let sample = vectors.samples.filter { $0.kind == kind }
-                                .map { String($0.rowid) }.joined(separator: ", ")
-                            print("      \(vectors.count(kind)) × \(kind.english)"
-                                  + (sample.isEmpty ? "" : " (rowid \(sample)…)"))
-                        }
-                        if !vectors.isClean {
-                            print("      what to do: `fouine maintain --repair` removes them; "
-                                  + "`fouine embed` then produces the missing vectors again")
-                        }
-                    }
                     if let names = deepReport.docNames {
                         print("  document names     : \(names.names) row(s) in docs_fts "
                               + "for \(names.docs) document(s)")

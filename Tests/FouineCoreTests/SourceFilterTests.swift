@@ -227,20 +227,6 @@ final class SourceFilterTests: XCTestCase {
         XCTAssertEqual(r.totalPages, 1)
     }
 
-    // MARK: - Le prédicat pur, celui que le canal vectoriel emploie
-
-    func testLePredicatPurAccepteEtRefuse() throws {
-        var q = try query("enthalpie")
-        XCTAssertTrue(q.keeps(.native))
-        XCTAssertTrue(q.keeps(.ocrAccurate))
-        q.sources = PageSource.scanned
-        XCTAssertFalse(q.keeps(.native))
-        XCTAssertTrue(q.keeps(.ocrAccurate))
-        q.sources = PageSource.typed
-        XCTAssertTrue(q.keeps(.native))
-        XCTAssertFalse(q.keeps(.ocrAccurate))
-    }
-
     // MARK: - La TROISIÈME provenance : la transcription (lot INT-F3)
 
     /// Une page transcrite depuis un enregistrement n'est ni tapée ni scannée.
@@ -275,8 +261,5 @@ final class SourceFilterTests: XCTestCase {
         // L'étiquette publiée par la CLI, le MCP et les facettes.
         XCTAssertEqual(GRDBStore.sourceLabel(PageSource.transcript.rawValue),
                        "transcript")
-        XCTAssertFalse(q.keeps(.native))
-        XCTAssertFalse(q.keeps(.ocrAccurate))
-        XCTAssertTrue(q.keeps(.transcript))
     }
 }

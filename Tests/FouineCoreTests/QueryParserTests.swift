@@ -320,13 +320,6 @@ final class QueryParserTests: XCTestCase {
                        ["Mes cours"])
     }
 
-    /// Le canal sémantique s'éteint sur une phrase (RK-01) : il doit la voir.
-    func testAsksForExactPhraseSeesTypographicQuotes() {
-        XCTAssertTrue(QueryParser.asksForExactPhrase("\u{201C}energie libre\u{201D}"))
-        XCTAssertTrue(QueryParser.asksForExactPhrase("\u{00AB} energie libre \u{00BB}"))
-        XCTAssertFalse(QueryParser.asksForExactPhrase("energie libre"))
-    }
-
     // MARK: - `nom:` et `texte:` (lot QP1)
 
     func testNamePrefixFeedsNameTermsAndNotThePage() throws {
@@ -352,16 +345,6 @@ final class QueryParserTests: XCTestCase {
         XCTAssertTrue(try QueryParser.searchQuery("rapport annuel").nameBoost)
         XCTAssertEqual(try QueryParser.parse("body:\"gaz parfait\"").nodes,
                        [.phrase("gaz parfait")])
-    }
-
-    /// Le texte envoyé au modèle : `texte:` garde sa valeur, `nom:` et les
-    /// filtres sortent — y compris une valeur de filtre entre guillemets.
-    func testSemanticTextKeepsBodyValuesAndDropsNameValues() {
-        XCTAssertEqual(QueryParser.semanticText("texte:rapport"), "rapport")
-        XCTAssertEqual(QueryParser.semanticText("nom:rapport"), "")
-        XCTAssertEqual(QueryParser.semanticText(
-            "nom:\"analyse JB\" dossier:\"Mes cours\" ext:pdf pres:5 chat -chien \u{00AB} au chaud \u{00BB} body:x"),
-            "chat au chaud x")
     }
 
     // MARK: - Montants (lot MP1, C2-12)

@@ -57,15 +57,6 @@ final class StatusContractTests: XCTestCase {
         // fraîchement indexée, la réponse est zéro — la passe l'a fait.
         XCTAssertEqual(payload["docs_without_language"] as? Int, 0)
 
-        // `semantic_campaign` (constat C2-11) : `null` quand personne ne
-        // vectorise. La clé est TOUJOURS présente — un script qui la lit ne
-        // doit pas avoir à distinguer « absente » de « aucune campagne ».
-        XCTAssertNotNil(payload["semantic_campaign"],
-                        "clé « semantic_campaign » absente")
-        XCTAssertTrue(payload["semantic_campaign"] is NSNull,
-                      "aucune campagne ne tourne sur une base jetable : "
-                      + "\(payload["semantic_campaign"] ?? "nil")")
-
         // Contre-épreuve : sur un index VIDE, la plupart des assertions qui
         // suivent seraient vraies sans rien dire.
         XCTAssertEqual(payload["docs_extracted"] as? Int, scratch.documents)
@@ -119,15 +110,12 @@ final class StatusContractTests: XCTestCase {
         // ADDITIVE et toujours présente ; un index de recette est très loin du
         // budget, donc `level` vaut « ok » et rien n'avertit.
         let budget = try XCTUnwrap(payload["disk_budget"] as? [String: Any])
-        for key in ["bytes", "budget_bytes", "bytes_at_full_vectors"] {
+        for key in ["bytes", "budget_bytes"] {
             XCTAssertNotNil(budget[key] as? Int, "disk_budget sans « \(key) »")
         }
         XCTAssertEqual(budget["budget_bytes"] as? Int, 2_500_000_000,
                        "le budget est celui de la SPEC, 2,5 × 10⁹ octets")
         XCTAssertEqual(budget["bytes"] as? Int, payload["db_bytes"] as? Int)
-        XCTAssertGreaterThanOrEqual(budget["bytes_at_full_vectors"] as? Int ?? 0,
-                                    budget["bytes"] as? Int ?? .max,
-                                    "la projection ne peut pas être sous la taille du jour")
         XCTAssertEqual(budget["level"] as? String, "ok")
         let ratioNow = try XCTUnwrap((budget["ratio_now"] as? NSNumber)?.doubleValue)
         XCTAssertLessThan(ratioNow, 0.01, "un index de recette pèse quelques Mo")
@@ -180,7 +168,6 @@ final class StatusContractTests: XCTestCase {
             statusResult.stdout.split(separator: "\n")
                 .first { $0.hasPrefix("database") }.map(String.init),
             "aucune ligne « database » dans status")
-        XCTAssertTrue(line.contains("at full meaning coverage"), line)
         XCTAssertTrue(line.contains("of the 2.5 GB budget"), line)
         XCTAssertTrue(line.contains("budget reached near"), line)
         XCTAssertFalse(line.contains("at 1 M"),

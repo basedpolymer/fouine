@@ -78,7 +78,7 @@ final class IndexCardSummaryTests: XCTestCase {
         XCTAssertNil(card(unknown).action)
 
         let counted = IndexStatus.working(
-            activity: .preparingMeaning,
+            activity: .readingScans,
             progress: IndexProgress(done: 3, total: 10, remainingSeconds: nil),
             detail: "Rapport 2024.pdf", stoppable: false)
         XCTAssertNil(card(counted).detail)

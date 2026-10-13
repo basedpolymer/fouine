@@ -9,22 +9,6 @@
 // Les PRAGMA de connexion (journal_mode=WAL, synchronous=NORMAL, foreign_keys=ON,
 // busy_timeout=5000) sont configurés par le Store via GRDB, pas par ce script.
 //
-// AMENDEMENT du 01/09/2026 (hybride sémantique, v3) : la place réservée
-// « v2-page-vec » du SPEC prévoyait `(doc_id, page) … WITHOUT ROWID` ; elle est
-// créée en rowid structuré, pour les mêmes raisons chiffrées que l'amendement A4
-// ci-dessus (convention §4.1, accès direct par clé entière, zéro index
-// secondaire).
-//
-// AMENDEMENT du 03/09/2026 (fenêtrage sémantique, v5 — constat C2-05) : le
-// rowid de `page_vec` cesse d'identifier une PAGE pour identifier une FENÊTRE
-// de page. Une page de 1 400 caractères au plus tient dans un vecteur ; le
-// corpus, lui, a une page moyenne de 2 282 caractères et 77,3 % de ses pages
-// dépassent 1 400 — le vecteur ne voyait donc que 56,2 % du texte indexé.
-// Le rowid structuré du §4.1 est prolongé d'un chiffre de fenêtre :
-// `vrowid = (doc_id * 100000 + page) * 8 + chunk`, `chunk ∈ [0, 7]`. La
-// fenêtre 0 est EXACTEMENT `prefix(1400)`, c'est-à-dire ce que la campagne
-// produisait déjà.
-//
 // AMENDEMENT du 11/09/2026 (constat PR-07) : `docs` porte `doc_date`, la date
 // INSCRITE DANS LE DOCUMENT (PDF, EPUB, bureautique, courriel, photo), par
 // opposition à `mtime` qui est celle du fichier. Colonne nullable, index dédié,
@@ -34,6 +18,14 @@
 // UN état : celui que `ddl` crée. Une base d'une autre version est refusée à
 // l'ouverture — plus ancienne, on refait l'index ; plus récente, on met Fouine
 // à jour — et c'est le Store qui porte ce refus (`GRDBStore.schemaMismatch`).
+//
+// UNE SEULE EXCEPTION, ET ELLE EST BORNÉE (13/10/2026, lot SR1) : la v10 ne
+// RETIRE que deux tables (`page_vec`, `vec_meta`) sans rien toucher de ce qui
+// porte les documents et leur texte. Refuser les bases v9 aurait obligé chaque
+// utilisateur à refaire un index de 2,7 Go — des heures d'extraction et d'OCR —
+// pour supprimer des lignes dont plus rien ne se sert. `v9ToV10` est donc un
+// pas de migration, et le seul : il n'ouvre pas de chaîne, et une base v8 ou
+// plus ancienne est toujours refusée.
 
 import Foundation
 
@@ -57,10 +49,33 @@ public enum Schema {
     ///     part, pour le bonus de classement D-R3 (idée R-02). Une table de
     ///     quelques milliers de lignes ; surtout PAS une colonne de plus dans
     ///     `page_fts` (voir le commentaire de la table) ;
-    ///   · `ocr_layout` et `page_vec` au rowid structuré (audits A4, C2-05),
-    ///     `vec_meta` (identité du modèle et géométrie du fenêtrage) ;
+    ///   · `ocr_layout` au rowid structuré (audit A4) ;
     ///   · `settings` et `agent_status` (audits U2, F7), `vocab_tri`, `meta`.
-    public static let version = 9
+    public static let version = 10
+
+    /// La version qui précède, celle que `v9ToV10` reprend.
+    public static let previousVersion = 9
+
+    /// Le pas v9 → v10 (lot SR1) : les deux tables que la v9 portait en plus
+    /// s'en vont. Elles ne tenaient rien du texte des documents — ni les
+    /// pages, ni leur index plein texte, ni la file d'OCR.
+    ///
+    /// AUCUN `VACUUM` ICI, et c'est une décision. Sur la base de référence
+    /// (2,7 Go), un `VACUUM` réécrit le fichier entier : plusieurs minutes
+    /// pendant lesquelles l'application ne montrerait rien, au premier
+    /// lancement de la version qui retire le sens. Les pages libérées restent
+    /// donc dans le fichier, réutilisables par les écritures suivantes, et
+    /// l'espace est rendu au disque par le prochain `fouine maintain
+    /// --vacuum` — qui est déjà le seul endroit du produit où un `VACUUM` est
+    /// joué, sous le verrou et à la demande.
+    ///
+    /// `DROP TABLE IF EXISTS` : la migration doit pouvoir être rejouée sur une
+    /// base à demi migrée (coupure de courant entre les deux ordres), et elle
+    /// tient de toute façon dans UNE transaction.
+    public static let v9ToV10 = """
+    DROP TABLE IF EXISTS page_vec;
+    DROP TABLE IF EXISTS vec_meta;
+    """
 
     /// Tokenizer de `page_fts`. PARTAGÉ avec la table d'appoint de la récolte
     /// OCR (`ocrHarvestDDL`) : les deux DOIVENT rester identiques, faute de quoi
@@ -76,7 +91,7 @@ public enum Schema {
     ///
     /// La limite était ASSUMÉE mais jamais VÉRIFIÉE : la page 100 000 d'un
     /// document porte exactement le rowid de la page 0 du document SUIVANT et
-    /// écrasait en silence ses `page_fts`, `ocr_layout` et `page_vec` — puis la
+    /// écrasait en silence ses `page_fts` et `ocr_layout` — puis la
     /// purge du premier document (`ftsRowIDRange`) emportait les pages du second.
     /// Trois barrières désormais, de la plus douce à la plus dure : les
     /// extracteurs qui connaissent le nombre de pages d'avance refusent avant de
@@ -192,9 +207,8 @@ public enum Schema {
     /// DIX, c'est-à-dire un écran. Le constat RK-04 (09/09/2026, base de
     /// production) : `comment mesurer la chaleur degagee par une reaction` rend
     /// 0 page, `la chaleur degagee par une reaction` en rend 10, et les deux
-    /// bonnes réponses que l'hybride finit par trouver (472 p.258, 158 p.583)
-    /// portent toutes deux « reaction » — ce sont des pages que le ET strict
-    /// avait exclues. Au-dessus de dix pages strictes, l'utilisateur a déjà de
+    /// bonnes réponses jugées (472 p.258, 158 p.583) portent toutes deux
+    /// « reaction » — ce sont des pages que le ET strict avait exclues. Au-dessus de dix pages strictes, l'utilisateur a déjà de
     /// quoi lire et rien ne se relâche : le quorum ne coûte alors RIEN, pas
     /// même une requête de plus.
     public static let quorumTrigger = 10
@@ -239,88 +253,6 @@ public enum Schema {
     /// Plage de rowid couvrant toutes les pages d'un document.
     public static func ftsRowIDRange(docID: Int64) -> ClosedRange<Int64> {
         (docID * pagesPerDocLimit)...(docID * pagesPerDocLimit + pagesPerDocLimit - 1)
-    }
-
-    // MARK: - Fenêtrage sémantique (schéma v5, constat C2-05)
-
-    /// Créneaux de fenêtre réservés dans le rowid d'un vecteur.
-    ///
-    /// HUIT, et non trois : le facteur est gelé dans les rowids déjà écrits, et
-    /// une puissance de deux laisse `vecWindowMax` évoluer (3 → 4, 5…) sans
-    /// jamais réécrire `page_vec`. Le rowid maximal reste très en deçà d'Int64 :
-    /// doc_id 1 329 × 100 000 × 8 ≈ 1,06 × 10⁹.
-    public static let vecChunksPerPage: Int64 = 8
-
-    /// Largeur d'une fenêtre, en caractères. 1 400 ≈ 256 jetons de français,
-    /// c'est-à-dire la longueur de séquence du modèle (`meta.json`, `seq`) :
-    /// au-delà, le modèle tronque de toute façon.
-    public static let vecWindowChars = 1_400
-
-    /// Pas entre deux fenêtres : 1 300, donc 100 caractères de recouvrement —
-    /// un peu plus d'un mot moyen, de quoi qu'aucune phrase ne soit coupée dans
-    /// les deux fenêtres à la fois sans être entière dans l'une.
-    public static let vecWindowStride = 1_300
-
-    /// Nombre maximal de fenêtres par page. 3 couvre 4 000 caractères, soit
-    /// 97,4 % du texte du corpus (C2-05) ; au-delà, 4,9 % des pages seulement
-    /// gagneraient quelque chose et le coût d'inférence croît linéairement.
-    ///
-    /// Le DERNIER créneau (`vecWindowMax - 1`) est la SENTINELLE DE COMPLÉTUDE :
-    /// la pompe l'écrit toujours, avec le vrai vecteur si la fenêtre existe, et
-    /// sinon avec un blob VIDE que `allVectors` ignore (dimension inattendue).
-    /// C'est ce qui rend la sélection de lot une anti-jointure d'un seul créneau
-    /// — le point que la conception C2 avait faux, et qui l'aurait empêchée de
-    /// produire jamais les fenêtres 1 et 2 (contre-expertise D2, § 6, C2-05).
-    public static let vecWindowMax = 3
-
-    /// Longueur utile minimale d'une fenêtre de queue : sous 100 caractères
-    /// au-delà du recouvrement, la fenêtre n'est pas créée du tout.
-    public static let vecWindowMinTail = 100
-
-    /// Rowid de `page_vec` pour une fenêtre d'une page.
-    public static func vecRowID(pageRowID: Int64, chunk: Int) -> Int64 {
-        precondition(chunk >= 0 && chunk < Int(vecChunksPerPage),
-                     "window \(chunk) outside the vector rowid range "
-                     + "(0…\(vecChunksPerPage - 1))")
-        return pageRowID * vecChunksPerPage + Int64(chunk)
-    }
-
-    /// Page à laquelle appartient un rowid de `page_vec`.
-    public static func pageRowID(vecRowID: Int64) -> Int64 {
-        vecRowID / vecChunksPerPage
-    }
-
-    /// Plage de rowid couvrant toutes les fenêtres d'une page. L'invalidation
-    /// d'un vecteur se fait TOUJOURS par cette plage : le texte d'une page
-    /// change en bloc, ses fenêtres aussi.
-    public static func vecRowIDRange(pageRowID: Int64) -> ClosedRange<Int64> {
-        (pageRowID * vecChunksPerPage)...(pageRowID * vecChunksPerPage
-                                          + vecChunksPerPage - 1)
-    }
-
-    /// Plage de rowid couvrant toutes les fenêtres de toutes les pages d'un
-    /// document — la transposition de `ftsRowIDRange` au facteur de fenêtre.
-    /// JAMAIS de suppression par doc_id (§4.1 : SCAN complet, 143 ms contre 3).
-    public static func vecRowIDRange(docID: Int64) -> ClosedRange<Int64> {
-        let pages = ftsRowIDRange(docID: docID)
-        let lo = pages.lowerBound * vecChunksPerPage
-        let hi = pages.upperBound * vecChunksPerPage + vecChunksPerPage - 1
-        return lo...hi
-    }
-
-    /// Nombre de fenêtres d'une page de `length` caractères.
-    ///
-    /// Toujours au moins une (une page vide reçoit un vecteur nul, comme
-    /// avant) ; une fenêtre k ≥ 1 n'existe que si la page porte au moins
-    /// `vecWindowMinTail` caractères au-delà du recouvrement. Table de
-    /// référence : 0-1 400 → 1 ; 1 401-2 700 → 2 ; 2 701 et plus → 3.
-    public static func vecWindowCount(forLength length: Int) -> Int {
-        var count = 1
-        while count < vecWindowMax,
-              length > count * vecWindowStride + vecWindowMinTail {
-            count += 1
-        }
-        return count
     }
 
     /// Script DDL complet, idempotent (CREATE IF NOT EXISTS partout).
@@ -467,38 +399,6 @@ public enum Schema {
       term TEXT PRIMARY KEY
     ) WITHOUT ROWID;
 
-    -- Vecteurs sémantiques par FENÊTRE de page (recherche hybride, §12 ;
-    -- schéma v5, constat C2-05). `vec` est le vecteur UNITAIRE quantifié int8
-    -- (round(v*127)) : 384 o par fenêtre avec e5-small, sous le seuil de
-    -- débordement — le produit scalaire int8 approxime le cosinus à 1/127 près.
-    -- Produit par `fouine embed`, invalidé PAR PLAGE à chaque réécriture du
-    -- texte de la page (replacePages, completeOCR, purgeDoc).
-    --
-    -- Le rowid prolonge celui de page_fts d'un chiffre de fenêtre :
-    -- vrowid = (doc_id * 100000 + page) * 8 + chunk, chunk ∈ [0, 7]. La
-    -- fenêtre k couvre les caractères [k*1300, k*1300+1400) du texte de la
-    -- page ; la fenêtre 0 est exactement le `prefix(1400)` du schéma v3.
-    -- Le dernier créneau (chunk = win_max - 1) existe TOUJOURS pour une page
-    -- traitée : vrai vecteur si la fenêtre existe, blob VIDE sinon. C'est la
-    -- sentinelle de complétude sur laquelle la pompe fait son anti-jointure —
-    -- et `allVectors` l'ignore, comme tout blob de dimension inattendue.
-    -- Aucun index secondaire (amendement A4) : le rowid seul.
-    CREATE TABLE IF NOT EXISTS page_vec(
-      rowid INTEGER PRIMARY KEY,   -- (doc_id * 100000 + page) * 8 + fenêtre
-      vec   BLOB    NOT NULL
-    );
-
-    -- Identité du modèle producteur des vecteurs (model_id, dim, revision…)
-    -- et géométrie du fenêtrage (win_chars, win_stride, win_max — posées à la
-    -- création : un lecteur SQL doit pouvoir retrouver ce que couvre un rowid
-    -- sans lire le code Swift).
-    -- Changer de modèle invalide TOUS les vecteurs : deux espaces d'embedding
-    -- ne se comparent pas. `EmbedRun` purge page_vec si l'identité change.
-    CREATE TABLE IF NOT EXISTS vec_meta(
-      k TEXT PRIMARY KEY,
-      v TEXT NOT NULL
-    ) WITHOUT ROWID;
-
     \(settingsDDL)
     """
 
@@ -558,7 +458,7 @@ public enum Schema {
     /// `INSERT … ON CONFLICT` au lieu d'un, dans la MÊME transaction — un seul
     /// fsync, quelques microsecondes.
     ///
-    /// Pas de `WITHOUT ROWID` ici, contrairement à `vec_meta` : ces tables font
+    /// Pas de `WITHOUT ROWID` ici, contrairement à `page_src` : ces tables font
     /// une dizaine de lignes de quelques octets, le gain de stockage serait nul.
     public static let settingsDDL = """
     CREATE TABLE IF NOT EXISTS settings(
@@ -625,21 +525,6 @@ public enum Schema {
     public static let ocrHarvestRefillSeen = """
     INSERT OR IGNORE INTO vocab_seen(term)
       SELECT term FROM temp.ocr_harvest_vocab
-    """
-
-    // MARK: - Amorçage de la création (lot J1)
-
-    /// Géométrie du fenêtrage, posée dans `vec_meta` à la CRÉATION de la base.
-    ///
-    /// Ces trois clés ne servent à aucun code : elles servent à l'humain qui
-    /// ouvre la base au `sqlite3` et veut savoir ce que couvre un rowid de
-    /// `page_vec` sans lire le Swift. `INSERT OR REPLACE` parce que la
-    /// création est le seul écrivain de ces clés.
-    public static let vecWindowMetaSQL = """
-    INSERT OR REPLACE INTO vec_meta(k, v) VALUES
-      ('win_chars',  '\(vecWindowChars)'),
-      ('win_stride', '\(vecWindowStride)'),
-      ('win_max',    '\(vecWindowMax)');
     """
 
     /// FORME IMPOSÉE d'une requête de recherche (§4.1) : sous-requête sur

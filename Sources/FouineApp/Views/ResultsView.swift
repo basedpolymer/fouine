@@ -321,8 +321,7 @@ struct ResultsView: View {
             }
             // LE REPLI EN FLOU, avant tout le reste : ce qui est affiché n'est
             // pas ce qui a été tapé, et c'est le contexte dans lequel se lisent
-            // les comptes juste au-dessus (C2-08). Il vaut aussi pour l'hybride
-            // depuis le lot RK1 : le canal lexical de la fusion repliait déjà.
+            // les comptes juste au-dessus (C2-08).
             if search.fuzzyFallback, !search.isSearching {
                 fuzzyFallbackNotice
             }
@@ -333,14 +332,6 @@ struct ResultsView: View {
             if search.quorum, !search.isSearching {
                 quorumNotice
             }
-            // Le sens n'a pas été consulté (RK-01) : l'interrupteur est armé,
-            // mais la requête demande une phrase exacte.
-            if search.semanticDisarmed, !search.isSearching {
-                semanticDisarmedNotice
-            }
-            if search.noLexicalMatch {
-                noLexicalNotice
-            }
             // PR-08 : pendant que les tranches suivantes arrivent, puis — si
             // le plafond a coupé — ce sur quoi le tri a porté. Quand tout est
             // chargé, il n'y a plus rien à dire : le classement est complet.
@@ -350,15 +341,6 @@ struct ResultsView: View {
                 sortCapNotice
             } else if search.sortIsPartial {
                 partialSortNotice
-            }
-            if let notice = search.semanticNotice {
-                // Repli sur le lexical : discret, jamais bloquant — les
-                // résultats affichés dessous sont bons, seul le canal
-                // sémantique manque.
-                Label(notice, systemImage: "exclamationmark.triangle")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .font(.callout)
@@ -394,14 +376,10 @@ struct ResultsView: View {
                 // Trois valeurs en deux jours : c'est bien la preuve qu'un
                 // chiffre n'a rien à faire là, et il dépend de toute façon
                 // de la machine, de sa charge et du cache disque.
-                Text(search.semanticPreparing
-                     ? "preparing the meaning search: the first one takes a few seconds…"
-                     : "searching…")
+                Text("searching…")
                     .foregroundStyle(.secondary)
             } else if !search.executedText.isEmpty {
-                if search.isHybrid {
-                    hybridCounts
-                } else {
+                do {
                     // Deux phrases pour deux natures de nombre. Le compte
                     // EXACT passe l'ENTIER : la règle de pluriel du
                     // catalogue lit `%lld`, et Foundation groupe déjà les
@@ -423,7 +401,7 @@ struct ResultsView: View {
                         .accessibilityAddTraits(.isStaticText)
                         .accessibilityLabel(AccessibilityText.resultCounts(
                             pages: search.totalPages,
-                            docs: search.totalDocs, hybrid: false))
+                            docs: search.totalDocs))
                         .accessibilityIdentifier("results.counts")
                 }
                 Text(verbatim: "· \(Format.milliseconds(search.elapsedMS))")
@@ -431,21 +409,6 @@ struct ResultsView: View {
                     .accessibilityAddTraits(.isStaticText)
                     .accessibilityLabel(String(localized: "in \(Format.milliseconds(search.elapsedMS))"))
                 exclusionBadge
-                // Le sens cherche encore (ST1) : les comptes lexicaux sont là,
-                // la liste va être reclassée. On le DIT, plutôt que de laisser
-                // croire que la recherche est finie — et le tourniquet montre
-                // que quelque chose travaille encore.
-                if search.semanticPending {
-                    ProgressView()
-                        .controlSize(.small)
-                        .accessibilityHidden(true)
-                    Text(search.semanticPreparing
-                         ? "preparing the meaning search: the first one takes a few seconds…"
-                         : "searching by meaning…")
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .accessibilityIdentifier("results.semanticPending")
-                }
             } else {
                 // Cette phrase passe à la ligne par un CADRE, jamais par
                 // `fixedSize(horizontal: false, vertical: true)`. Dans cette
@@ -512,24 +475,6 @@ struct ResultsView: View {
             .accessibilityIdentifier("results.veryCommon")
     }
 
-    /// AUCUNE page ne porte les mots tapés, et il y a pourtant des résultats :
-    /// ils viennent du sens seul. Le dire est la seule chose honnête à faire —
-    /// ce n'est PAS un filtre, et c'est une mesure : un seuil de cosinus
-    /// éteindrait d'abord les requêtes que le canal sert le mieux (R-04,
-    /// docs/search.md § 3).
-    private var noLexicalNotice: some View {
-        // DEUX PHRASES (lot MC1) : « aucune page ne les porte TOUS » n'est pas
-        // « aucun de vos mots n'existe ». Dire la seconde quand la première
-        // est vraie fait conclure à un fonds muet, et arrêter de chercher.
-        Text(search.wordsPresentInIndex.isEmpty
-             ? String(localized: "None of your words appears in your documents: these results are suggested by meaning only.")
-             : String(localized: "Your words are in your documents, but never together on the same page: these results are suggested by meaning only."))
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityIdentifier("results.noLexicalMatch")
-    }
-
     /// La recherche exacte n'a rien rendu : Fouine a rejoué la requête en
     /// tolérant les fautes, sur tous les documents (C2-08). Aucun mot de
     /// technicien — ni « flou », ni « portée », ni « index ».
@@ -555,19 +500,6 @@ struct ResultsView: View {
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityIdentifier("results.quorum")
-    }
-
-    /// L'interrupteur « Chercher aussi par le sens » est armé, mais la requête
-    /// demande une phrase entre guillemets, que le sens ne sait pas honorer : il
-    /// proposait des pages qui ne portent pas l'expression (RK-01, jugé le
-    /// 09/09/2026). Une LIGNE, pas une alerte : rien n'est en panne, les
-    /// résultats affichés sont bons, et l'interrupteur reste où il est.
-    private var semanticDisarmedNotice: some View {
-        Text("Meaning is not used when you ask for an exact phrase.")
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityIdentifier("results.semanticDisarmed")
     }
 
     /// Le tri ne peut porter que sur le jeu chargé (voir SortOrder) : le dire,
@@ -655,54 +587,6 @@ struct ResultsView: View {
                 .accessibilityHint("Any document containing one of these terms is discarded entirely, including its pages that answer the query.")
                 .accessibilityIdentifier("results.exclusions")
         }
-    }
-
-    /// Comptes du mode hybride : ce qui est affiché vient d'une fusion de deux
-    /// top-k ; le seul total exhaustif disponible est celui du canal lexical.
-    @ViewBuilder
-    private var hybridCounts: some View {
-        Text("\(search.totalPages) merged page(s) in \(search.totalDocs) document(s)")
-            .accessibilityLabel(AccessibilityText.resultCounts(
-                pages: search.totalPages, docs: search.totalDocs, hybrid: true))
-            .accessibilityIdentifier("results.counts")
-        if search.semanticOnlyCount > 0 {
-            Text("· \(Format.integer(search.semanticOnlyCount)) sem.")
-                .foregroundStyle(Color.purple)
-                .help("Pages found by meaning alone: none of the words you typed appears on them.")
-                .accessibilityLabel(
-                    AccessibilityText.semanticOnlyPages(search.semanticOnlyCount))
-                .accessibilityHint("No term of the query appears on them.")
-        }
-        Text("· by words: \(Format.integer(search.lexTotalPages)) p. / \(Format.integer(search.lexTotalDocs)) doc.")
-            .foregroundStyle(.secondary)
-            .help("Total of the word search alone. The meaning search only adds its best pages: it has no total to announce.")
-            .accessibilityLabel(String(localized: "Word search alone: \(AccessibilityText.resultCounts(pages: search.lexTotalPages, docs: search.lexTotalDocs, hybrid: false))"))
-            .accessibilityHint("The meaning search only adds its best pages: it has no total to announce.")
-        // La COUVERTURE, dite là où les comptes se lisent (audit C2-02) : une
-        // page sur deux du top-10 peut venir d'un canal qui ne voit que 16 %
-        // du corpus, et rien ne le disait.
-        // Le seuil était à 0,5 : à 67 % de couverture — l'état réel du fonds
-        // le 09/09/2026, 274 244 pages sur 408 951 — un tiers du fonds
-        // échappait au canal sans qu'un mot le dise (AP-05). Il se dit
-        // désormais dès que la couverture n'est pas COMPLÈTE, et il se dit en
-        // nombres de pages : un pourcentage se lisait comme une qualité de
-        // résultat, deux comptes se lisent comme ce qu'ils sont.
-        if search.semanticPagesIndexed > 0, semanticCoverage < 0.99 {
-            Text("· meaning search sees only \(Format.integer(search.semanticVectors)) pages out of \(Format.integer(search.semanticPagesIndexed))")
-                .foregroundStyle(.secondary)
-                .help("The meaning search only covers the pages prepared for it. Settings ▸ Meaning search explains how to extend it.")
-                .accessibilityLabel(String(localized: "Meaning search sees only \(AccessibilityText.pages(search.semanticVectors)) out of \(AccessibilityText.indexedPages(search.semanticPagesIndexed))"))
-                .accessibilityHint("The meaning search only covers the pages prepared for it.")
-                .accessibilityIdentifier("results.coverage")
-        }
-    }
-
-    /// Part des pages indexées que le canal sémantique voit réellement, de 0 à
-    /// 1 (`Format.percent` attend une fraction).
-    private var semanticCoverage: Double {
-        search.semanticPagesIndexed > 0
-            ? Double(search.semanticVectors) / Double(search.semanticPagesIndexed)
-            : 0
     }
 
     // MARK: - Filtres actifs, visibles et révocables (§5.6)
@@ -798,9 +682,6 @@ struct ResultsView: View {
             }
             if search.canLoadMore {
                 loadMoreRow
-            }
-            if search.isHybrid, !search.groups.isEmpty {
-                hybridFooter
             }
             if search.groups.isEmpty, !search.executedText.isEmpty,
                !search.isSearching, search.errorText == nil {
@@ -929,10 +810,7 @@ struct ResultsView: View {
             Text("No result for “\(search.executedText)”")
                 .foregroundStyle(.secondary)
             let gestures = EmptyStateAdvice.gestures(
-                fuzzy: search.fuzzy,
-                semanticReady: search.semanticAvailability.isReady,
-                semanticOn: search.semanticEnabled,
-                filtersActive: search.hasFilters)
+                fuzzy: search.fuzzy, filtersActive: search.hasFilters)
             if !gestures.isEmpty {
                 HStack(spacing: 14) {
                     ForEach(gestures) { gesture in
@@ -956,9 +834,8 @@ struct ResultsView: View {
 
     private func perform(_ gesture: EmptyStateGesture) {
         switch gesture {
-        case .tolerateTypos:   search.fuzzy = .on
-        case .searchByMeaning: search.semanticEnabled = true
-        case .removeFilters:   search.clearFilters()
+        case .tolerateTypos: search.fuzzy = .on
+        case .removeFilters: search.clearFilters()
         }
     }
 
@@ -1219,24 +1096,19 @@ struct ResultsView: View {
     private func hitRow(_ hit: Hit) -> some View {
         let key = HitKey(docID: hit.docID, page: hit.page)
         let selected = search.selection == key
-        let info = search.hybridInfo[key]
-        let semanticOnly = info?.semanticOnly ?? false
         let unit = DocumentDisplay.unit(hit.path)
         let traits: AccessibilityTraits = selected ? [.isSelected] : []
         return Button {
             selectHit(hit, key: key)
         } label: {
-            hitLabel(hit, key: key, selected: selected, info: info,
-                     semanticOnly: semanticOnly, unit: unit)
+            hitLabel(hit, key: key, selected: selected, unit: unit)
         }
         .buttonStyle(.plain)
         // Tout ce qui n'était que visuel entre ici : le pictogramme de
-        // provenance, l'insigne « ≈ » (flou ou sémantique), le fond de
+        // provenance, l'insigne « ≈ » du flou, le fond de
         // sélection. L'extrait passe en VALEUR — VoiceOver le lit après le
         // libellé, ce qui laisse le nom du document et la page en tête.
-        .accessibilityLabel(hitAccessibilityLabel(hit, key: key,
-                                                  semanticOnly: semanticOnly,
-                                                  unit: unit))
+        .accessibilityLabel(hitAccessibilityLabel(hit, key: key, unit: unit))
         .accessibilityValue(hitAccessibilityValue(hit, selected: selected))
         .accessibilityHint("Shows this page in the preview. Double-click, or Command-Return, to open it in its own window.")
         .accessibilityAddTraits(traits)
@@ -1267,12 +1139,10 @@ struct ResultsView: View {
     }
 
     private func hitLabel(_ hit: Hit, key: HitKey, selected: Bool,
-                          info: HybridInfo?, semanticOnly: Bool,
                           unit: PageUnit) -> some View {
         let background: Color = selected ? Color.accentColor.opacity(0.16) : Color.clear
         return VStack(alignment: .leading, spacing: 2) {
-            hitLine(hit, key: key, selected: selected, info: info,
-                    semanticOnly: semanticOnly, unit: unit)
+            hitLine(hit, key: key, selected: selected, unit: unit)
             // POURQUOI CE RÉSULTAT (lot U1, R-06) — sous la ligne SÉLECTIONNÉE
             // seulement. Une phrase sous chacune des deux cents lignes ferait
             // un mur, et il faudrait lire autant de pages qu'il y a de
@@ -1290,7 +1160,6 @@ struct ResultsView: View {
     }
 
     private func hitLine(_ hit: Hit, key: HitKey, selected: Bool,
-                         info: HybridInfo?, semanticOnly: Bool,
                          unit: PageUnit) -> some View {
         let pageStyle: HierarchicalShapeStyle = selected ? .primary : .secondary
         return HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -1303,18 +1172,11 @@ struct ResultsView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
                 .frame(width: 56, alignment: .trailing)
-            if semanticOnly {
-                // La provenance d'un hit sémantique pur n'est pas connue
-                // sans un balayage de page_src : on n'affiche donc PAS un
-                // pictogramme qui mentirait, mais l'insigne du canal.
-                semanticBadge(info)
-            } else {
-                provenanceIcon(hit: hit, key: key)
-            }
+            provenanceIcon(hit: hit, key: key)
             if hit.source == .transcript {
                 timestampChip(hit: hit)
             }
-            hitSnippet(hit, semanticOnly: semanticOnly)
+            hitSnippet(hit)
             if hit.fuzzyDistance > 0 {
                 fuzzyMark(hit.fuzzyDistance)
             }
@@ -1331,17 +1193,8 @@ struct ResultsView: View {
     }
 
     @ViewBuilder
-    private func hitSnippet(_ hit: Hit, semanticOnly: Bool) -> some View {
-        if semanticOnly {
-            // Début brut de la page : surtout PAS `attributedSnippet`,
-            // dont les marqueurs sont « et » — omniprésents dans un
-            // texte français, ils surligneraient n'importe quoi.
-            Text(verbatim: hit.snippet)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .lineLimit(3)
-                .multilineTextAlignment(.leading)
-        } else {
+    private func hitSnippet(_ hit: Hit) -> some View {
+        do {
             Text(attributedSnippet(hit.snippet))
                 .font(.callout)
                 .lineLimit(3)
@@ -1372,7 +1225,7 @@ struct ResultsView: View {
             .accessibilityIdentifier("results.why")
     }
 
-    private func hitAccessibilityLabel(_ hit: Hit, key: HitKey, semanticOnly: Bool,
+    private func hitAccessibilityLabel(_ hit: Hit, key: HitKey,
                                        unit: PageUnit) -> String {
         let engine: OCREngineID = search.engines[key]
             ?? (hit.source == .native ? .none : .vision)
@@ -1383,7 +1236,6 @@ struct ResultsView: View {
             page: hit.page,
             source: hit.source,
             engine: engine,
-            semanticOnly: semanticOnly,
             fuzzyDistance: hit.fuzzyDistance,
             timestamp: timestamp,
             unit: unit)
@@ -1456,27 +1308,6 @@ struct ResultsView: View {
                                                       firstWindowPage: 1))
     }
 
-    /// Insigne d'un hit sémantique pur : aucun terme de la requête n'est sur
-    /// cette page, elle vient de la proximité vectorielle seule. Le cosinus et
-    /// le rang du canal partent dans l'infobulle — l'insigne, lui, reste un
-    /// signe discret.
-    private func semanticBadge(_ info: HybridInfo?) -> some View {
-        var help = String(localized: "Found by meaning: none of your words is on this page.")
-        // La MARGE, pas le cosinus (audit C2-01/C2-13) : sur ce corpus tous les
-        // cosinus tiennent entre 0,78 et 0,88, et « Cosine 0.85 » se lisait
-        // comme « 85 % de pertinence ». Mais « +2,4 σ » ne se lit pas non plus :
-        // σ est l'écart-type, un mot que le public ne connaît pas (lot J2). La
-        // marge se DIT, par paliers — le nombre exact n'aidait personne, et le
-        // rang du canal sémantique encore moins.
-        if let z = info?.z {
-            help += " " + SemanticMarginText.describe(z)
-        }
-        return Text(verbatim: "≈")
-            .font(.caption.bold())
-            .foregroundStyle(Color.purple)
-            .help(help)
-    }
-
     /// Pictogramme de provenance : texte tapé / scanné / scanné avant Fouine.
     ///
     /// Le libellé vient de `LanguageNames`, seule table des provenances
@@ -1501,18 +1332,6 @@ struct ResultsView: View {
     /// le dernier chargement a rendu des résultats VISIBLES (audit A10.3) : sinon
     /// un filtre d'affichage qui vide la liste rendrait cette ligne visible
     /// d'emblée et rejouerait la requête par tranches de 200 jusqu'à épuisement.
-    /// Pourquoi il n'y a pas de « Charger plus » en hybride : le RRF fusionne
-    /// deux top-k de profondeur fixe, il ne pagine pas — une seconde tranche
-    /// obtenue par offset n'aurait aucun sens dans le classement fusionné.
-    private var hybridFooter: some View {
-        Text("Word search and meaning search combined: the \(Format.integer(search.hits.count)) best pages, and no more. Refine the query or the filters to see other pages, or turn “Also search by meaning” off to browse the whole list.")
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
     private var loadMoreRow: some View {
         VStack(spacing: 2) {
             HStack {

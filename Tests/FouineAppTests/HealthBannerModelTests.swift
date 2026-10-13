@@ -24,12 +24,10 @@ final class HealthBannerModelTests: XCTestCase {
 
     private func report(agent: AgentOperationalState = .active,
                         lock: WriteLock.LockStatus = .free,
-                        installed: Bool = true, vectors: Int = 10,
                         roots: [RootStatus]? = nil,
                         currentPID: pid_t = 1) -> HealthBannerReport {
         HealthBannerEvaluator.evaluate(
             agentState: agent, lockStatus: lock,
-            semanticInstalled: installed, hasVectors: vectors > 0,
             roots: roots ?? [root(id: 1, label: "Docs")],
             currentPID: currentPID)
     }
@@ -42,7 +40,6 @@ final class HealthBannerModelTests: XCTestCase {
         XCTAssertEqual(r.maxSeverity, .green)
         XCTAssertEqual(r.agentRow.message, .backgroundIndexingOn)
         XCTAssertEqual(r.writeLockRow.message, .indexAvailable)
-        XCTAssertEqual(r.semanticRow.message, .semanticReady)
         XCTAssertEqual(r.rootsRow.message, .foldersAllAccessible)
         for row in r.rows {
             XCTAssertNil(row.action, "une ligne verte n'a pas besoin de bouton : \(row.kind)")
@@ -82,7 +79,6 @@ final class HealthBannerModelTests: XCTestCase {
                        .outsideApplications(path: "/Users/moi/Downloads/Fouine.app")] {
             let notFound = HealthBannerEvaluator.evaluate(
                 agentState: .notFound, appCopies: copies, lockStatus: .free,
-                semanticInstalled: true, hasVectors: true,
                 roots: [root(id: 1, label: "Docs")]).agentRow
             XCTAssertEqual(notFound.severity, .orange, "\(copies)")
             XCTAssertEqual(notFound.message, .backgroundIndexingServiceMissing, "\(copies)")
@@ -146,28 +142,7 @@ final class HealthBannerModelTests: XCTestCase {
         XCTAssertTrue(report(lock: .stale(dead)).isAllGreen)
     }
 
-    // MARK: - 3. Recherche sémantique
-
-    /// Une option absente ou en préparation n'est pas un avertissement.
-    func testSemanticStatesAreAllGreen() {
-        let ready = report(installed: true, vectors: 42).semanticRow
-        XCTAssertEqual(ready.severity, .green)
-        XCTAssertEqual(ready.message, .semanticReady)
-
-        let preparing = report(installed: true, vectors: 0).semanticRow
-        XCTAssertEqual(preparing.severity, .green)
-        XCTAssertEqual(preparing.message, .semanticPreparing)
-
-        let missing = report(installed: false, vectors: 0).semanticRow
-        XCTAssertEqual(missing.severity, .green)
-        XCTAssertEqual(missing.message, .semanticNotInstalled)
-
-        for row in [ready, preparing, missing] {
-            XCTAssertNil(row.action)
-        }
-    }
-
-    // MARK: - 4. Dossiers
+    // MARK: - 3. Dossiers
 
     func testRootsStates() {
         let none = report(roots: []).rootsRow
@@ -247,7 +222,6 @@ final class HealthBannerModelTests: XCTestCase {
         for state in [AgentOperationalState.registeredButSilent, .notFound] {
             let row = HealthBannerEvaluator.evaluate(
                 agentState: state, appCopies: several, lockStatus: .free,
-                semanticInstalled: true, hasVectors: true,
                 roots: [root(id: 1, label: "Docs")]).agentRow
             XCTAssertEqual(row.message, .backgroundIndexingSeveralCopies, "état \(state)")
             XCTAssertEqual(row.severity, .orange)
@@ -256,20 +230,18 @@ final class HealthBannerModelTests: XCTestCase {
         // Sans copie parasite, le message reste celui d'avant.
         let plain = HealthBannerEvaluator.evaluate(
             agentState: .registeredButSilent, lockStatus: .free,
-            semanticInstalled: true, hasVectors: true,
             roots: [root(id: 1, label: "Docs")]).agentRow
         XCTAssertEqual(plain.message, .backgroundIndexingNotStarting)
         // Un agent SAIN ne se fait pas alarmer par une copie de trop : la ligne
         // ne parle que d'un agent qui ne démarre pas.
         let healthy = HealthBannerEvaluator.evaluate(
             agentState: .active, appCopies: several, lockStatus: .free,
-            semanticInstalled: true, hasVectors: true,
             roots: [root(id: 1, label: "Docs")]).agentRow
         XCTAssertEqual(healthy.message, .backgroundIndexingOn)
         XCTAssertEqual(healthy.severity, .green)
     }
 
-    /// Rien dans le bandeau ne dit « verrou », « pid », « vecteur » ou
+    /// Rien dans le bandeau ne dit « verrou », « pid » ou
     /// « schéma » : le public n'est pas technicien (CLAUDE.md).
     func testLocalizedTextsSpeakToNonTechnicians() {
         let holder = LockHolder(pid: getpid(), role: .agent, since: Date())
@@ -283,7 +255,6 @@ final class HealthBannerModelTests: XCTestCase {
             .indexUpdating(by: .cli, since: holder.clockText, ownProcess: false),
             .indexUpdating(by: .app, since: holder.clockText, ownProcess: false),
             .indexUpdating(by: .app, since: holder.clockText, ownProcess: true),
-            .semanticReady, .semanticPreparing, .semanticNotInstalled,
             .noFolders, .diskNotPluggedIn(folder: "X"), .folderNotAllowed(folder: "X"),
             .folderNotFound(folder: "X"), .folderCannotBeRead(folder: "X"),
             .foldersAllAccessible,
@@ -313,13 +284,10 @@ final class HealthBannerModelTests: XCTestCase {
         ]
         for agent in agents {
             for lock in locks {
-                for installed in [true, false] {
-                    for roots in rootSets {
-                        let r = report(agent: agent, lock: lock, installed: installed,
-                                       vectors: installed ? 0 : 3, roots: roots)
-                        XCTAssertLessThan(r.maxSeverity, .red,
-                                          "\(agent) \(lock) installed=\(installed) roots=\(roots.count)")
-                    }
+                for roots in rootSets {
+                    let r = report(agent: agent, lock: lock, roots: roots)
+                    XCTAssertLessThan(r.maxSeverity, .red,
+                                      "\(agent) \(lock) roots=\(roots.count)")
                 }
             }
         }
@@ -330,14 +298,13 @@ final class HealthBannerModelTests: XCTestCase {
 /// §5.6 amendé exige sur une ligne VERTE.
 final class HealthBannerGreenActionTests: XCTestCase {
 
-    /// Aucune racine : les quatre lignes sont vertes, et pourtant il reste
+    /// Aucune racine : les trois lignes sont vertes, et pourtant il reste
     /// « Ajouter un dossier… » à proposer. Le cas s'atteint dès que la lecture
     /// des racines échoue — la barre latérale s'affiche alors, et disait
     /// « Tout fonctionne ».
     private var noFolders: HealthBannerReport {
         HealthBannerEvaluator.evaluate(
-            agentState: .off, lockStatus: .free,
-            semanticInstalled: false, hasVectors: false, roots: [])
+            agentState: .off, lockStatus: .free, roots: [])
     }
 
     func testGreenRowWithAnActionIsNotAllGreen() {
@@ -349,8 +316,8 @@ final class HealthBannerGreenActionTests: XCTestCase {
                        "A2-13 : la pastille masquait « Ajouter un dossier… »")
     }
 
-    /// Et la barre latérale ne rend QUE cette ligne : les trois autres n'ont
-    /// rien à dire.
+    /// Et la barre latérale ne rend QUE cette ligne : les autres n'ont rien
+    /// à dire.
     func testOnlyTheActionableRowIsDisplayed() {
         let rows = noFolders.rowsToDisplay
         XCTAssertEqual(rows.count, 1)
@@ -367,8 +334,7 @@ final class HealthBannerGreenActionTests: XCTestCase {
             absolutePath: "/Volumes/Data/Docs", mounted: true,
             readable: true, reason: nil)
         let r = HealthBannerEvaluator.evaluate(
-            agentState: .active, lockStatus: .free,
-            semanticInstalled: true, hasVectors: true, roots: [root])
+            agentState: .active, lockStatus: .free, roots: [root])
         XCTAssertTrue(r.isAllGreen)
         XCTAssertTrue(r.rowsToDisplay.isEmpty)
     }
@@ -382,10 +348,9 @@ final class HealthBannerGreenActionTests: XCTestCase {
             absolutePath: "/Volumes/Data/Docs", mounted: true,
             readable: false, reason: nil)
         let r = HealthBannerEvaluator.evaluate(
-            agentState: .active, lockStatus: .free,
-            semanticInstalled: true, hasVectors: true, roots: [unreadable])
+            agentState: .active, lockStatus: .free, roots: [unreadable])
         XCTAssertEqual(r.maxSeverity, .orange)
-        XCTAssertEqual(r.rowsToDisplay.count, 4)
+        XCTAssertEqual(r.rowsToDisplay.count, 3)
     }
 }
 

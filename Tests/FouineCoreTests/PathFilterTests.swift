@@ -251,20 +251,12 @@ final class PathFilterTests: XCTestCase {
                        "un filtre de page ne restreint pas les documents")
     }
 
-    // MARK: - Le canal du sens voit le même jeu
+    // MARK: - L'ensemble des documents qu'un filtre laisse passer
 
-    func testVectorChannelSeesTheSameDocuments() throws {
+    /// `docIDsMatchingFilters` traduit les filtres en ensemble de `doc_id` —
+    /// c'est par là que passe le périmètre d'un serveur `fouine mcp --folders`.
+    func testFiltersTranslateIntoASetOfDocuments() throws {
         let c = try fixture()
-        XCTAssertEqual(try c.db.store.docIDsMatchingName(try query("azote chemin:Offres")),
-                       [c.pourvue, c.notes])
-        XCTAssertEqual(try c.db.store.docIDsMatchingName(try query("azote -ext:md")),
-                       [c.notes, c.reacteur, c.brouillon])
-        XCTAssertEqual(try c.db.store.docIDsMatchingName(try query("azote -nom:brouillon")),
-                       [c.pourvue, c.notes, c.reacteur])
-        XCTAssertNil(try c.db.store.docIDsMatchingName(try query("azote")),
-                     "sans filtre de nom ni de chemin, le canal du sens voit tout")
-        // La fonction que le canal vectoriel appelle aussi, avec ses valeurs
-        // par défaut vides : elle rend `nil` quand rien n'est demandé.
         XCTAssertNil(try c.db.store.docIDsMatchingFilters(
             folders: [], exts: [], inDocIDs: [], excludingDocsMatching: nil))
         XCTAssertEqual(try c.db.store.docIDsMatchingFilters(

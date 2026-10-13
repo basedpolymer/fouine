@@ -22,8 +22,7 @@
 // CE QUE LES RÈGLES NE FONT PAS, à dessein : ni féminin, ni conjugaison, ni
 // dérivation (`catalyseur` → `catalyse`). Le pluriel est la seule variation qui
 // rate des DOCUMENTS entiers sur ce corpus ; le reste relève du préfixe
-// (`catalys*`) ou du canal sémantique, et chaque règle de plus ajoute son
-// bruit. Deux garde-fous de longueur, mesurés sur les pièges du français :
+// (`catalys*`), et chaque règle de plus ajoute son bruit. Deux garde-fous de longueur, mesurés sur les pièges du français :
 // on n'AJOUTE un s qu'à partir de quatre lettres (`ion` → `ions` échappe, mais
 // `sel`, `gaz` aussi : rien de grave, ils se tapent au pluriel si besoin), et on
 // n'en RETIRE un qu'à partir de cinq lettres — `mois`, `fois`, `pays`, `sens`,

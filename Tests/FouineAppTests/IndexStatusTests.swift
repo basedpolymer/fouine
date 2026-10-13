@@ -48,7 +48,7 @@ final class IndexStatusTests: XCTestCase {
         let roots = roots ?? [root()]
         let health = HealthBannerEvaluator.evaluate(
             agentState: agentState, appCopies: appCopies, lockStatus: lock,
-            semanticInstalled: true, hasVectors: true, roots: roots)
+            roots: roots)
         return IndexStatusInput(
             probed: probed, roots: roots, rootsError: rootsError, health: health,
             indexing: indexing, automatic: automatic, agentState: agentState,
@@ -530,7 +530,6 @@ final class IndexStatusTests: XCTestCase {
             .needsAttention(.serviceMissing),
             .working(activity: .updating, progress: nil, detail: nil, stoppable: true),
             .working(activity: .readingScans, progress: nil, detail: nil, stoppable: false),
-            .working(activity: .preparingMeaning, progress: nil, detail: nil, stoppable: true),
             .working(activity: .externalWrite, progress: nil, detail: nil, stoppable: false),
             .paused(reason: .onBattery, scansWaiting: 3),
             .paused(reason: .lowPowerMode, scansWaiting: 3),
@@ -542,8 +541,8 @@ final class IndexStatusTests: XCTestCase {
             .idle(automatic: false, scansWaiting: 0, lastUpdate: nil),
             .idle(automatic: false, scansWaiting: 7, lastUpdate: nil),
         ]
-        let banned = ["agent", "OCR", "verrou", "lock", "pid", "vecteur", "vector",
-                      "register", "enregistr", "launchd", "embed", "sémantique", "semantic"]
+        let banned = ["agent", "OCR", "verrou", "lock", "pid",
+                      "register", "enregistr", "launchd"]
         for status in statuses {
             var texts = [IndexStatusText.headline(status)]
             if let detail = IndexStatusText.detail(status, now: now) { texts.append(detail) }
@@ -586,7 +585,7 @@ final class IndexStatusTests: XCTestCase {
         let keys = [
             "Checking…", "Up to date", "Up to date — %lld scanned page(s) to read",
             "Manual updates", "Manual updates — %lld scanned page(s) to read",
-            "Updating the index", "Reading scanned pages", "Preparing search by meaning",
+            "Updating the index", "Reading scanned pages",
             "The index is being updated", "Update now", "Read scanned pages…",
             "Restart automatic updates", "Check again", "about %lld min left",
             "about %lld h left", "about %lld day(s) left",
@@ -629,7 +628,6 @@ final class IndexStatusTests: XCTestCase {
         }
         XCTAssertEqual(symbol(.updating), "arrow.triangle.2.circlepath")
         XCTAssertEqual(symbol(.readingScans), "text.viewfinder")
-        XCTAssertEqual(symbol(.preparingMeaning), "wand.and.stars")
         XCTAssertEqual(IndexStatus.needsAttention(.severalCopies).symbol,
                        "exclamationmark.triangle.fill")
         XCTAssertNotEqual(IndexStatus.checking.symbol,
@@ -644,10 +642,8 @@ final class IndexStatusTests: XCTestCase {
     /// prévue » : le propriétaire l'avait lue comme un plafond. Les chiffres
     /// sont ceux de l'audit du 09/09/2026 et du corpus de recette C2.
     func testTheCardSpeaksOfTheDiskOnlyWhenRoomIsShort() {
-        let production = DiskForecast(bytes: 2_151_112_704, pagesIndexed: 408_951,
-                                      pagesFullyVectorised: 274_244)
-        let household = DiskForecast(bytes: 23_785_472, pagesIndexed: 2_858,
-                                     pagesFullyVectorised: 2_858)
+        let production = DiskForecast(bytes: 2_151_112_704, pagesIndexed: 408_951)
+        let household = DiskForecast(bytes: 23_785_472, pagesIndexed: 2_858)
 
         // 29 Go libres : rien à dire, même à 86 % du critère P5 de la SPEC —
         // ce critère ne regarde plus l'application.
@@ -661,15 +657,12 @@ final class IndexStatusTests: XCTestCase {
                                               forecast: production),
                        .low(free: 3_200_000_000, index: 2_151_112_704))
 
-        // 100 Mo libres alors que la préparation du sens doit encore écrire
-        // ~118 Mo (134 707 pages × 2,13 fenêtres × 410 octets) : la place ne
-        // suffit pas pour finir.
+        // 100 Mo libres : sous le plancher d'un gigaoctet, on parle fort.
         XCTAssertEqual(DiskSpaceNotice.decide(freeBytes: 100_000_000,
                                               forecast: production),
                        .tight(free: 100_000_000, index: 2_151_112_704))
 
-        // Un petit fonds entièrement préparé, mais 800 Mo libres : sous 1 Go,
-        // on parle fort quoi qu'il reste à écrire.
+        // Un petit fonds, mais 800 Mo libres : même règle.
         XCTAssertEqual(DiskSpaceNotice.decide(freeBytes: 800_000_000,
                                               forecast: household),
                        .tight(free: 800_000_000, index: 23_785_472))
@@ -679,11 +672,10 @@ final class IndexStatusTests: XCTestCase {
                                               forecast: production), .silent)
     }
 
-    /// Le seuil « la place manque pour finir » suit ce qu'il reste à écrire :
-    /// à couverture pleine, seul le plancher absolu de 1 Go joue encore.
-    func testTheTightThresholdFollowsWhatRemainsToBeWritten() {
-        let done = DiskForecast(bytes: 2_270_000_000, pagesIndexed: 408_951,
-                                pagesFullyVectorised: 408_951)
+    /// Le plancher absolu d'un gigaoctet, et le seuil bavard de cinq : ce
+    /// sont les deux seules bornes.
+    func testTheTwoThresholdsAreTheFreeSpaceLeft() {
+        let done = DiskForecast(bytes: 2_270_000_000, pagesIndexed: 408_951)
         XCTAssertEqual(DiskSpaceNotice.decide(freeBytes: 1_500_000_000,
                                               forecast: done),
                        .low(free: 1_500_000_000, index: 2_270_000_000))
@@ -764,62 +756,6 @@ final class IndexStatusTests: XCTestCase {
                 XCTAssertFalse(sentence.localizedCaseInsensitiveContains(word),
                                "« \(word) » n'a rien à faire dans « \(sentence) »")
             }
-        }
-    }
-}
-
-// MARK: - La recherche par le sens préparée en arrière-plan (AG1, PR-21)
-
-extension IndexStatusTests {
-
-    /// La phase publiée par la mise à jour automatique devient l'activité que
-    /// la carte affiche DÉJÀ pour la campagne lancée depuis l'application : une
-    /// seule phrase pour un seul travail, et la barre porte « N pages sur M ».
-    func testThePreparingMeaningPhaseBecomesTheExistingActivity() {
-        let record = self.status(.preparingMeaning,
-                                 detail: AgentStatusDetail.pagesLeft(700),
-                                 done: 300, total: 1_000)
-        let status = IndexStatusEvaluator.evaluate(input(agentStatus: record))
-        guard case .working(let activity, let progress, _, let stoppable) = status
-        else { return XCTFail("« travaille » attendu, obtenu \(status)") }
-        XCTAssertEqual(activity, .preparingMeaning)
-        XCTAssertEqual(progress?.done, 300)
-        XCTAssertEqual(progress?.total, 1_000)
-        // On n'arrête pas d'ici ce que le réglage commande : le bouton
-        // « Arrêter » de la carte ne vaut que pour une passe de cette fenêtre.
-        XCTAssertFalse(stoppable)
-        XCTAssertEqual(status.tint, .working)
-    }
-
-    /// Le bouton « Préparer la recherche par le sens… » disparaît quand Fouine
-    /// s'en charge — et SEULEMENT alors. Les trois conditions comptent : sans
-    /// modèle rien ne se prépare, et un agent muet ou en attente d'approbation
-    /// ne prépare rien non plus (sans quoi le bouton disparaîtrait sans que le
-    /// travail se fasse).
-    func testThePrepareButtonOnlyStepsAsideWhenFouineReallyDoesIt() {
-        XCTAssertEqual(MeaningPreparation.decide(settingOn: true,
-                                                 modelInstalled: true,
-                                                 agent: .active),
-                       .inBackground)
-        XCTAssertEqual(MeaningPreparation.decide(settingOn: true,
-                                                 modelInstalled: true,
-                                                 agent: .waitingFirstReport),
-                       .inBackground)
-        XCTAssertEqual(MeaningPreparation.decide(settingOn: false,
-                                                 modelInstalled: true,
-                                                 agent: .active),
-                       .byHand)
-        XCTAssertEqual(MeaningPreparation.decide(settingOn: true,
-                                                 modelInstalled: false,
-                                                 agent: .active),
-                       .byHand)
-        for silent: AgentOperationalState in [.off, .registeredButSilent,
-                                              .requiresApproval, .notFound,
-                                              .unknown] {
-            XCTAssertEqual(MeaningPreparation.decide(settingOn: true,
-                                                     modelInstalled: true,
-                                                     agent: silent),
-                           .byHand, "état « \(silent.rawValue) »")
         }
     }
 }

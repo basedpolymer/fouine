@@ -224,13 +224,6 @@ final class LanguageBackfillTests: XCTestCase {
 
         q.langs = ["fr"]
         XCTAssertEqual(try db.store.search(q).hits.map(\.docID), [fr])
-
-        // Le même contrat pour le canal vectoriel, qui ne lit pas ce SQL mais
-        // reçoit un ensemble de documents autorisés (lot U2).
-        XCTAssertEqual(
-            try db.store.docIDsMatching(langs: [FacetKey.undeterminedLanguage],
-                                        modifiedAfter: nil),
-            [nul, und])
     }
 
     /// Le rattrapage rejoint la facette : après lui, les documents détectés

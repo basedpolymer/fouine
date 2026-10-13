@@ -17,7 +17,8 @@
 //
 // LA GARDE D'ESSAI EST ICI AUSSI (`LicenseGate`), et elle ne couvre QUE les
 // commandes qui écrivent dans l'index : `crawl`, `extract`, `index`, `ocr`,
-// `embed`. `search`, `list`, `status`, `doctor`, `mcp`, `backup`, `config`,
+// une passe d'indexation. `search`, `list`, `status`, `doctor`, `mcp`,
+// `backup`, `config`,
 // `root` et `maintain` marchent dans tous les états — la fin d'essai arrête la
 // mise à jour de l'index, elle ne prend pas en otage ce qui est déjà dedans.
 

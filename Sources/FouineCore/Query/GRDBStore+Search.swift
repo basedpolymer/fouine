@@ -129,11 +129,10 @@ extension GRDBStore {
     /// `negative` : expression MATCH des termes exclus (`-terme`, arbitrage T5) ;
     /// tout document dont UNE page y répond est exclu, `nil` = aucune exclusion.
     ///
-    /// LE POINT UNIQUE DE LA RECHERCHE LEXICALE : la CLI, l'application, le
-    /// serveur MCP et le canal lexical de l'hybride (`HybridSearch.run`)
-    /// passent tous par ici. C'est donc ici que vivent les deux ajouts du lot
-    /// MP1 — le repli en flou (C2-08) et le canal des noms (PR-02) —, et non
-    /// dans trois surfaces qui auraient divergé.
+    /// LE POINT UNIQUE DE LA RECHERCHE : la CLI, l'application et le serveur
+    /// MCP passent tous par ici. C'est donc ici que vivent les deux ajouts du
+    /// lot MP1 — le repli en flou (C2-08) et le canal des noms (PR-02) —, et
+    /// non dans trois surfaces qui auraient divergé.
     public func search(_ q: SearchQuery,
                        excludingDocsMatching negative: String?) throws -> SearchResults {
         // `nom:rapport` SANS terme de page (lot QP1) : il n'y a pas de page à
@@ -834,100 +833,6 @@ extension GRDBStore {
             elapsedMS: Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000)
     }
 
-    /// Les documents que les `nom:` laissent passer, pour le canal VECTORIEL de
-    /// l'hybride, qui ne connaît des filtres que l'ensemble de documents
-    /// autorisés (même rôle que `docIDsMatching(langs:modifiedAfter:)`) ; `nil`
-    /// quand la requête n'en porte aucun.
-    /// (lot MC1) Le nom N'EST PLUS SEUL : `chemin:`, `-nom:`, `-chemin:`,
-    /// `-dossier:` et `-ext:` restreignent eux aussi l'ensemble autorisé. Le
-    /// canal vectoriel ne connaît des filtres que cet ensemble, et
-    /// `HybridSearch` — qui appelle déjà cette fonction avec la requête
-    /// entière — les applique donc sans changer de site d'appel. La fonction
-    /// GARDE son nom : la renommer toucherait `FouineEmbed`, hors de ce lot.
-    public func docIDsMatchingName(_ q: SearchQuery) throws -> Set<Int64>? {
-        let match = Self.nameMatchExpression(q)
-        let excluded = Self.nameExcludeExpression(q)
-        let added = Self.pathAndExcludeClauses(q, alias: "")
-        guard match != nil || excluded != nil || !added.clauses.isEmpty else {
-            return nil
-        }
-        return try read { db in
-            var allowed: Set<Int64>?
-            if let match {
-                allowed = Set(try Int64.fetchAll(
-                    db, sql: "SELECT rowid FROM docs_fts WHERE docs_fts MATCH ?",
-                    arguments: [match]))
-            }
-            if !added.clauses.isEmpty {
-                let rows = Set(try Int64.fetchAll(
-                    db, sql: "SELECT id FROM docs WHERE "
-                        + added.clauses.joined(separator: " AND "),
-                    arguments: StatementArguments(added.args)))
-                allowed = allowed.map { $0.intersection(rows) } ?? rows
-            }
-            if let excluded {
-                let out = try Int64.fetchAll(
-                    db, sql: "SELECT rowid FROM docs_fts WHERE docs_fts MATCH ?",
-                    arguments: [excluded])
-                if allowed == nil {
-                    allowed = Set(try Int64.fetchAll(db, sql: "SELECT id FROM docs"))
-                }
-                allowed?.subtract(out)
-            }
-            return allowed
-        }
-    }
-
-    // MARK: - Les mots de la requête qui EXISTENT dans l'index (lot MC1)
-
-    /// Ceux des mots tapés qu'au moins une page porte, dans l'ordre de la
-    /// requête — les filtres de la requête appliqués.
-    ///
-    /// POURQUOI. « none of your words is in your documents » (`SearchAdvice`)
-    /// se déclenchait sur le seul `lexTotalPages == 0`, c'est-à-dire sur
-    /// « aucune page ne les porte TOUS ». Mesuré le 13/09/2026 sur la base de
-    /// production : `dossier:Livres distribution des temps de séjour dans un
-    /// réacteur réel` rendait cette phrase alors que « réacteur » est dans 22
-    /// documents de `Livres` — la surface affirmait le contraire de ce que
-    /// l'index contient, et l'utilisateur en concluait que son corpus était
-    /// muet. Un `EXISTS` par mot, borné à la première ligne appariée : quelques
-    /// millisecondes, et seulement quand la phrase va être dite.
-    ///
-    /// LES MOTS PORTEURS SEULEMENT, ceux que le quorum compte : « de », « un »,
-    /// « des », « dans » sont dans tous les documents, et les citer noyait les
-    /// deux mots qui apprennent quelque chose (mesuré : la phrase énumérait les
-    /// neuf mots de la question). Une requête qui n'en porte aucun rend une
-    /// liste vide, et l'ancienne phrase — plus générale — reprend la main.
-    public func wordsPresent(_ q: SearchQuery,
-                             excludingDocsMatching negative: String? = nil) throws
-        -> [String] {
-        let terms = q.terms.filter {
-            $0.count >= QueryParser.quorumMinimumWordLength
-                && !QueryParser.quorumStopwords.contains(Morphology.fold($0))
-        }
-        guard !terms.isEmpty else { return [] }
-        let morphology = Self.morphologyApplies(q)
-        let negativeFTS = negative.map { Self.effectiveFTS($0, morphology: morphology) }
-        let filter = docFilter(q, column: Self.ftsDocIDExpr,
-                               page: Self.ftsPageExpr, negative: negativeFTS)
-        var out: [String] = []
-        var seen = Set<String>()
-        try read { db in
-            for term in terms where seen.insert(Morphology.fold(term)).inserted {
-                let match = Self.effectiveFTS(QueryParser.escapeBare(term),
-                                              morphology: morphology)
-                let found = try Bool.fetchOne(db, sql: """
-                    SELECT EXISTS(
-                      SELECT 1 FROM page_fts\(filter.join)
-                      WHERE page_fts MATCH ?\(filter.sql)
-                    )
-                    """, arguments: StatementArguments([match] + filter.args)) ?? false
-                if found { out.append(term) }
-            }
-        }
-        return out
-    }
-
     /// Totaux seuls, pour la page vide (voir l'appelant).
     private func fuzzyTotals(_ plan: FuzzyPlan,
                              threshold: Int = Schema.approximateCountThreshold) throws -> (pages: Int, docs: Int, approximate: Bool) {
@@ -1439,40 +1344,6 @@ extension GRDBStore {
         case 3: return "transcript"
         case 2: return "ocr_accurate"
         default: return "native"
-        }
-    }
-
-    /// Documents que les filtres de LANGUE et de DATE laissent passer ; `nil`
-    /// quand aucun des deux n'est armé (aucune restriction).
-    ///
-    /// Le canal LEXICAL n'en a pas besoin — `docFilter` écrit ces deux clauses
-    /// dans sa sous-requête. C'est le canal VECTORIEL qui la réclame : il
-    /// balaye `page_vec` et ne connaît des filtres que l'ensemble de documents
-    /// qu'on lui autorise (`HybridSearch`, `VectorIndex.topK(allowedDocs:)`).
-    /// Sans elle, `--lang fr --hybrid` rendait des pages anglaises « proposées
-    /// par le sens » sous un filtre qui promettait le français.
-    ///
-    /// Compagne de `docIDsMatchingFilters(folders:exts:inDocIDs:)`, qui vit
-    /// dans `GRDBStore+Vec.swift` ; les deux s'intersectent chez l'appelant.
-    public func docIDsMatching(langs: [String],
-                               modifiedAfter: Double?) throws -> Set<Int64>? {
-        guard !langs.isEmpty || modifiedAfter != nil else { return nil }
-        var clauses: [String] = []
-        var args: [(any DatabaseValueConvertible)?] = []
-        if !langs.isEmpty {
-            clauses.append("\(Self.languageSQL("lang")) IN (\(placeholders(langs.count)))")
-            args.append(contentsOf: langs.map {
-                $0.lowercased() as (any DatabaseValueConvertible)? })
-        }
-        if let modifiedAfter {
-            clauses.append("mtime >= ?")
-            args.append(modifiedAfter)
-        }
-        return try read { db in
-            Set(try Int64.fetchAll(
-                db, sql: "SELECT id FROM docs WHERE "
-                    + clauses.joined(separator: " AND "),
-                arguments: StatementArguments(args)))
         }
     }
 

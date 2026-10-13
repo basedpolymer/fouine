@@ -59,9 +59,6 @@ public enum DocumentOrder: String, Sendable {
 }
 
 /// Une ligne de listage : la ligne `docs` plus le compte de pages OCRisées.
-/// Le nombre de pages VECTORISÉES n'y est pas — il se lit par
-/// `vectorisedPageCounts(forDocIDs:)`, point unique du dépôt (voir son
-/// commentaire : c'est là que le fenêtrage v5 interviendra).
 public struct DocumentListing: Sendable {
     public let id: Int64
     public let volUUID: String
@@ -333,13 +330,9 @@ extension GRDBStore {
     /// Nombre de pages INDEXÉES par document, comptées sur la table d'ombre
     /// `page_fts_docsize` (lot MC2, constat PM-06).
     ///
-    /// C'est le dénominateur de la couverture sémantique d'un PÉRIMÈTRE
-    /// FILTRÉ : `vectorisedPageCounts(forDocIDs:)` en donne le numérateur, et
-    /// annoncer 67,85 % pour un dossier qui n'a pas un seul vecteur était le
-    /// constat. Même dénombrement que `indexedPageCount()` — donc le même
-    /// chiffre sans filtre —, et une sonde de PLAGE par document, comme
-    /// `vectorisedPageCounts` : une expression sur la clé primaire interdirait
-    /// l'index et balaierait la table entière.
+    /// Même dénombrement que `indexedPageCount()` — donc le même chiffre
+    /// sans filtre —, et une sonde de PLAGE par document : une expression sur
+    /// la clé primaire interdirait l'index et balaierait la table entière.
     public func indexedPageCounts(forDocIDs ids: [Int64]) throws -> [Int64: Int] {
         guard !ids.isEmpty else { return [:] }
         return try read { db in

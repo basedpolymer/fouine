@@ -152,16 +152,6 @@ struct MaintainCommand: ParsableCommand {
                           + String(format: "(%.2f MB)", mb))
                     print("  freelist pages            : \(report.freelistBefore) -> \(report.freelistAfter)")
                 }
-                if let repaired = report.vectorRepair {
-                    print("  page_vec rows removed     : \(repaired.total)")
-                    for kind in VectorAnomaly.Kind.allCases where repaired.count(kind) > 0 {
-                        print("      \(kind.rawValue): \(repaired.count(kind)) — \(kind.english)")
-                    }
-                    if repaired.pagesRequeued > 0 {
-                        print("  pages back to vectorise   : \(repaired.pagesRequeued) "
-                              + "(run `fouine embed` to produce them again)")
-                    }
-                }
                 if let cleared = report.ocrFailuresCleared {
                     print("  OCR failure marks cleared : \(cleared)")
                 }

@@ -26,9 +26,10 @@
 //   2. PAS DE `fouine.lock`. Voir l'en-tête de `GRDBStore+Settings.swift` : le
 //      verrou est réservé aux écritures d'indexation. Pendant une passe, l'agent
 //      le tient déjà et l'écriture passe par le même pool ; au repos, il l'a
-//      rendu, et une transaction courte suffit. Vérifié contre `EmbedRun` : sa
-//      boucle `patiently` ne réessaie que sur `WriteLock.isBusy`, c'est-à-dire
-//      sur le message de `flock` — qu'une écriture d'état ne produit jamais.
+//      rendu, et une transaction courte suffit. Vérifié contre les boucles de
+//      reprise : `patiently` ne réessaie que sur `WriteLock.isBusy`,
+//      c'est-à-dire sur le message de `flock` — qu'une écriture d'état ne
+//      produit jamais.
 //
 //   3. UNE PANNE D'ÉTAT N'ARRÊTE RIEN. `agent_status` est de la télémétrie : si
 //      la base refuse l'écriture, on le dit UNE fois dans le journal et l'agent

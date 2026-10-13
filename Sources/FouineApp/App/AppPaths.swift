@@ -131,9 +131,6 @@ enum Prefs {
     static let savedSearches = "search.saved"
     static let fuzzyMode = "search.fuzzy.mode"
     static let fuzzyScope = "search.fuzzy.scope"
-    /// Interrupteur « Sémantique » (§12). Absent = éteint : le chemin lexical
-    /// reste celui par défaut.
-    static let semantic = "search.semantic"
     static let firstRunProbeDone = "tcc.firstRunProbeDone"
     /// « Garder Fouine dans la barre des menus » (UX-07). ABSENTE = allumée :
     /// `bool(forKey:)` rendrait `false` sur une installation neuve, et la

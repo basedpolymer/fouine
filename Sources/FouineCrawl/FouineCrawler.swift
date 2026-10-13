@@ -14,7 +14,7 @@
 //   · UN RENOMMAGE N'EST PAS UNE SUPPRESSION (lot K6, constat A3-02). Un chemin
 //     disparu et un chemin apparu qui portent le MÊME inode, la MÊME taille et
 //     le MÊME mtime sont le même fichier : on déplace la ligne `docs`, on ne
-//     détruit pas ses pages, son OCR, sa file ni ses vecteurs.
+//     détruit pas ses pages, son OCR ni sa file.
 //
 // Et le corpus est en LECTURE SEULE stricte : ce fichier n'ouvre jamais rien en
 // écriture sous une racine indexée — ni, depuis l'audit F5, en LECTURE quand le

@@ -50,36 +50,6 @@ final class SettingsTests: XCTestCase {
         }
     }
 
-    /// La préparation de la recherche par le sens en arrière-plan (lot AG1,
-    /// PR-21) est ÉTEINTE par défaut depuis la 1.0.1 (DF1) : elle se demande,
-    /// par la case ou par le bouton « Préparer… » de la barre latérale.
-    func testMeaningIsNotPreparedInTheBackgroundByDefault() {
-        let snapshot = SettingsSnapshot.environmentOnly([:])
-        XCTAssertFalse(snapshot.agentPrepareMeaning)
-        XCTAssertEqual(snapshot.agentEmbedBudgetMinutes, 10)
-        XCTAssertEqual(snapshot.agentLastEmbedBatchAt, 0)
-        // La clé d'horodatage est un état interne : elle n'est pas au
-        // catalogue (comme `spotlight.synced_at`), et la fenêtre de réglages
-        // ne la liste donc pas.
-        XCTAssertFalse(SettingKeys.all.contains { $0.key == SettingKeys.agentLastEmbedBatchAt.key })
-        XCTAssertTrue(SettingKeys.all.contains { $0.key == SettingKeys.agentPrepareMeaning.key })
-        XCTAssertTrue(SettingKeys.all.contains { $0.key == SettingKeys.agentEmbedBudgetMinutes.key })
-    }
-
-    /// Les bornes du budget, et la façon dont une valeur hors bornes est
-    /// RAMENÉE plutôt que refusée (même règle que le budget d'OCR).
-    func testTheEmbedBudgetIsClampedBetweenOneAndTwoHours() throws {
-        XCTAssertEqual(try SettingKeys.agentEmbedBudgetMinutes.normalize("0"), "1")
-        XCTAssertEqual(try SettingKeys.agentEmbedBudgetMinutes.normalize("999"), "120")
-        let snapshot = SettingsSnapshot(rows: ["agent.embedBudgetMinutes": "45"],
-                                        environment: [:])
-        XCTAssertEqual(snapshot.agentEmbedBudgetMinutes, 45)
-        let forced = SettingsSnapshot(
-            rows: ["agent.prepareMeaning": "true"],
-            environment: ["FOUINE_AGENT_PREPARE_MEANING": "false"])
-        XCTAssertFalse(forced.agentPrepareMeaning)
-    }
-
     /// Tout défaut du catalogue doit passer sa propre validation : une faute de
     /// frappe dans `SettingKeys` se verrait ici, pas en production.
     func testEveryFallbackIsItsOwnNormalForm() throws {
@@ -254,7 +224,7 @@ final class SettingsTests: XCTestCase {
 
     func testSchemaVersionAndTablesExistOnAFreshDatabase() throws {
         let db = try makeDB()
-        XCTAssertEqual(Schema.version, 9)
+        XCTAssertEqual(Schema.version, 10)
         XCTAssertEqual(try db.store.rawStrings(
             "SELECT v FROM meta WHERE k = 'schema_version'"),
                        [String(Schema.version)])

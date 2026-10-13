@@ -70,8 +70,8 @@ public struct JSONRPCError: Error, Sendable {
     /// LA RAISON EST RECOPIÉE DANS `message` (constat PM-08). La phrase utile
     /// vivait dans `data.reason` seule, et beaucoup de clients MCP ne rendent
     /// au modèle que `message` : le propriétaire a vu « Invalid params » pour
-    /// un `mode: "semantic"` dont le serveur savait parfaitement dire
-    /// « must be one of auto, lexical, hybrid ». Le préfixe reste, parce que
+    /// une valeur hors énumération dont le serveur savait parfaitement dire
+    /// « must be one of … ». Le préfixe reste, parce que
     /// c'est le libellé standard du code -32602 que les clients corrèlent ;
     /// `data.reason` reste, parce que c'est là que les clients qui le lisent
     /// vont le chercher.

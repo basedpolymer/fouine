@@ -94,9 +94,13 @@ public final class GRDBStore: IndexStore {
     ///   · `schema_version` = `Schema.version` : on ouvre, SANS prendre le
     ///     verrou (c'est le cas de toutes les lectures, `fouine search` et
     ///     `status` compris) ;
+    ///   · `schema_version` = `Schema.previousVersion` : on joue le PAS v9 → v10
+    ///     (lot SR1), sous le verrou nommé et en une transaction. C'est la
+    ///     seule migration du produit : elle ne retire que les deux tables de
+    ///     la recherche par le sens, et refuser la base aurait obligé à refaire
+    ///     tout l'index pour cela (§4.1) ;
     ///   · toute autre valeur : on REFUSE, avec la phrase de `schemaMismatch`,
-    ///     et sans toucher à la base. Il n'y a AUCUNE migration : ce binaire
-    ///     n'ouvre que le schéma qu'il crée (§4.1).
+    ///     et sans toucher à la base.
     public func open(at url: URL) throws {
         let dir = url.deletingLastPathComponent()
         do {
@@ -144,18 +148,20 @@ public final class GRDBStore: IndexStore {
             switch try pool.read({ try Self.storedSchemaVersion($0) }) {
             case .some(Schema.version):
                 break                                   // rien à faire
-            case .some(let found):
+            case .some(let found) where found != Schema.previousVersion:
                 throw FouineError.databaseFailure(Self.schemaMismatch(found: found))
-            case .none:
+            case .some, .none:
                 try lock.acquire(timeout: lockTimeout)
                 defer { lock.release() }
                 // On RELIT sous le verrou : entre la lecture ci-dessus et
-                // l'obtention du verrou, un autre processus a pu créer la base.
-                // Sans cette seconde lecture on rejouerait la DDL —
-                // idempotente, mais on réécrirait `created_at`.
+                // l'obtention du verrou, un autre processus a pu créer la base
+                // ou la migrer. Sans cette seconde lecture on rejouerait la
+                // DDL — idempotente, mais on réécrirait `created_at`.
                 switch try pool.read({ try Self.storedSchemaVersion($0) }) {
                 case .some(Schema.version):
                     break
+                case .some(Schema.previousVersion):
+                    try pool.write { try Self.migrateToCurrent($0) }
                 case .some(let found):
                     throw FouineError.databaseFailure(
                         Self.schemaMismatch(found: found))
@@ -229,7 +235,8 @@ public final class GRDBStore: IndexStore {
     ///
     /// 4. **Aucun `ExclusiveLock`.** `state.lockFile` reste nil : ce store ne
     ///    peut donc littéralement pas prendre `fouine.lock`, et la campagne
-    ///    d'embedding ou l'agent continuent d'écrire pendant qu'il lit. Le WAL
+    ///    l'agent ou une passe d'indexation continuent d'écrire pendant qu'il
+    ///    lit. Le WAL
     ///    autorise les lecteurs concurrents, et les lectures n'ont jamais pris
     ///    le verrou (§5.1).
     ///
@@ -287,10 +294,17 @@ public final class GRDBStore: IndexStore {
                 "\(url.path) is not a Fouine index (no schema_version in meta)")
         }
         guard found == Schema.version else {
-            // EXACTEMENT la phrase de l'ouverture en écriture : une base d'un
-            // autre schéma est refusée de la même façon partout, et le geste
-            // qu'on donne ne dépend pas de la commande qui l'a rencontrée.
-            throw FouineError.databaseFailure(Self.schemaMismatch(found: found))
+            // LE PAS v9 → v10 DEMANDE D'ÉCRIRE, et ce store ne peut pas (lot
+            // SR1). Lui donner la phrase du désaccord de schéma enverrait
+            // refaire un index parfaitement bon : on nomme donc le geste qui
+            // migre, et il tient en une fois.
+            // Pour toute autre version, EXACTEMENT la phrase de l'ouverture en
+            // écriture : le geste ne dépend pas de la commande qui l'a
+            // rencontrée.
+            throw FouineError.databaseFailure(
+                found == Schema.previousVersion
+                    ? Self.schemaNeedsUpgrade
+                    : Self.schemaMismatch(found: found))
         }
 
         state.mutex.lock()
@@ -357,6 +371,15 @@ public final class GRDBStore: IndexStore {
     /// UN SCHÉMA PLUS ANCIEN NE SE RATTRAPE PAS : Fouine n'ouvre que le schéma
     /// qu'il crée, et la phrase doit donc dire le seul geste possible — refaire
     /// l'index — au lieu de promettre une migration qui n'existe pas.
+    /// La base est à la version qui précède : une ÉCRITURE la met à jour en une
+    /// fois (`migrateToCurrent`), et les commandes de lecture ne peuvent pas le
+    /// faire elles-mêmes. Le geste est celui de `cantOpenGuidance`, pour la
+    /// même raison — il faut un processus qui ait le droit d'écrire.
+    public static let schemaNeedsUpgrade =
+        "this Fouine index has to be updated once for this version of Fouine — "
+        + "open Fouine.app, or run `fouine maintain`, then try again "
+        + "(a read-only command cannot do it). Nothing is reindexed."
+
     public static func schemaMismatch(found: Int) -> String {
         found > Schema.version
             ? "this Fouine index was written by a newer version — update the fouine binary"
@@ -379,7 +402,6 @@ public final class GRDBStore: IndexStore {
     /// ouvre une —, sous le verrou nommé.
     static func createSchema(_ db: Database) throws {
         try db.execute(sql: Schema.ddl)
-        try db.execute(sql: Schema.vecWindowMetaSQL)
         try db.execute(
             sql: """
             INSERT OR REPLACE INTO meta(k, v) VALUES
@@ -387,6 +409,25 @@ public final class GRDBStore: IndexStore {
             """,
             arguments: [String(Schema.version), fouineVersion,
                         String(Date().timeIntervalSince1970)])
+    }
+
+    /// Le PAS v9 → v10 (lot SR1), dans la transaction d'écriture de l'appelant
+    /// et sous le verrou nommé.
+    ///
+    /// La version est inscrite À LA FIN, dans la même transaction : une
+    /// coupure de courant laisse donc une base qui se dit encore v9, et le
+    /// prochain lancement rejoue le pas sur une base où les tables sont déjà
+    /// parties (`DROP TABLE IF EXISTS`). L'inverse — la version d'abord —
+    /// aurait laissé une base qui se dit v10 en portant encore `page_vec`.
+    static func migrateToCurrent(_ db: Database) throws {
+        try db.execute(sql: Schema.v9ToV10)
+        // La DDL est idempotente : la rejouer pose ce qu'une v9 d'avant
+        // pourrait ne pas avoir (`roots.ignore_rules` est, elle, ajoutée par la
+        // première écriture — voir le commentaire de la table).
+        try db.execute(sql: Schema.ddl)
+        try db.execute(
+            sql: "INSERT OR REPLACE INTO meta(k, v) VALUES ('schema_version', ?)",
+            arguments: [String(Schema.version)])
     }
 
     /// La version de schéma inscrite dans `meta`, relue MAINTENANT.
@@ -791,10 +832,10 @@ public final class GRDBStore: IndexStore {
     /// Renommages et déplacements (schéma v6, constat A3-02).
     ///
     /// LA MÉTHODE QUI N'EFFACE RIEN. Elle ne touche ni `page_fts`, ni
-    /// `page_src`, ni `ocr_layout`, ni `ocr_queue`, ni `page_vec` : ces tables
-    /// sont indexées par `doc_id` (ou par le rowid structuré qui en dérive), et
-    /// le `doc_id` ne bouge pas. C'est exactement ce qui rend un `mv` gratuit
-    /// là où il coûtait des heures d'OCR et de vectorisation.
+    /// `page_src`, ni `ocr_layout`, ni `ocr_queue` : ces tables sont indexées
+    /// par `doc_id` (ou par le rowid structuré qui en dérive), et le `doc_id`
+    /// ne bouge pas. C'est exactement ce qui rend un `mv` gratuit là où il
+    /// coûtait des heures d'OCR.
     ///
     /// `indexed_at` n'est PAS retouché : rien n'a été ré-indexé.
     ///
@@ -902,12 +943,6 @@ public final class GRDBStore: IndexStore {
         // même suppression par PLAGE, jamais par doc_id.
         try db.execute(sql: "DELETE FROM ocr_layout WHERE rowid BETWEEN ? AND ?",
                        arguments: [range.lowerBound, range.upperBound])
-        // page_vec porte un rowid de FENÊTRE depuis le schéma v5 : la plage est
-        // celle des pages multipliée par le facteur de fenêtre. Toujours par
-        // PLAGE, jamais par doc_id.
-        let vecRange = Schema.vecRowIDRange(docID: id)
-        try db.execute(sql: "DELETE FROM page_vec   WHERE rowid BETWEEN ? AND ?",
-                       arguments: [vecRange.lowerBound, vecRange.upperBound])
         try db.execute(sql: "DELETE FROM ocr_queue  WHERE doc_id = ?", arguments: [id])
         // Le nom du document part avec lui (schéma v8, D-R3).
         try removeDocumentName(db, id: id)
@@ -967,13 +1002,6 @@ public final class GRDBStore: IndexStore {
             let range = Schema.ftsRowIDRange(docID: docID)
             try db.execute(sql: "DELETE FROM page_fts WHERE rowid BETWEEN ? AND ?",
                            arguments: [range.lowerBound, range.upperBound])
-            // Le texte change : TOUTES les fenêtres de ces pages sont périmées,
-            // sentinelle de complétude comprise. `fouine embed` les reproduira
-            // (schéma v5) — et tant que la sentinelle manque, la page est
-            // « incomplète » pour la pompe, donc re-sélectionnée.
-            let vecRange = Schema.vecRowIDRange(docID: docID)
-            try db.execute(sql: "DELETE FROM page_vec WHERE rowid BETWEEN ? AND ?",
-                           arguments: [vecRange.lowerBound, vecRange.upperBound])
             for p in pages {
                 try db.execute(sql: """
                     INSERT INTO page_fts(rowid, body, doc_id, page) VALUES (?,?,?,?)
@@ -1203,11 +1231,6 @@ public final class GRDBStore: IndexStore {
             let rowid = Schema.ftsRowID(docID: docID, page: page)
             try db.execute(sql: "DELETE FROM page_fts WHERE rowid = ?",
                            arguments: [rowid])
-            // Texte remplacé par l'OCR : toutes les fenêtres de la page sont
-            // périmées, sentinelle comprise (schéma v5).
-            let vecRange = Schema.vecRowIDRange(pageRowID: rowid)
-            try db.execute(sql: "DELETE FROM page_vec WHERE rowid BETWEEN ? AND ?",
-                           arguments: [vecRange.lowerBound, vecRange.upperBound])
             if nchars >= Self.minIndexedCharacters {
                 try db.execute(sql: """
                     INSERT INTO page_fts(rowid, body, doc_id, page) VALUES (?,?,?,?)
@@ -1312,13 +1335,11 @@ public final class GRDBStore: IndexStore {
     /// republié toutes les 60 s, qui ne dit rien de l'index —, et son compte de
     /// pages en attente datait de la dernière fois que la fenêtre avait été
     /// devant. Les deux nombres justes sont ici ; les prendre dans `stats()`
-    /// aurait coûté le balayage de `page_vec` (258 ms, lot MN1) à chaque tic de
-    /// sonde.
+    /// aurait coûté ses huit comptes à chaque tic de sonde.
     ///
     /// Mesuré le 13/10/2026 sur une copie de la base de production (3 642
-    /// documents, 820 000 fenêtres de vecteurs), cache chaud, médiane de trois
-    /// passes : **0,85 ms** (0,87 / 0,85 / 0,75), contre **379 ms** pour
-    /// `stats()` au même instant. PAS D'INDEX SUR `indexed_at`, et il n'en faut
+    /// documents), cache chaud, médiane de trois passes : **0,85 ms** (0,87 /
+    /// 0,85 / 0,75), contre **379 ms** pour `stats()` au même instant. PAS D'INDEX SUR `indexed_at`, et il n'en faut
     /// pas : `docs` tient en quelques milliers de lignes, et un index de plus
     /// serait à tenir à jour à chaque document indexé.
     public func indexFreshness() throws -> IndexFreshness {
@@ -1385,38 +1406,6 @@ public final class GRDBStore: IndexStore {
                 "SELECT count(*) FROM page_src "
                 + "WHERE src IN (\(Self.scannedSourceList)) AND (conf IS NULL OR conf <= 0)")
             s["ocr_queue_len"]  = try count("SELECT count(*) FROM ocr_queue")
-            // TROIS nombres depuis le fenêtrage (schéma v5), et pas un :
-            // `pages_vec` reste ce qu'il a toujours été — des PAGES que le
-            // canal sémantique voit —, `pages_vec_complete` compte celles dont
-            // toutes les fenêtres sont produites (sentinelle posée), et
-            // `vectors_vec` compte les lignes, c'est-à-dire les fenêtres.
-            // UN SEUL BALAYAGE POUR LES TROIS (lot MN1). `page_vec` n'a pas
-            // d'index secondaire — `SCAN page_vec`, vérifié par EXPLAIN QUERY
-            // PLAN —, et un balayage y coûte cher parce que chaque ligne porte
-            // un blob de 384 octets : 820 458 lignes, ~315 Mo de table.
-            // Mesuré le 14/09/2026 sur une copie de la base de production
-            // (820 458 fenêtres), cache chaud, trois passes : **502 ms** en
-            // trois requêtes (182 + 183 + 137), **258 ms** en une. C'est le
-            // poste dominant de `fouine status`, qui tient en 672 ms à chaud et
-            // 3,2 s à froid. Les trois nombres et leurs clés sont inchangés.
-            //
-            // Les comptes de `page_src` ci-dessus, EUX, restent séparés : ils
-            // passent par `idx_page_src_conf` (index couvrant), soit 22 ms pour
-            // les quatre, quand le même regroupement en un balayage coûtait
-            // 167 ms — sept fois pire. On ne regroupe que ce qui balaie déjà.
-            // `coalesce` parce que `sum()` rend NULL sur une table VIDE, là où
-            // `count()` rendait 0 : une base neuve doit lire « 0 vecteur ».
-            let windows = try Row.fetchOne(db, sql: """
-                SELECT count(*) AS n,
-                       coalesce(sum(rowid % \(Schema.vecChunksPerPage) = 0), 0)
-                           AS pages,
-                       coalesce(sum(rowid % \(Schema.vecChunksPerPage)
-                           = \(Schema.vecWindowMax - 1)), 0) AS complete
-                  FROM page_vec
-                """)
-            s["pages_vec"] = windows?["pages"] ?? 0
-            s["pages_vec_complete"] = windows?["complete"] ?? 0
-            s["vectors_vec"] = windows?["n"] ?? 0
             return s
         }
         out["db_bytes"] = databaseBytes()

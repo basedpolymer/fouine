@@ -40,7 +40,7 @@ final class TempIndex {
     ///   cas de toutes les transcriptions « golden » et ce qui rend
     ///   `fouine_status.agent` déterministe.
     init(documents: Int = 2, pagesPerDocument: Int = 3,
-         vectorisedPages: Int = 0, pageChars: Int = 0,
+         pageChars: Int = 0,
          failedDocuments: Int = 0, skippedDocuments: Int = 0,
          roots: [String] = [], languages: [String] = [],
          agentStatus: AgentStatusRecord? = nil) throws {
@@ -90,41 +90,6 @@ final class TempIndex {
                 size: 3 << 30, mtime: 1_700_000_200))
             try store.setDocState(id, .skipped, err: "file too large (3.0 GiB)")
         }
-        if vectorisedPages > 0 {
-            // Des vecteurs FACTICES : `vectorCount()` compte des lignes, il ne
-            // les relit pas. C'est assez pour éprouver le calcul de couverture,
-            // et cela évite d'exiger un modèle de 220 Mo dans une suite de
-            // tests.
-            //
-            // La valeur 6 n'est pas prise au hasard. Un vecteur unitaire de
-            // dimension 384 quantifié en int8 a des composantes autour de
-            // 127/√384 ≈ 6,5 ; le produit scalaire de deux vecteurs remplis de
-            // 6 rend donc un cosinus de 0,857, c'est-à-dire dans la bande
-            // 0,78-0,88 réellement mesurée sur le corpus. Remplir de 1 aurait
-            // donné 0,024 — un chiffre qu'aucune transcription ne devrait
-            // montrer comme s'il venait du produit.
-
-            // L'identité du modèle est posée comme `EmbedRun` la pose : c'est
-            // elle que `fouine_similar_pages` rend sous `model_id`/`revision`,
-            // et une base qui en manquerait ne serait pas représentative.
-            try store.setVecMeta(modelID: "multilingual-e5-small", dim: 384,
-                                 revision: 1)
-            var batch: [(rowid: Int64, vec: Data)] = []
-            for offset in 0..<vectorisedPages {
-                let page = offset % pagesPerDocument + 1
-                let docID = Int64(offset / pagesPerDocument + 1)
-                // Schéma v5 : un vecteur vit au rowid de sa FENÊTRE. Fenêtre 0
-                // réelle, et la sentinelle de complétude (créneau vecWindowMax-1,
-                // blob vide) comme la pompe l'écrit — `allVectors` l'ignore.
-                let pageRowID = Schema.ftsRowID(docID: docID, page: page)
-                batch.append((Schema.vecRowID(pageRowID: pageRowID, chunk: 0),
-                              Data(repeating: 6, count: 384)))
-                batch.append((Schema.vecRowID(pageRowID: pageRowID,
-                                              chunk: Schema.vecWindowMax - 1),
-                              Data()))
-            }
-            try store.upsertVectors(batch)
-        }
         if let agentStatus { try store.writeAgentStatus(agentStatus) }
         // Le verrou est rendu tout de suite : le serveur doit pouvoir lire une
         // base que personne ne tient, et c'est aussi le cas normal.
@@ -162,21 +127,14 @@ final class TempIndex {
     ///
     /// `modelDirectory` pointe par défaut sur un dossier VIDE : aucune suite ne
     /// peut dépendre d'un modèle de 220 Mo présent sur la machine qui la rejoue,
-    /// et c'est aussi ce qui rend le repli sémantique éprouvable sans réseau.
-    /// Les tests SOUS modèle passent le vrai répertoire et se sautent sans lui.
     func makeServer(logLevel: LogLevel = .quiet,
-                    schemaCacheTTL: TimeInterval = 60,
-                    modelDirectory: URL? = nil) throws -> MCPServer {
-        let model = modelDirectory
-            ?? directory.appendingPathComponent("no-model", isDirectory: true)
-        return MCPServer(
+                    schemaCacheTTL: TimeInterval = 60) throws -> MCPServer {
+        MCPServer(
             options: .init(databaseURL: databaseURL, logLevel: logLevel,
                            schemaCacheTTL: schemaCacheTTL),
             version: "1.0.0-test",
-            makeSemanticEngine: { SemanticEngine(store: $0, modelDirectory: model) },
-            makeStatusTool: { store, semantic in
-                StatusTool(store: store, semantic: semantic, modelDirectory: model,
-                           launchdProbe: { .notRegistered })
+            makeStatusTool: { store in
+                StatusTool(store: store, launchdProbe: { .notRegistered })
             })
     }
 

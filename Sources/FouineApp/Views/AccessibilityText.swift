@@ -88,13 +88,6 @@ enum AccessibilityText {
     static func foundPages(_ n: Int) -> String {
         bare(String(localized: "\(n) pages found"))
     }
-    static func mergedPages(_ n: Int) -> String {
-        bare(String(localized: "\(n) merged pages"))
-    }
-    static func semanticOnlyPages(_ n: Int) -> String {
-        bare(String(localized: "\(n) pages found by meaning alone"))
-    }
-
     // `agentStatus(_:)` a été retiré (UX-03) : le bloc de progression de
     // l'agent n'existe plus dans la barre latérale. Ce que VoiceOver dit de
     // l'index se lit maintenant dans `indexCard(_:)` ci-dessous, qui part de
@@ -127,30 +120,6 @@ enum AccessibilityText {
     /// de milliers retirés, pour la même raison.
     static func spokenCount(_ text: String) -> String {
         bare(text)
-    }
-
-    // MARK: - Modèle sémantique (audit D6)
-
-    /// Ce que VoiceOver dit d'un transfert en cours.
-    ///
-    /// La barre de progression annonce seule un pourcentage sans unité ; ce qui
-    /// manque, et qui compte quand on attend 220 Mo, c'est l'ÉTAPE (le
-    /// téléchargement n'est pas la décompression) et les octets déjà là.
-    ///
-    /// Le pourcentage passe par `Format.percent` et non par un « % » écrit dans
-    /// la clé : un `%` littéral dans une clé de String Catalog est un
-    /// spécificateur de format, et l'espace qui le précède en français vient de
-    /// la locale, pas de la traduction.
-    static func modelTransfer(phase: String, fraction: Double?,
-                              received: Int64, expected: Int64) -> String {
-        guard let fraction, expected > 0 else { return phase }
-        return String(localized: "\(phase), \(Format.percent(fraction)) — \(Format.bytes(Int(received))) of \(Format.bytes(Int(expected)))")
-    }
-
-    /// Ce que VoiceOver dit du modèle installé : la ligne visible est un
-    /// numéro de révision et une taille, que rien ne rattache au modèle.
-    static func installedModel(id: String, revision: Int, bytes: Int64) -> String {
-        String(localized: "\(id), revision \(String(revision)), \(Format.bytes(Int(bytes))) on disk")
     }
 
     // MARK: - Racines (barre latérale)
@@ -241,10 +210,7 @@ enum AccessibilityText {
 
     /// Par quel canal cette page est arrivée. L'insigne « ≈ » et le pictogramme
     /// de provenance sont, sans cette phrase, purement visuels (audit U3).
-    static func channel(semanticOnly: Bool, fuzzyDistance: Int) -> String {
-        if semanticOnly {
-            return String(localized: "approximate result, found by meaning")
-        }
+    static func channel(fuzzyDistance: Int) -> String {
         if fuzzyDistance > 0 {
             // « distance 2 » ne se lit pas à haute voix (lot J2) : on dit
             // combien de lettres séparent le mot trouvé du mot cherché.
@@ -262,21 +228,16 @@ enum AccessibilityText {
         LanguageNames.sourceLabel(source, engine: engine)
     }
 
-    /// Une page sémantique pure n'a pas de provenance connue sans un balayage de
-    /// `page_src` : on ne l'annonce pas plutôt que de l'inventer — c'est la même
-    /// raison qui fait afficher l'insigne « ≈ » à la place du pictogramme.
-    ///
     /// `timestamp` est le moment d'un passage ENTENDU (lot PV1) : sur une page
     /// de son ou de vidéo, « page 3 » ne dit rien — « à 12:40 » situe.
     static func hitLabel(fileName: String, page: Int, source: PageSource,
-                         engine: OCREngineID, semanticOnly: Bool,
+                         engine: OCREngineID,
                          fuzzyDistance: Int, timestamp: String? = nil,
                          unit: PageUnit = .page) -> String {
         var parts = [bare(Citation.label(fileName: fileName, page: page, unit: unit))]
         if let timestamp { parts.append(bare(String(localized: "at \(timestamp)"))) }
-        if !semanticOnly { parts.append(textSource(source, engine: engine)) }
-        parts.append(channel(semanticOnly: semanticOnly,
-                             fuzzyDistance: fuzzyDistance))
+        parts.append(textSource(source, engine: engine))
+        parts.append(channel(fuzzyDistance: fuzzyDistance))
         return parts.joined(separator: ", ")
     }
 
@@ -323,8 +284,7 @@ enum AccessibilityText {
 
     /// La ligne d'état affiche « 1 203 page(s) dans 12 document(s) » avec
     /// l'espace fine insécable : ce libellé la redit en nombres nus.
-    static func resultCounts(pages n: Int, docs: Int, hybrid: Bool) -> String {
-        let p = hybrid ? mergedPages(n) : foundPages(n)
-        return String(localized: "\(p) in \(documents(docs))")
+    static func resultCounts(pages n: Int, docs: Int) -> String {
+        String(localized: "\(foundPages(n)) in \(documents(docs))")
     }
 }

@@ -31,9 +31,9 @@ final class ToolsListTests: XCTestCase {
         return try XCTUnwrap(result["tools"] as? [[String: Any]])
     }
 
-    func testTheFiveToolsAllAnnounceThemselvesAsReadOnly() throws {
+    func testTheFourToolsAllAnnounceThemselvesAsReadOnly() throws {
         let tools = try self.tools()
-        XCTAssertEqual(tools.count, 5)
+        XCTAssertEqual(tools.count, 4)
         for tool in tools {
             let name = tool["name"] as? String ?? "?"
             let annotations = try XCTUnwrap(tool["annotations"] as? [String: Any],

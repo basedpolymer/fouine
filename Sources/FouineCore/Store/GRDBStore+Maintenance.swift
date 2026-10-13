@@ -72,9 +72,6 @@ public struct DeepCheckReport: Sendable {
     public let fragmentationBytes: Int
     public let walBytes: Int
     public let journalMode: String
-    /// Cohérence de `page_vec` (audit A1m-05). `nil` seulement pour un
-    /// appelant qui n'a pas pu la calculer — `deepCheck()` la remplit toujours.
-    public let vectors: VectorConsistencyReport?
     /// Cohérence de `docs_fts` (schéma v8, D-R3). `nil` seulement pour un
     /// appelant qui n'a pas pu la calculer — `deepCheck()` la remplit toujours.
     public let docNames: DocNameCheck?
@@ -83,9 +80,9 @@ public struct DeepCheckReport: Sendable {
     /// prend le temps — et la réponse n'était pas celle qu'on croyait. Mesuré
     /// le 10/09/2026 sur une copie de la base de production (2,15 Go, 177 s au
     /// total, une autre compilation en cours) : `quick_check` **79,6 s**,
-    /// `page_vec` 5,5 s, `docs_fts` 9 ms, `fts5_integrity` **92,0 s**. Les
-    /// deux gros postes sont donc à peu près à égalité, et le verrou
-    /// d'écriture n'est tenu que pendant le second.
+    /// `docs_fts` 9 ms, `fts5_integrity` **92,0 s**. Les deux gros postes sont
+    /// donc à peu près à égalité, et le verrou d'écriture n'est tenu que
+    /// pendant le second.
     public let steps: [MaintainStep]
     public let elapsedMS: Double
 
@@ -93,7 +90,6 @@ public struct DeepCheckReport: Sendable {
                 pageCount: Int, pageSize: Int, freelistCount: Int,
                 fragmentationPct: Double, fragmentationBytes: Int,
                 walBytes: Int, journalMode: String,
-                vectors: VectorConsistencyReport? = nil,
                 docNames: DocNameCheck? = nil,
                 steps: [MaintainStep] = [], elapsedMS: Double) {
         self.quickCheck = quickCheck
@@ -106,7 +102,6 @@ public struct DeepCheckReport: Sendable {
         self.fragmentationBytes = fragmentationBytes
         self.walBytes = walBytes
         self.journalMode = journalMode
-        self.vectors = vectors
         self.docNames = docNames
         self.steps = steps
         self.elapsedMS = elapsedMS
@@ -130,7 +125,6 @@ public struct DeepCheckReport: Sendable {
                 ["name": $0.name, "elapsed_ms": Int(round($0.elapsedMS))] as [String: Any]
             }
         }
-        if let vectors { object["vectors"] = vectors.json }
         if let docNames { object["doc_names"] = docNames.json }
         return object
     }
@@ -154,9 +148,6 @@ public struct MaintainReport: Sendable {
     public let freelistBefore: Int
     public let freelistAfter: Int
     public let vacuumExecuted: Bool
-    /// Ce que `--repair` a retiré de `page_vec`. `nil` sans l'option : sans
-    /// elle, `maintain` ne change RIEN au contenu de l'index (contrat C2-06).
-    public let vectorRepair: VectorRepairReport?
     /// Documents dont `--repair` a effacé la marque d'échec d'OCR faute de
     /// page scannée (IX2). `nil` sans l'option, pour la même raison.
     public let ocrFailuresCleared: Int?
@@ -164,7 +155,7 @@ public struct MaintainReport: Sendable {
 
     public init(steps: [MaintainStep], bytesBefore: Int, bytesAfter: Int, bytesReclaimed: Int,
                 freelistBefore: Int, freelistAfter: Int, vacuumExecuted: Bool,
-                vectorRepair: VectorRepairReport? = nil, ocrFailuresCleared: Int? = nil,
+                ocrFailuresCleared: Int? = nil,
                 totalElapsedMS: Double) {
         self.steps = steps
         self.bytesBefore = bytesBefore
@@ -173,7 +164,6 @@ public struct MaintainReport: Sendable {
         self.freelistBefore = freelistBefore
         self.freelistAfter = freelistAfter
         self.vacuumExecuted = vacuumExecuted
-        self.vectorRepair = vectorRepair
         self.ocrFailuresCleared = ocrFailuresCleared
         self.totalElapsedMS = totalElapsedMS
     }
@@ -189,7 +179,6 @@ public struct MaintainReport: Sendable {
             "total_elapsed_ms": Int(round(totalElapsedMS)),
             "steps": steps.map { ["name": $0.name, "elapsed_ms": Int(round($0.elapsedMS))] },
         ]
-        if let vectorRepair { object["vector_repair"] = vectorRepair.json }
         if let ocrFailuresCleared { object["ocr_failures_cleared"] = ocrFailuresCleared }
         return object
     }
@@ -426,14 +415,10 @@ extension GRDBStore {
             return (pc, ps, fc, jm, qc)
         } }
 
-        // Cohérence de `page_vec` (audit A1m-05) : AVANT le verrou, parce que
-        // c'est une lecture pure et que la tenir sous le verrou de
-        // l'integrity-check FTS5 (3 min 30 sur 1,8 Go) allongerait pour rien
-        // la fenêtre pendant laquelle l'agent voit la base occupée.
-        let vectors = try timed("page_vec") { try checkVectors() }
         // `docs_fts` (schéma v8) : deux `count(*)` sur des tables de quelques
-        // milliers de lignes — une lecture, comme la précédente, avant le
-        // verrou de l'integrity-check FTS5.
+        // milliers de lignes — une lecture pure, faite AVANT le verrou de
+        // l'integrity-check FTS5 (3 min 30 sur 1,8 Go), qu'il serait inutile
+        // d'allonger.
         let docNames = try timed("docs_fts") { try checkDocumentNames() }
 
         // FTS5 integrity-check : syntaxe INSERT, donc transaction d'écriture SQLite
@@ -486,7 +471,6 @@ extension GRDBStore {
             fragmentationBytes: fragBytes,
             walBytes: walBytes,
             journalMode: journalMode,
-            vectors: vectors,
             docNames: docNames,
             steps: steps,
             elapsedMS: elapsedMS
@@ -497,11 +481,11 @@ extension GRDBStore {
 
     /// Maintenance de la base (SPEC §4.3, C2-06).
     /// Prend le verrou nommé sous le rôle `cli` (sortie 3 si occupé).
-    /// `repair` (audit A1m-05) : retire de `page_vec` les lignes qu'aucune
-    /// pompe n'a pu écrire, AVANT les optimisations — l'`optimize` de FTS5 et
-    /// le checkpoint n'ont aucune raison de recopier ce qui va partir. Sans
-    /// l'option, `maintain` ne touche à AUCUNE donnée : c'est le contrat de la
-    /// commande depuis C2-06, et il ne change pas.
+    /// `repair` (audit A1m-05, IX2) : refait `docs_fts` depuis `docs` et
+    /// efface les marques d'échec d'OCR qui ne désignent plus aucune page
+    /// scannée, AVANT les optimisations. Sans l'option, `maintain` ne touche à
+    /// AUCUNE donnée : c'est le contrat de la commande depuis C2-06, et il ne
+    /// change pas.
     public func maintain(
         vacuum: Bool = false,
         force: Bool = false,
@@ -519,24 +503,9 @@ extension GRDBStore {
         let currentPool = try self.pool
         var steps: [MaintainStep] = []
 
-        // 0. Réparation de page_vec (--repair). Le verrou est déjà pris :
-        // `repairVectors` passe par `writeLocked`, qui est idempotent.
-        var vectorRepair: VectorRepairReport?
         var ocrFailuresCleared: Int?
         if repair {
-            let t = Date()
-            let report = try repairVectors()
-            vectorRepair = report
-            steps.append(MaintainStep(name: "page_vec repair",
-                                      elapsedMS: Date().timeIntervalSince(t) * 1000.0))
-            if report.total > 0 {
-                progress?("removed \(report.total) inconsistent page_vec row(s); "
-                          + "\(report.pagesRequeued) page(s) back in the `fouine embed` queue")
-            } else {
-                progress?("page_vec is consistent, nothing to repair")
-            }
-
-            // 0 bis. `docs_fts` (schéma v8) : reconstruite depuis `docs`, qui
+            // 0. `docs_fts` (schéma v8) : reconstruite depuis `docs`, qui
             // en est la seule source. Quelques milliers de lignes, instantané —
             // on la refait sans se demander si elle est juste.
             let tNames = Date()
@@ -659,7 +628,6 @@ extension GRDBStore {
             freelistBefore: freelistBefore,
             freelistAfter: freelistAfter,
             vacuumExecuted: vacuumRan,
-            vectorRepair: vectorRepair,
             ocrFailuresCleared: ocrFailuresCleared,
             totalElapsedMS: totalElapsed
         )

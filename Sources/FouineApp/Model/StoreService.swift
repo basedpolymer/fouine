@@ -72,26 +72,6 @@ final class StoreService: @unchecked Sendable {
         try await run { [store] in try store.search(q, excludingDocsMatching: negative) }
     }
 
-    /// Les documents dont le NOM DE FICHIER répond (lot MP1, PR-02).
-    ///
-    /// À PART de `search`, qui les rend déjà, pour le seul chemin HYBRIDE :
-    /// `HybridResults` ne porte pas ce champ (c'est `HybridSearch.run` qui
-    /// appelle le canal lexical), et le bandeau ne doit pas dépendre de
-    /// l'interrupteur « Chercher aussi par le sens ».
-    func documentsMatchingName(_ q: SearchQuery) async throws -> [DocumentListing] {
-        try await run { [store] in try store.documentsMatchingName(q) }
-    }
-
-    /// Ceux des mots tapés qu'au moins une page porte (lot MC1) : ce qui
-    /// distingue « aucun de vos mots n'est dans vos documents » de « vos mots
-    /// n'y sont jamais ensemble ». Lu SEULEMENT quand la phrase va être dite.
-    func wordsPresent(_ q: SearchQuery, excludingDocsMatching negative: String?)
-        async throws -> [String] {
-        try await run { [store] in
-            try store.wordsPresent(q, excludingDocsMatching: negative)
-        }
-    }
-
     /// Mêmes exclusions que la recherche : sans elles, les facettes comptaient
     /// des documents que la liste de résultats n'affiche pas (audit F1).
     func facets(_ q: SearchQuery, by key: FacetKey,
@@ -133,13 +113,12 @@ final class StoreService: @unchecked Sendable {
     /// quoi le découpage en jetons d'une page dense se paierait sur le fil
     /// principal à chaque changement de sélection.
     func explanation(docID: Int64, page: Int, words: [QueryWord],
-                     fuzzyDistance: Int, lexRank: Int?, vecRank: Int?,
+                     fuzzyDistance: Int,
                      fallbackText: String) async throws -> HitExplanation? {
         try await run { [store] in
             let text = try store.pageText(docID: docID, page: page)
             return HitExplanation(words: words, text: text ?? fallbackText,
                                   fuzzyDistance: fuzzyDistance,
-                                  lexRank: lexRank, vecRank: vecRank,
                                   // Faute de texte indexé (page qui attend
                                   // encore l'OCR), on retombe sur l'extrait —
                                   // et on cesse alors de conclure à un manque.

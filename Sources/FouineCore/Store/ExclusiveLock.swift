@@ -43,7 +43,7 @@ public enum LockRole: String, Sendable {
     }
 
     /// Rôle déduit du nom de l'exécutable, pour les acquisitions PARESSEUSES
-    /// (`fouine root add`, `fouine embed`…) qui ne passent pas par une passe
+    /// (`fouine root add`, `fouine config set`…) qui ne passent pas par une passe
     /// d'indexation et n'ont donc personne pour déclarer leur rôle.
     public static func forCurrentProcess() -> LockRole {
         let name = ProcessInfo.processInfo.processName
@@ -163,11 +163,10 @@ public struct LockHolder: Sendable, Equatable {
 /// OCR — de toute autre panne — disque plein, base corrompue, schéma cassé —,
 /// qu'il faut REMONTER.
 ///
-/// Motif (audit X3, `EmbedRun.swift:83`) : la pompe à vecteurs avalait toute
-/// erreur d'écriture par un `try?`, puis réessayait pendant 15 min. Une base
-/// corrompue était donc indiscernable d'un verrou tenu, et se soldait par un
-/// abandon silencieux au bout d'un quart d'heure — après avoir jeté les
-/// vecteurs déjà inférés.
+/// Motif (audit X3) : une pompe d'écriture avalait toute erreur par un
+/// `try?`, puis réessayait pendant 15 min. Une base corrompue était donc
+/// indiscernable d'un verrou tenu, et se soldait par un abandon silencieux au
+/// bout d'un quart d'heure — après avoir jeté le travail déjà fait.
 ///
 /// La classification passe par le MESSAGE parce que `FouineError` est un
 /// contrat gelé (§4.2) — on ne peut pas lui ajouter un cas sans casser les
@@ -199,8 +198,8 @@ public enum WriteLock {
     ///
     /// POURQUOI UN JETON ET PLUS UNE PHRASE. `isBusy` décidait sur le préfixe
     /// « base verrouillée par un autre processus » — c'est-à-dire sur du
-    /// FRANÇAIS. Trois boucles de reprise en dépendent (`EmbedRun`,
-    /// `AgentStatusWriter`, `GRDBStore+Settings`) : le jour où les messages du
+    /// FRANÇAIS. Les boucles de reprise en dépendent (`AgentStatusWriter`,
+    /// `GRDBStore+Settings`) : le jour où les messages du
     /// cœur passent à l'anglais, elles auraient cessé de distinguer un verrou
     /// tenu d'une base corrompue et réessayé un quart d'heure sur un disque
     /// plein. Le message porte donc les DONNÉES, dans un format à nous, stable

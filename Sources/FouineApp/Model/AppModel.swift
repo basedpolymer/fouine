@@ -9,7 +9,6 @@ import UniformTypeIdentifiers
 import ServiceManagement
 import FouineCore
 import FouineCrawl
-import FouineEmbed
 import FouineIndex
 
 /// État d'une racine tel que l'interface doit le montrer : montée, lisible, et
@@ -165,8 +164,6 @@ final class AppModel: ObservableObject {
     @Published private(set) var healthReport: HealthBannerReport = HealthBannerEvaluator.evaluate(
         agentState: .off,
         lockStatus: .free,
-        semanticInstalled: false,
-        hasVectors: false,
         roots: []
     )
     private(set) var healthProbeTask: Task<Void, Never>?
@@ -223,47 +220,6 @@ final class AppModel: ObservableObject {
                                    doubtful: stats["pages_ocr_low_conf"] ?? 0)
     }
 
-    // MARK: - Recherche par le sens (UX-12)
-
-    /// Où en est la préparation de la recherche par le sens, et ce qu'il en
-    /// reste. `nil` tant qu'on ne l'a pas demandé (c'est trois comptes en base,
-    /// on ne les paie qu'à l'ouverture de la feuille ou de l'onglet).
-    struct MeaningReadiness: Equatable {
-        /// Pages entièrement préparées.
-        var ready: Int
-        /// Pages indexées, c'est-à-dire le total à préparer.
-        var total: Int
-        /// Heures de travail restantes au débit de la dernière passe, ou `nil`
-        /// : aucune passe n'a encore tourné, donc rien de sincère à annoncer.
-        var remainingHours: Double?
-
-        var left: Int { max(0, total - ready) }
-        var isComplete: Bool { total > 0 && left == 0 }
-    }
-
-    @Published private(set) var meaning: MeaningReadiness?
-
-    /// Relit l'avancement de la préparation, hors du fil principal.
-    ///
-    /// Mesuré sur une copie de la base de production : 7 ms pour les pages
-    /// indexées, 24 ms pour les pages prêtes, 48 ms pour la projection en
-    /// heures. C'est le prix d'une ouverture de feuille, pas celui d'une sonde.
-    func refreshMeaningReadiness() async {
-        let store = service.store
-        let fresh = await Task.detached(priority: .utility)
-            { () -> MeaningReadiness? in
-            guard let indexed = try? store.indexedPageCount(),
-                  let forecast = try? store.embedForecast() else { return nil }
-            return MeaningReadiness(
-                ready: max(0, indexed - forecast.incompletePages),
-                total: indexed, remainingHours: forecast.remainingHours)
-        }.value
-        // Une lecture qui échoue ne DOIT PAS effacer ce qui est affiché
-        // (§5.6, « ne jamais vider l'affichage »).
-        guard let fresh else { return }
-        meaning = fresh
-    }
-
     /// Feuille affichée, s'il y en a une.
     ///
     /// UNE seule feuille est attachée à la vue (audit A10.6) : deux `.sheet`
@@ -274,9 +230,6 @@ final class AppModel: ObservableObject {
     enum Sheet: Equatable {
         case indexing
         case ocrPrompt
-        /// « Préparer la recherche par le sens » (UX-12) : ce que la passe
-        /// fait, où elle en est, combien de temps on lui donne.
-        case prepareMeaning
         /// « Désinstaller Fouine… » (audit D13). Une feuille et non une alerte :
         /// elle porte trois cases à cocher et une demi-douzaine de chemins.
         case uninstall
@@ -875,16 +828,11 @@ final class AppModel: ObservableObject {
     /// finir (`DiskSpaceNotice`).
     ///
     /// Calculé depuis `stats`, donc au rythme de `refreshStats` et SANS aucune
-    /// lecture nouvelle : les trois nombres nécessaires (taille, pages
-    /// indexées, pages entièrement préparées) sont déjà dans le lot que
-    /// `stats()` rend, balayage de `page_vec` compris. La géométrie des
-    /// fenêtres reste la constante du corpus de production : la mesurer coûte
-    /// un second balayage (48 ms) et déplace la projection de moins de 2 %,
-    /// ce qui ne change aucun seuil.
+    /// lecture nouvelle : les deux nombres nécessaires (taille, pages
+    /// indexées) sont déjà dans le lot que `stats()` rend.
     var diskBudget: DiskForecast {
         DiskForecast(bytes: stats["db_bytes"] ?? 0,
-                     pagesIndexed: stats["pages_indexed"] ?? 0,
-                     pagesFullyVectorised: stats["pages_vec_complete"] ?? 0)
+                     pagesIndexed: stats["pages_indexed"] ?? 0)
     }
 
     /// Le repère de la visite précédente, ou `nil` s'il n'y en a jamais eu.
@@ -1095,20 +1043,10 @@ final class AppModel: ObservableObject {
 
     /// Rafraîchit l'état des 4 composantes de santé.
     func refreshHealth() async {
-        let store = service.store
         let lockPath = FouinePaths.lockURL(for: service.databaseURL).path
         let lockStatus = await Task.detached(priority: .utility) {
             WriteLock.inspect(path: lockPath)
         }.value
-        let modelDir = EmbedPaths.modelDirectory()
-        let modelInstalled = EmbedPaths.modelAvailable(at: modelDir)
-        // EXISTS, pas count(*) (A2-08) : le bandeau ne teste qu'un booléen, et
-        // le comptage exact balayait `page_vec` en entier — 0,10 s aujourd'hui,
-        // une à deux secondes à campagne finie, toutes les 30 secondes.
-        let hasVectors = (try? await Task.detached(priority: .utility) {
-            try store.hasAnyVector()
-        }.value) ?? ((stats["vectors_vec"] ?? 0) > 0)
-
         // LaunchServices se lit hors du fil principal : la base de services est
         // sur disque, et l'interroger bloque quelques millisecondes (lot J2).
         let copiesVerdict = await Task.detached(priority: .utility) {
@@ -1119,8 +1057,6 @@ final class AppModel: ObservableObject {
             agentState: agentOperationalState,
             appCopies: copiesVerdict,
             lockStatus: lockStatus,
-            semanticInstalled: modelInstalled,
-            hasVectors: hasVectors,
             roots: roots
         )
         refreshIndexStatus()
@@ -1454,53 +1390,6 @@ final class AppModel: ObservableObject {
                 self.indexingService = nil
             }
             await self?.refreshStats()
-        }
-    }
-
-    /// Lance la préparation de la recherche par le sens (UX-12).
-    ///
-    /// Calquée sur `startOCR` : le verrou est ANNONCÉ avant d'être attendu
-    /// (B1-26), la feuille change de contenu sans se fermer (A10.6), et
-    /// « Continuer en arrière-plan » renvoie la progression à la carte
-    /// « Index », qui porte « Arrêter ».
-    func startPrepareMeaning(budgetMinutes: Int?) {
-        guard !indexing.running else { return }
-        let svc = IndexingService(store: service.store)
-        indexingService = svc
-
-        let lockPath = FouinePaths.lockURL(for: service.databaseURL).path
-        let opening: String
-        if case .held(let holder) = WriteLock.inspect(path: lockPath) {
-            let who = LockActivityText.describe(holder)
-            opening = String(localized: "The index is being updated (\(who)) — waiting for it to finish…")
-        } else {
-            opening = String(localized: "Preparing search by meaning — getting ready…")
-        }
-
-        service.store.setWriteLockWaitHandler { [weak self] holder, _ in
-            let who = LockActivityText.describe(holder)
-            let waitingText = String(localized: "The index is being updated (\(who)) — waiting for it to finish…")
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.apply(IndexingState(running: true, activity: .preparingMeaning,
-                                         phase: waitingText).stamped())
-            }
-        }
-
-        apply(IndexingState(running: true, activity: .preparingMeaning,
-                            phase: opening).stamped())
-        sheet = .indexing
-        let publish = progressPublisher()
-        Task { [weak self] in
-            let outcome = await svc.runEmbed(budgetMinutes: budgetMinutes,
-                                             progress: publish)
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                self.apply(outcome)
-                self.indexingService = nil
-            }
-            await self?.refreshStats()
-            await self?.refreshMeaningReadiness()
         }
     }
 

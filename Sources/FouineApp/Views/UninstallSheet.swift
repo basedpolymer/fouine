@@ -118,7 +118,7 @@ struct UninstallSheet: View {
 
             box(targets: plan.support,
                 title: "Delete the index and the settings",
-                detail: Text("The index, its working files and the model for search by meaning. Rebuilding it means reading and recognising every document again, which can take hours."),
+                detail: Text("The index and its working files. Rebuilding it means reading and recognising every document again, which can take hours."),
                 isOn: $options.deleteIndex)
             box(targets: [plan.logs],
                 title: "Delete the logs",

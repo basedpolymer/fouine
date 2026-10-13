@@ -4,7 +4,7 @@
 // dans `UserDefaults` : l'agent launchd ne partage pas le domaine de
 // préférences de l'app, et c'est précisément l'agent qu'il s'agit de régler.
 // `Prefs` (UserDefaults) reste pour ce qui est purement d'interface — historique
-// de recherche, mode flou, interrupteur sémantique.
+// de recherche, mode flou.
 //
 // TROIS PRÉCAUTIONS D'INTERFACE :
 //
@@ -160,14 +160,6 @@ final class SettingsModel: ObservableObject {
             return String(localized: "Stop reading scanned pages while Low Power Mode is on.")
         case SettingKeys.agentPauseOnThermal.key:
             return String(localized: "Stop reading scanned pages while the Mac is hot, and start again once it has cooled down.")
-        case SettingKeys.agentPrepareMeaning.key:
-            return String(localized: "Prepare search by meaning little by little in the background, once every scanned page has been read.")
-        case SettingKeys.agentEmbedBudgetMinutes.key:
-            return String(localized: "How long each stretch of that preparation lasts, in minutes.")
-        // — Recherche par le sens (lot MC3). Le mot « tableur » se dit à des
-        // gens qui n'ouvrent pas de terminal ; « vecteur » ne s'y dit jamais.
-        case SettingKeys.embedSkipSpreadsheets.key:
-            return String(localized: "Leave spreadsheets out of search by meaning: a page of figures teaches it nothing, and those pages stay findable word for word.")
         case SettingKeys.pinnedRoots.key:
             return String(localized: "The scanned pages of this folder are read before those of the other folders.")
         case SettingKeys.notifyOnQueueDrained.key:

@@ -28,13 +28,6 @@ final class HitRelevanceTests: XCTestCase {
         XCTAssertEqual(HitRelevance.percentages(bm25: [-10, 0]), [100, 0])
     }
 
-    /// En hybride le meilleur est le PLUS GRAND (le RRF est positif) : prendre
-    /// le minimum aurait mis 100 % au dernier résultat.
-    func testLeRRFSeLitDansLAutreSens() throws {
-        let pct = HitRelevance.percentages(rrf: [0.0164, 0.0143, 0.0082])
-        XCTAssertEqual(pct, [100, 87, 50])
-    }
-
     func testLePourcentageResteBorne() throws {
         XCTAssertEqual(HitRelevance.percentage(score: -20, best: -10), 100,
                        "un score meilleur que le meilleur ne dépasse pas 100")

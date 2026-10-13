@@ -28,15 +28,10 @@ final class StoredIgnoreRulesPassTests: XCTestCase {
         let docs = try scratch.documents()
         XCTAssertEqual(docs.count, 3)
 
-        // Un vecteur pour chaque document : c'est `page_vec` qu'il faut voir
-        // se vider pour le seul document exclu.
-        try store.upsertVectors(docs.map { doc in
-            (rowid: Schema.vecRowID(pageRowID: Schema.ftsRowID(docID: doc.id, page: 0),
-                                    chunk: 0),
-             vec: Data(repeating: 1, count: 384))
-        })
         store.releaseWriteLock()
-        XCTAssertEqual(try store.vectorCount(), 3)
+        // Le texte des trois documents est indexé : c'est `page_fts` qu'il
+        // faut voir se vider pour le seul document exclu.
+        XCTAssertEqual(try store.indexedPageCount(), 3)
 
         try store.setIgnoreRulesJSON(
             rootID: scratch.rootRecord.id,
@@ -51,7 +46,8 @@ final class StoredIgnoreRulesPassTests: XCTestCase {
             ($0.record.relPath as NSString).lastPathComponent
         }.sorted()
         XCTAssertEqual(left, ["fiche-0.txt", "fiche-2.txt"])
-        XCTAssertEqual(try store.vectorCount(), 2, "les vecteurs du document exclu partent avec lui")
+        XCTAssertEqual(try store.indexedPageCount(), 2,
+                       "le texte du document exclu part avec lui")
         XCTAssertFalse(FileManager.default.fileExists(
             atPath: scratch.root.appendingPathComponent(IgnoreRules.fileName).path),
             "la règle vit dans la base, jamais dans le dossier")
