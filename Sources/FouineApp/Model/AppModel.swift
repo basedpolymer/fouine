@@ -1020,7 +1020,7 @@ final class AppModel: ObservableObject {
     ///
     /// PAS DE SONDE QUAND LA FENÊTRE EST AU FOND (A2-08), même règle que
     /// `startAgentStatusProbe` : personne ne regarde le bandeau, et le tour de
-    /// sonde ouvre le verrou, lit `page_vec` et interroge LaunchServices. Rien
+    /// sonde ouvre le verrou, lit la base et interroge LaunchServices. Rien
     /// n'est perdu — `SidebarView` rafraîchit la santé sur
     /// `didBecomeActiveNotification`, c'est-à-dire au moment exact où le
     /// bandeau redevient visible.
@@ -1120,8 +1120,7 @@ final class AppModel: ObservableObject {
         // l'agent, et la lecture légère qui dit depuis quand l'index n'a pas
         // bougé et combien de pages scannées attendent. Mesurées ensemble à
         // 1,4 ms sur une copie de la base de production (0,85 + 0,5, médianes
-        // de trois passes), là où `stats()` coûte 379 ms — le balayage de
-        // `page_vec`. C'est ce qui permet de les relire à CHAQUE tic.
+        // de trois passes), là où `stats()` coûte 379 ms. C'est ce qui permet de les relire à CHAQUE tic.
         let read = await Task.detached(priority: .utility) {
             (status: try? store.agentStatus(), freshness: try? store.indexFreshness())
         }.value

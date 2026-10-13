@@ -69,7 +69,7 @@ struct MaintainCommand: ParsableCommand {
     var force = false
 
     @Flag(name: .long,
-          help: "Remove the page_vec rows `doctor --deep` reports as inconsistent, and clear the OCR failure mark of documents without any scanned page.")
+          help: "Rebuild the table of document names, and clear the OCR failure mark of documents without any scanned page.")
     var repair = false
 
     @Flag(name: .long,
