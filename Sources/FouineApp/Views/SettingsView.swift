@@ -161,7 +161,10 @@ private struct GeneralSettingsTab: View {
         // Système) : on relit, on ne se souvient pas. Même raisonnement pour
         // l'autorisation des messages, qui se retire au même endroit.
         .task {
-            interface.refreshLoginItem()
+            // DANS SA PROPRE TÂCHE : cette lecture passe par `smd`, qui peut
+            // traîner (PI-03), et le reste de l'onglet n'a aucune raison de
+            // l'attendre pour s'afficher.
+            Task { await interface.refreshLoginItem() }
             // `load()` d'abord : la case doit partir de la valeur ÉCRITE, et
             // non du zéro d'un modèle encore vide (la fenêtre charge en
             // parallèle ; l'appel est idempotent).
