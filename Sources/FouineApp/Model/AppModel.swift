@@ -431,7 +431,11 @@ final class AppModel: ObservableObject {
     /// `didSet` par propriété, et l'évaluation est pure et instantanée.
     func refreshIndexStatus() {
         indexStatus = IndexStatusEvaluator.evaluate(IndexStatusInput(
-            probed: isReady && agentProbed,
+            // ET L'ENREGISTREMENT LU AU MOINS UNE FOIS (suite de PI-04) :
+            // tant que `smd` ne s'est pas prononcé, on ne sait pas si la mise
+            // à jour automatique est armée, et un état deviné là est soit un
+            // « Ré-enregistrer » soit un « éteint » qui clignote.
+            probed: isReady && agentProbed && knownServiceStatus != nil,
             roots: roots, rootsError: rootsError, health: healthReport,
             indexing: indexing, automatic: backgroundIndexing,
             agentState: agentOperationalState, agentStatus: agentStatus,
@@ -482,7 +486,14 @@ final class AppModel: ObservableObject {
         await refreshStats()
         sinceLastVisitPages = SinceLastVisit.added(
             previous: pagesAtLastVisit, current: stats["pages_indexed"] ?? 0)
-        await refreshAgentStatus()
+        // L'ENREGISTREMENT DE L'AGENT NE RETIENT PLUS LE DÉMARRAGE (suite de
+        // PI-04). C'est un aller-retour XPC vers `smd`, le service que BU-03 a
+        // mesuré figé plus de 100 s sur la machine du propriétaire : attendu
+        // ici, il retardait TOUT ce qui suit — la santé, les deux sondes, le
+        // vocabulaire, le rattrapage Spotlight. Il part donc dans sa propre
+        // tâche et publie quand il revient ; d'ici là, la carte dit
+        // « Vérification… » plutôt qu'un état deviné.
+        startServiceStatusRead()
         // La PREMIÈRE lecture d'`agent_status` se fait ici, avant tout
         // affichage d'un état : sans elle, l'agent enregistré était tenu pour
         // « silencieux » jusqu'au premier tour de la sonde, et la barre
@@ -900,7 +911,12 @@ final class AppModel: ObservableObject {
     /// la progression — et le mesurer a donné ~212 appels en trois heures,
     /// fenêtre au fond, pour un état immobile. On le relit donc au plus toutes
     /// les 30 s, une lecture à la fois, et entre deux on reporte celui-ci.
-    private var knownServiceStatus: SMAppService.Status = .notFound
+    /// `nil` TANT QU'AUCUNE LECTURE N'A RÉPONDU (suite de PI-04). Partir de
+    /// `.notFound` faisait évaluer l'état opérationnel comme si l'agent n'était
+    /// pas enregistré : « Ré-enregistrer », ou un « éteint » qui clignote, le
+    /// temps que `smd` réponde — et ce temps peut être long, c'est tout le
+    /// propos de BU-03. Tant qu'on ne sait pas, la carte dit « Vérification… ».
+    private var knownServiceStatus: SMAppService.Status?
     private var serviceStatusReadAt: Date?
     private var serviceStatusTask: Task<Void, Never>?
     static let serviceStatusInterval: TimeInterval = 30
@@ -923,6 +939,19 @@ final class AppModel: ObservableObject {
             self.noteServiceStatus(status)
             self.serviceStatusTask = nil
             self.updateOperationalState(serviceStatus: status)
+        }
+    }
+
+    /// Lance la lecture de l'enregistrement SANS l'attendre, dans le créneau de
+    /// la sonde : une seule lecture en vol, celle-ci comprise. C'est ce qui
+    /// évite qu'un démarrage demande deux fois la même chose à `smd` — la sonde
+    /// part dans la seconde qui suit.
+    func startServiceStatusRead() {
+        guard serviceStatusTask == nil else { return }
+        serviceStatusTask = Task { [weak self] in
+            guard let self else { return }
+            await self.refreshAgentStatus()
+            self.serviceStatusTask = nil
         }
     }
 
@@ -955,6 +984,17 @@ final class AppModel: ObservableObject {
             enabledAt: agentEnabledAt
         )
         refreshIndexStatus()
+    }
+
+    /// Publie l'état opérationnel depuis le dernier enregistrement CONNU, et ne
+    /// publie rien tant qu'il n'y en a aucun (suite de PI-04) : ce qui a été lu
+    /// en base part quand même à l'affichage.
+    private func publishOperationalState() {
+        guard let known = knownServiceStatus else {
+            refreshIndexStatus()
+            return
+        }
+        updateOperationalState(serviceStatus: known)
     }
 
     // MARK: - Ce que l'agent fait (audit F7)
@@ -1112,12 +1152,12 @@ final class AppModel: ObservableObject {
         // Une lecture qui échoue ne DOIT PAS effacer l'état affiché (§5.6,
         // « ne jamais vider l'affichage ») : on garde le dernier connu.
         guard let fresh else {
-            updateOperationalState(serviceStatus: knownServiceStatus)
+            publishOperationalState()
             return
         }
         agentStatus = fresh
         rateEstimator.observe(fresh)
-        updateOperationalState(serviceStatus: knownServiceStatus)
+        publishOperationalState()
         await notifyIfQueueDrained(fresh)
     }
 
