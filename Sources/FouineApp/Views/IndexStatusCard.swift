@@ -288,14 +288,28 @@ extension IndexStatus.Tint {
 struct IndexProgressBar: View {
     let bar: IndexCardSummary.Bar
 
+    /// Ce que VoiceOver annonce sur une barre INDÉTERMINÉE (PI-13) : sans
+    /// total, elle n'a ni valeur ni libellé, et un parcours de dossiers ou une
+    /// passe sans total ne disait rien du tout. Le libellé est un PARAMÈTRE et
+    /// non une règle interne : la carte, elle, enveloppe déjà titre et
+    /// précision dans un seul élément (`AccessibilityText.indexCard`), et un
+    /// libellé de plus y ferait répéter la phrase.
+    var indeterminateLabel: String?
+
     var body: some View {
         switch bar {
         case .determinate(let fraction):
             ProgressView(value: fraction)
                 .progressViewStyle(.linear)
         case .indeterminate:
-            ProgressView()
-                .progressViewStyle(.linear)
+            if let indeterminateLabel {
+                ProgressView()
+                    .progressViewStyle(.linear)
+                    .accessibilityLabel(Text(verbatim: indeterminateLabel))
+            } else {
+                ProgressView()
+                    .progressViewStyle(.linear)
+            }
         }
     }
 }

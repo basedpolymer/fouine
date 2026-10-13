@@ -177,7 +177,11 @@ struct IndexDetailsView: View {
 
         if let bar = IndexCardSummary.bar(for: status) {
             VStack(alignment: .leading, spacing: 4) {
-                IndexProgressBar(bar: bar)
+                // Le titre de l'état en libellé parlé (PI-13) : la barre
+                // déterminée a sa ligne « 312 / 1 200 pages » juste dessous,
+                // l'indéterminée n'avait rien.
+                IndexProgressBar(bar: bar,
+                                 indeterminateLabel: IndexStatusText.headline(status))
                 if case .working(_, let progress?, _, _) = status, progress.isDeterminate {
                     Text(verbatim: IndexStatusText.progressLine(progress))
                         .font(.callout.monospacedDigit())
