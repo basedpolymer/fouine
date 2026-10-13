@@ -15,7 +15,7 @@ The authoritative version number lives in the `VERSION` file and in
 `Sources/FouineCore/Version.swift`; the two must agree (`make check-version`).
 See `RELEASING.md`.
 
-## [1.1.0] — unreleased
+## [1.1.0] — 2026-10-13
 
 ### Changed
 
@@ -585,6 +585,8 @@ and searches them, on your Mac, without sending anything anywhere.
   by where it lives — Fouine's own copy folder — and its link must use its
   application's scheme (`notes:`, `bear:`). *(AN2)*
 
+[1.1.0]: https://github.com/basedpolymer/fouine/releases/tag/v1.1.0
+[1.0.3]: https://github.com/basedpolymer/fouine/releases/tag/v1.0.3
 [1.0.2]: https://github.com/basedpolymer/fouine/releases/tag/v1.0.2
 [1.0.1]: https://github.com/basedpolymer/fouine/releases/tag/v1.0.1
 [1.0.0]: https://github.com/basedpolymer/fouine/releases/tag/v1.0.0
