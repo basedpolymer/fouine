@@ -65,6 +65,12 @@ See `RELEASING.md`.
   changed, and no longer shows a guessed state — "Manual updates", "Restart
   automatic updates" — before macOS has answered. *(PI2)*
 
+- **"Last check" in the Updates settings shows the right date after a check
+  that finds a new version.** It kept the date of the check before until you
+  touched something in the settings. And cancelling, or postponing, the
+  installation of a version Fouine has just found no longer says that Fouine
+  could not check whether a newer version exists. *(LC1)*
+
 ## [1.0.3] — 2026-09-25
 
 ### Fixed

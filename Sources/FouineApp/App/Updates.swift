@@ -48,6 +48,29 @@ enum Updates {
     /// d'adresse du tout. La ligne « ou téléchargez-la depuis … » n'apparaît
     /// que le jour où cette constante est posée.
     static let downloadPage: URL? = nil
+
+    /// Une vérification qui s'arrête sur `error` a-t-elle ÉCHOUÉ, au sens de
+    /// l'onglet — « Fouine n'a pas pu vérifier… » ?
+    ///
+    /// Sparkle arrête son pilote par une erreur dans trois cas qui n'en sont
+    /// pas pour l'utilisateur : aucune nouvelle version (`SUNoUpdateError`),
+    /// et une version TROUVÉE dont il a annulé ou remis à plus tard
+    /// l'autorisation d'installer (`SUInstallationCanceledError`,
+    /// `SUInstallationAuthorizeLaterError`). Ces deux derniers faisaient dire à
+    /// l'onglet que le serveur n'avait pas répondu, alors qu'il venait de
+    /// proposer une mise à jour. Le domaine compte : un 1001 d'un autre
+    /// domaine n'est pas « aucune mise à jour ».
+    static func checkFailed(_ error: NSError) -> Bool {
+        guard error.domain == SUSparkleErrorDomain else { return true }
+        switch error.code {
+        case Int(SUError.noUpdateError.rawValue),
+             Int(SUError.installationCanceledError.rawValue),
+             Int(SUError.installationAuthorizeLaterError.rawValue):
+            return false
+        default:
+            return true
+        }
+    }
 }
 
 /// Le contrôleur Sparkle de l'app, sa disponibilité et son état d'erreur.
@@ -190,7 +213,7 @@ final class UpdatesController: ObservableObject {
 // MARK: - Le délégué de Sparkle (audit BU-22)
 
 /// Un `NSObject` minuscule dont le seul rôle est de rapporter qu'une
-/// vérification s'est terminée sans réponse du serveur.
+/// vérification s'est terminée, et si elle a joint le serveur.
 ///
 /// Sparkle appelle ses délégués sur le fil principal. Le rappel remonte au
 /// contrôleur, qui est `@MainActor` : `MainActor.assumeIsolated` dit ce fait au
@@ -205,8 +228,18 @@ private final class UpdatesHook: NSObject, SPUUpdaterDelegate {
     func updater(_ updater: SPUUpdater, didAbortWithError error: Error) {
         // « Aucune mise à jour trouvée » passe par le MÊME chemin qu'un échec
         // réseau : sans ce tri, une vérification parfaitement réussie ferait
-        // dire à l'onglet que le serveur est injoignable.
-        let noUpdate = (error as NSError).code == Int(SUError.noUpdateError.rawValue)
-        MainActor.assumeIsolated { onCycleFinished?(!noUpdate) }
+        // dire à l'onglet que le serveur est injoignable (`Updates.checkFailed`).
+        let failed = Updates.checkFailed(error as NSError)
+        MainActor.assumeIsolated { onCycleFinished?(failed) }
+    }
+
+    /// Une version plus récente TROUVÉE : la vérification a joint le serveur.
+    ///
+    /// Sans ce rappel, ce cas-là ne passait par rien d'autre — le pilote ne
+    /// s'arrête pas sur une erreur, il propose la mise à jour —, et « Last
+    /// check » gardait dans l'onglet la date de la vérification d'avant
+    /// jusqu'au geste suivant (relevé par le lot PI3, 13/10/2026).
+    func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
+        MainActor.assumeIsolated { onCycleFinished?(false) }
     }
 }
