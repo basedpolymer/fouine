@@ -1320,6 +1320,12 @@ final class AppModel: ObservableObject {
         // bouton « Stop » restait cliquable, et cliquable plusieurs fois, tant
         // que la passe n'avait pas repris la main.
         indexing.cancelled = true
+        // Et l'état PUBLIÉ avec, tout de suite (PI-07). `indexing` n'est pas
+        // ce que les vues lisent : `indexStatus` l'est, et il restait
+        // « arrêtable » jusqu'à la publication suivante du service — la
+        // fenêtre « Votre index », qui tire son geste de l'état seul, offrait
+        // un « Stop » encore armé.
+        refreshIndexStatus()
     }
 
     func startOCR(budgetMinutes: Int?, only: String? = nil, label: String? = nil) {

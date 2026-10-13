@@ -23,6 +23,20 @@ struct UpdatesSettingsView: View {
 
     var body: some View {
         Form {
+            // Les réglages de mise à jour vivent dans Sparkle, pas dans un
+            // `@Published` à nous : `revision` est ce qui dit qu'ils ont
+            // changé. La lecture ci-dessous ne sert qu'à l'écrire noir sur
+            // blanc — `updates` est observé, et toute publication l'invalide
+            // déjà, que ce corps lise `revision` ou non.
+            //
+            // CE QU'ELLE REMPLACE : un `.id(updates.revision)` sur le `Form`
+            // (PI-12). Changer l'identité d'une vue la DÉTRUIT et la recrée :
+            // armer l'interrupteur, choisir une fréquence — ou une
+            // vérification automatique qui aboutit alors que personne ne
+            // touchait à rien — faisait clignoter tout l'écran et perdait le
+            // défilement et le focus.
+            let _ = updates.revision
+
             Section {
                 Toggle("Check for updates automatically",
                        isOn: Binding(get: { updates.automaticallyChecks },
@@ -92,10 +106,6 @@ struct UpdatesSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        // `revision` change à chaque geste : sans cette lecture, SwiftUI ne
-        // redessine pas, car les réglages vivent dans Sparkle et non dans un
-        // `@Published` à nous.
-        .id(updates.revision)
     }
 
     // MARK: - Habillage
