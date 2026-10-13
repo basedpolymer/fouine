@@ -888,8 +888,47 @@ final class AppModel: ObservableObject {
         return await Task.detached(priority: .utility) { read() }.value
     }
 
+    /// Le dernier statut d'enregistrement LU, et quand (PI-04).
+    ///
+    /// DEUX SONDES, PAS UNE. L'état de l'agent (`agent_status`) est une lecture
+    /// de base de quelques millisecondes, et c'est lui qui nourrit la barre
+    /// d'avancement, la fenêtre « Votre index » et l'icône de la barre des
+    /// menus : il se publie à chaque tic. L'enregistrement, lui, est le même
+    /// aller-retour XPC vers `smd` que BU-03 a sorti du fil principal, et seuls
+    /// un geste de l'utilisateur ou une approbation système le changent :
+    /// relu dans la même itération, un `smd` lent figeait tout l'affichage de
+    /// la progression — et le mesurer a donné ~212 appels en trois heures,
+    /// fenêtre au fond, pour un état immobile. On le relit donc au plus toutes
+    /// les 30 s, une lecture à la fois, et entre deux on reporte celui-ci.
+    private var knownServiceStatus: SMAppService.Status = .notFound
+    private var serviceStatusReadAt: Date?
+    private var serviceStatusTask: Task<Void, Never>?
+    static let serviceStatusInterval: TimeInterval = 30
+
+    private func noteServiceStatus(_ status: SMAppService.Status) {
+        knownServiceStatus = status
+        serviceStatusReadAt = Date()
+    }
+
+    /// Relit l'enregistrement si la dernière lecture date, et à condition
+    /// qu'aucune ne soit déjà en vol : un `smd` qui ne répond pas ne doit pas
+    /// faire EMPILER une lecture toutes les deux secondes.
+    func refreshServiceStatusIfStale(force: Bool = false) {
+        guard serviceStatusTask == nil else { return }
+        if !force, let last = serviceStatusReadAt,
+           Date().timeIntervalSince(last) < Self.serviceStatusInterval { return }
+        serviceStatusTask = Task { [weak self] in
+            guard let self else { return }
+            let status = await self.serviceStatus()
+            self.noteServiceStatus(status)
+            self.serviceStatusTask = nil
+            self.updateOperationalState(serviceStatus: status)
+        }
+    }
+
     func refreshAgentStatus() async {
         let status = await serviceStatus()
+        noteServiceStatus(status)
         switch status {
         case .enabled:
             backgroundIndexing = true
@@ -930,10 +969,17 @@ final class AppModel: ObservableObject {
     func startAgentStatusProbe() {
         guard agentStatusTask == nil else { return }
         agentStatusTask = Task { [weak self] in
+            var wasActive = NSApp?.isActive ?? false
             while !Task.isCancelled {
                 guard let self else { return }
                 await self.refreshAgentActivity()
                 let active = NSApp?.isActive ?? false
+                // L'app qui revient devant : c'est le moment où quelqu'un
+                // regarde, et le seul où l'enregistrement a pu changer sans
+                // passer par un geste de Fouine (la case décochée dans les
+                // Réglages Système). On force alors la lecture hors cadence.
+                if active, !wasActive { self.refreshServiceStatusIfStale(force: true) }
+                wasActive = active
                 let seconds: UInt64 = active ? 2 : 30
                 try? await Task.sleep(nanoseconds: seconds * 1_000_000_000)
             }
@@ -1050,23 +1096,28 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// Une lecture d'`agent_status` ET du statut d'enregistrement, toutes deux
-    /// hors du fil principal (audit F7, BU-03).
+    /// Une lecture d'`agent_status`, hors du fil principal (audit F7, BU-03).
+    ///
+    /// ELLE N'ATTEND PLUS `smd` (PI-04) : l'enregistrement se relit dans sa
+    /// propre tâche, à sa propre cadence, et ce qui est publié ici l'est dès
+    /// que la base a répondu. Avant, les deux lectures se suivaient dans la
+    /// même itération et la progression restait figée aussi longtemps que le
+    /// service se taisait.
     func refreshAgentActivity() async {
         let store = service.store
         let fresh = await Task.detached(priority: .utility) {
             try? store.agentStatus()
         }.value
-        let registration = await serviceStatus()
+        refreshServiceStatusIfStale()
         // Une lecture qui échoue ne DOIT PAS effacer l'état affiché (§5.6,
         // « ne jamais vider l'affichage ») : on garde le dernier connu.
         guard let fresh else {
-            updateOperationalState(serviceStatus: registration)
+            updateOperationalState(serviceStatus: knownServiceStatus)
             return
         }
         agentStatus = fresh
         rateEstimator.observe(fresh)
-        updateOperationalState(serviceStatus: registration)
+        updateOperationalState(serviceStatus: knownServiceStatus)
         await notifyIfQueueDrained(fresh)
     }
 
