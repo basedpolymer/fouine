@@ -780,8 +780,11 @@ enum IndexStatusText {
         case .working(let activity, _, let detail, _):
             if let detail { return detail }
             return activity == .externalWrite ? anotherProgramWriting : nil
-        case .paused(let reason, _):
-            return Self.pauseSentence(reason)
+        // « Elles seront lues dès que… » parle des pages scannées en attente :
+        // sans aucune, le pronom n'a pas d'antécédent et la phrase donne un
+        // motif d'attente pour un travail que le titre nie (PI-05).
+        case .paused(let reason, let scans):
+            return scans > 0 ? Self.pauseSentence(reason) : nil
         case .idle(let automatic, let scans, let lastUpdate):
             if automatic, scans > 0 {
                 return String(localized: "They are read automatically when the Mac is plugged in and idle.")

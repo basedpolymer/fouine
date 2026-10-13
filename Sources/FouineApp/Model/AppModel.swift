@@ -440,6 +440,7 @@ final class AppModel: ObservableObject {
             indexing: indexing, automatic: backgroundIndexing,
             agentState: agentOperationalState, agentStatus: agentStatus,
             scansWaiting: ocrQueueLength,
+            lastIndexedAt: freshness?.lastIndexedAt,
             agentRemainingSeconds: rateEstimator.remainingSeconds))
     }
 
@@ -832,11 +833,33 @@ final class AppModel: ObservableObject {
         // (`DiskSpaceNotice`). `nil` quand le volume ne répond pas : la carte
         // se tait alors, plutôt que d'annoncer un reste faux.
         diskFreeBytes = AppPaths.freeDiskBytes()
+        // `stats()` vient de compter la file : c'est la lecture la plus
+        // récente, elle prend donc la place de celle de la sonde. Sans cela,
+        // la fin d'une passe d'OCR gardait le compte d'il y a deux secondes.
+        if let queued = fresh["ocr_queue_len"] {
+            freshness = GRDBStore.IndexFreshness(
+                lastIndexedAt: freshness?.lastIndexedAt, scansWaiting: queued)
+        }
         rememberPagesIndexed(fresh["pages_indexed"] ?? 0)
         refreshIndexStatus()
     }
 
-    var ocrQueueLength: Int { stats["ocr_queue_len"] ?? 0 }
+    /// La dernière lecture légère (`GRDBStore.indexFreshness`), ou `nil` tant
+    /// qu'aucune n'a répondu. Pas `@Published` : rien ne l'affiche telle quelle,
+    /// elle n'entre que dans `indexStatus` — et une publication de plus par tic
+    /// est exactement ce que PI-06 retire.
+    private var freshness: GRDBStore.IndexFreshness?
+
+    /// Les pages scannées qui attendent d'être lues.
+    ///
+    /// DE LA LECTURE LÉGÈRE, ET PLUS DE `stats` (PI-10). `stats()` n'est relue
+    /// qu'au démarrage, à la fin d'une passe, au retour de l'app au premier plan
+    /// et dans la fenêtre « Votre index » : fenêtre fermée — le mode de vie
+    /// normal de Fouine depuis UX-08 —, le panneau de la barre des menus
+    /// annonçait « À jour — N pages scannées à lire » avec le N de la dernière
+    /// fois que la fenêtre avait été devant. Le compte de `stats` reste le
+    /// filet, pour le temps qu'il faut à la première lecture légère.
+    var ocrQueueLength: Int { freshness?.scansWaiting ?? stats["ocr_queue_len"] ?? 0 }
 
     /// Le poids de l'index et ce qu'il doit encore écrire (MO-03). L'app ne
     /// compare plus ce poids à la taille prévue par la SPEC (décision du
@@ -1145,20 +1168,27 @@ final class AppModel: ObservableObject {
     /// service se taisait.
     func refreshAgentActivity() async {
         let store = service.store
-        let fresh = await Task.detached(priority: .utility) {
-            try? store.agentStatus()
+        // DEUX LECTURES DANS LA MÊME TÂCHE (PI-02, PI-05, PI-10) : le statut de
+        // l'agent, et la lecture légère qui dit depuis quand l'index n'a pas
+        // bougé et combien de pages scannées attendent. Mesurées ensemble à
+        // 1,4 ms sur une copie de la base de production (0,85 + 0,5, médianes
+        // de trois passes), là où `stats()` coûte 379 ms — le balayage de
+        // `page_vec`. C'est ce qui permet de les relire à CHAQUE tic.
+        let read = await Task.detached(priority: .utility) {
+            (status: try? store.agentStatus(), freshness: try? store.indexFreshness())
         }.value
         refreshServiceStatusIfStale()
         // Une lecture qui échoue ne DOIT PAS effacer l'état affiché (§5.6,
         // « ne jamais vider l'affichage ») : on garde le dernier connu.
-        guard let fresh else {
+        if let fresh = read.freshness { freshness = fresh }
+        guard let status = read.status else {
             publishOperationalState()
             return
         }
-        agentStatus = fresh
-        rateEstimator.observe(fresh)
+        agentStatus = status
+        rateEstimator.observe(status)
         publishOperationalState()
-        await notifyIfQueueDrained(fresh)
+        await notifyIfQueueDrained(status)
     }
 
     /// « L'agent a fini » — la notification que l'audit F7 réclame.
