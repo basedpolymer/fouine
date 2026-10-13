@@ -688,6 +688,48 @@ final class StoreTests: XCTestCase {
         XCTAssertGreaterThan(s["db_bytes"] ?? 0, 0)
     }
 
+    /// La lecture légère de l'interface (PI-02, PI-05, PI-10) : l'instant du
+    /// dernier document indexé et la file de reconnaissance, sans le balayage
+    /// de `page_vec` que `stats()` paie.
+    ///
+    /// Base vierge : AUCUNE date. C'est le cas qui compte — une date inventée
+    /// (l'époque, « maintenant ») ferait écrire « Mis à jour il y a 56 ans » ou
+    /// « à l'instant » sous un index vide.
+    func testIndexFreshnessFollowsTheLastIndexedDocument() throws {
+        let db = try makeDB()
+        let empty = try db.store.indexFreshness()
+        XCTAssertNil(empty.lastIndexedAt, "rien d'indexé : rien à dater")
+        XCTAssertEqual(empty.scansWaiting, 0)
+
+        // Un document : `upsertDoc` l'horodate à l'insertion, l'extraction le
+        // réhorodate, et c'est cette colonne-là que l'on lit.
+        let native = try addDoc(db, relPath: "Users/alice/Livres/n.pdf")
+        try db.store.replacePages(docID: native, pages: [page(1, "texte natif")])
+        try db.store.setDocState(native, .extracted, err: nil)
+        let first = try XCTUnwrap(try db.store.indexFreshness().lastIndexedAt)
+
+        // Un SECOND document, indexé plus tard : c'est lui qui date l'index.
+        Thread.sleep(forTimeInterval: 0.05)
+        let second = try addDoc(db, relPath: "Users/alice/Livres/deux.pdf")
+        try db.store.setDocState(second, .extracted, err: nil)
+        let after = try XCTUnwrap(try db.store.indexFreshness().lastIndexedAt)
+        XCTAssertGreaterThan(after, first,
+                             "le dernier document indexé ne date plus l'index")
+
+        // La file de reconnaissance : vide, puis non vide, puis revidée par la
+        // lecture d'une page — le compte que la carte annonce.
+        XCTAssertEqual(try db.store.indexFreshness().scansWaiting, 0)
+        try db.store.enqueueOCR(docID: second, pages: [1, 2], priority: 0)
+        XCTAssertEqual(try db.store.indexFreshness().scansWaiting, 2)
+        try db.store.completeOCR(docID: second, page: 1,
+                                 result: ocrPage("une page reconnue"))
+        XCTAssertEqual(try db.store.indexFreshness().scansWaiting, 1)
+        // `completeOCR` retouche `indexed_at` (lot INT-S1) : lire une page
+        // scannée EST une mise à jour de l'index.
+        XCTAssertGreaterThan(try XCTUnwrap(db.store.indexFreshness().lastIndexedAt),
+                             after)
+    }
+
     func testTopVocabularyRespectsMinLengthAndFrequency() throws {
         let db = try makeDB()
         let docID = try addDoc(db, relPath: "Users/alice/Livres/v.pdf")
