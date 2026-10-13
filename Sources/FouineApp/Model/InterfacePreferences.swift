@@ -54,17 +54,43 @@ final class InterfacePreferences: ObservableObject {
     /// Ce qu'il s'est passé au dernier geste, s'il y a quelque chose à en dire.
     @Published var loginNotice: String?
 
-    init() {
-        showsMenuBarIcon = Prefs.showsMenuBarIcon
-        searchesAsYouType = Prefs.searchesAsYouType
-        refreshLoginItem()
-    }
+    /// D'où vient l'état d'ouverture à la session.
+    ///
+    /// UNE FERMETURE, ET JAMAIS SUR LE FIL PRINCIPAL (PI-03, même mesure que
+    /// BU-03 pour l'agent, `AppModel.readServiceStatus`) :
+    /// `SMAppService.mainApp.status` est un aller-retour XPC SYNCHRONE vers
+    /// `smd`, et il était joué ici depuis `init()`, c'est-à-dire depuis
+    /// `FouineDesktopApp.init()` — avant toute fenêtre. Sur une machine où
+    /// `smd` traîne (un enregistrement `launchd` orphelin suffit : plus de
+    /// 100 s mesurées), le lancement se figeait entièrement muet, sans fenêtre
+    /// ni icône. Le test y branche un faux qui note son fil.
+    let readMainAppStatus: @Sendable () -> SMAppService.Status
 
     /// Hors bundle (`swift run FouineApp`), il n'y a pas d'application à
     /// enregistrer : la case est présente mais désactivée, et son aide dit
     /// pourquoi — la faire disparaître laisserait croire que Fouine ne sait pas
     /// s'ouvrir toute seule.
-    var canOpenAtLogin: Bool { Uninstaller.bundleToTrash() != nil }
+    ///
+    /// Décidé une fois, à la naissance : un bundle n'apparaît pas en cours de
+    /// route, et les vues le lisent à chaque rendu.
+    let canOpenAtLogin: Bool
+
+    init(canOpenAtLogin: Bool = Uninstaller.bundleToTrash() != nil,
+         readMainAppStatus: @escaping @Sendable () -> SMAppService.Status
+            = { SMAppService.mainApp.status }) {
+        self.canOpenAtLogin = canOpenAtLogin
+        self.readMainAppStatus = readMainAppStatus
+        showsMenuBarIcon = Prefs.showsMenuBarIcon
+        searchesAsYouType = Prefs.searchesAsYouType
+        // La DERNIÈRE VALEUR CONNUE en attendant la réponse de `smd` : partir
+        // de « non » faisait basculer l'interrupteur sous les yeux de
+        // l'utilisateur, et disait faux tant que la lecture n'avait pas
+        // répondu. Ce n'est pas une préférence parallèle — elle n'est jamais
+        // consultée pour décider quoi que ce soit, seulement affichée, et la
+        // lecture qui suit la corrige.
+        opensAtLogin = canOpenAtLogin && Prefs.lastKnownOpensAtLogin
+        Task { await refreshLoginItem() }
+    }
 
     var openAtLoginHelp: String {
         canOpenAtLogin
@@ -72,17 +98,24 @@ final class InterfacePreferences: ObservableObject {
             : String(localized: "Only available from the installed application: “swift run FouineApp” cannot register itself.")
     }
 
-    func refreshLoginItem() {
+    /// La lecture, hors du fil principal.
+    private func mainAppStatus() async -> SMAppService.Status {
+        let read = readMainAppStatus
+        return await Task.detached(priority: .utility) { read() }.value
+    }
+
+    func refreshLoginItem() async {
         guard canOpenAtLogin else {
             opensAtLogin = false
             return
         }
-        switch SMAppService.mainApp.status {
+        switch await mainAppStatus() {
         case .enabled, .requiresApproval:
             opensAtLogin = true
         default:
             opensAtLogin = false
         }
+        Prefs.lastKnownOpensAtLogin = opensAtLogin
     }
 
     func setOpensAtLogin(_ wanted: Bool) {
@@ -95,14 +128,22 @@ final class InterfacePreferences: ObservableObject {
                 try SMAppService.mainApp.unregister()
             }
             opensAtLogin = wanted
-            if wanted, SMAppService.mainApp.status == .requiresApproval {
-                loginNotice = String(localized: "macOS is asking you to confirm this in System Settings ▸ General ▸ Login Items & Extensions.")
+            Prefs.lastKnownOpensAtLogin = wanted
+            // Le geste est FAIT : la case n'attend pas que `smd` dise si macOS
+            // réclame en plus une confirmation (PI-03). La phrase arrive quand
+            // la réponse arrive, et le geste reste instantané.
+            if wanted {
+                Task { [weak self] in
+                    guard let self, await self.mainAppStatus() == .requiresApproval,
+                          self.loginNotice == nil else { return }
+                    self.loginNotice = String(localized: "macOS is asking you to confirm this in System Settings ▸ General ▸ Login Items & Extensions.")
+                }
             }
         } catch {
             // On ne fait PAS mentir la case : on la remet où le système la
             // laisse, et on dit la cause à la fin, entre parenthèses.
-            refreshLoginItem()
             loginNotice = String(localized: "Fouine could not change this setting (\((error as NSError).localizedDescription)).")
+            Task { await refreshLoginItem() }
         }
     }
 }

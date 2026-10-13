@@ -157,6 +157,19 @@ enum Prefs {
         get { defaults.object(forKey: searchAsYouType) as? Bool ?? true }
         set { defaults.set(newValue, forKey: searchAsYouType) }
     }
+    /// La dernière valeur CONNUE d'« ouvrir Fouine à l'ouverture de session »,
+    /// et rien de plus (PI-03). La vérité reste `SMAppService.mainApp.status`,
+    /// relu à chaque affichage ; mais ce statut est un aller-retour XPC vers
+    /// `smd` qui ne peut plus se lire sur le fil principal, et l'interrupteur
+    /// doit afficher quelque chose en attendant la réponse. Absente = « non »,
+    /// l'état d'une installation neuve. Rien ne DÉCIDE depuis cette clé : la
+    /// lecture qui suit l'écrase, et c'est pourquoi ce n'est pas la préférence
+    /// parallèle que l'audit A12 a retirée pour l'agent.
+    static let opensAtLoginLastKnown = "ui.opensAtLogin.lastKnown"
+    static var lastKnownOpensAtLogin: Bool {
+        get { defaults.bool(forKey: opensAtLoginLastKnown) }
+        set { defaults.set(newValue, forKey: opensAtLoginLastKnown) }
+    }
     // `agent.backgroundIndexing` a été retirée (audit A12) : jamais lue, jamais
     // écrite. L'état de l'agent est celui que rend `SMAppService.status`, seule
     // source de vérité — une préférence parallèle n'aurait pu que mentir.

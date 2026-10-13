@@ -19,6 +19,18 @@ See `RELEASING.md`.
 
 ### Fixed
 
+- **Opening the settings no longer hides a folder Fouine cannot read.** The
+  Index card said "Fouine is not allowed to read “X”" and offered "Allow
+  access…"; a few seconds after the settings window was opened, the card went
+  back to "Up to date" and the button disappeared, while the orange banner
+  stayed. The card now keeps what the last check found. *(PI1)*
+- **Fouine no longer freezes while macOS takes its time.** Starting up waited
+  for the system to answer a question about opening at login — on some Macs
+  that answer takes more than a minute, and nothing appeared at all, neither
+  window nor menu bar icon. The progress of the index, the "Your index" window
+  and the menu bar icon used to stop moving for the same reason, even though
+  the index itself was working. Both now go on without waiting. *(PI1)*
+
 ## [1.0.3] — 2026-09-25
 
 ### Fixed
