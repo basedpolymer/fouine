@@ -374,7 +374,10 @@ Elle ne contient que ceci :
 
 - une phrase d'état (« À jour », « Lecture des pages scannées »…) et, dessous,
   une précision quand il y en a une (« Mis à jour il y a 3 min », « Elles seront
-  lues dès que le Mac sera branché sur le secteur. ») ;
+  lues dès que le Mac sera branché sur le secteur. »). « Mis à jour il y a… »
+  date le dernier document indexé par Fouine, et non la dernière fois qu'elle a
+  regardé : sur un index qui n'a pas bougé depuis trois semaines, la phrase dit
+  « Mis à jour il y a 21 jours » ;
 - pendant un travail, une barre d'avancement et, quand il peut être estimé, le
   temps restant (« environ 2 h restantes »). Le document en cours et le compte
   des pages changent sans cesse : ils sont dans la fenêtre « Votre index » ;
@@ -402,12 +405,12 @@ la même façon, avec leurs propres phrases.
 ### États de la carte
 
 La carte affiche un seul état à la fois, choisi dans cet ordre : vérification,
-aucun dossier, passe lancée depuis l'application, action attendue de vous, autre
-programme qui écrit, mise à jour automatique, à jour.
+aucun dossier, passe lancée depuis l'application, dossiers illisibles, action
+attendue de vous, autre programme qui écrit, mise à jour automatique, à jour.
 
 | Titre affiché | Ligne secondaire | Signification | Bouton |
 |---|---|---|---|
-| Vérification… | aucune | l'état de l'index est relu au lancement | aucun |
+| Vérification… | aucune | l'état de l'index est relu au lancement, ou la liste des dossiers n'a pas pu être lue | aucun |
 | Aucun dossier à indexer | aucune | aucun dossier n'a été ajouté | Ajouter un dossier… |
 | Mise à jour de l'index | le temps restant quand il est connu | parcours des dossiers, extraction du texte | Arrêter *(passe lancée depuis l'application)* |
 | Lecture des pages scannées | « Environ 2 h restantes » | reconnaissance du texte des pages scannées | Arrêter *(idem)* |
@@ -422,14 +425,22 @@ programme qui écrit, mise à jour automatique, à jour.
 | La mise à jour automatique ne démarre pas | « La relancer suffit en général… » | le service ne s'est jamais signalé, ou s'est arrêté | Relancer la mise à jour automatique |
 | Plusieurs copies de Fouine sont installées | « Ne gardez que celle du dossier Applications… » | deux copies de Fouine.app sont installées | Relancer la mise à jour automatique |
 | La mise à jour automatique est indisponible | « Fouine doit être installée dans le dossier Applications… » | l'application n'est pas dans Applications | Afficher dans le Finder *(la copie à déposer dans Applications)* |
-| À jour | « Mis à jour il y a 3 min » | rien à faire | aucun |
+| À jour | « Mis à jour il y a 3 min » *(quand le dernier document a été indexé ; rien du tout sur un index vide)* | rien à faire | aucun |
 | À jour — N pages scannées à lire | « Elles sont lues automatiquement quand le Mac est branché et au repos. » | le texte est à jour, les pages scannées suivront | aucun |
 | Mise à jour manuelle (— N pages scannées à lire) | « Fouine ne met l'index à jour que lorsque vous le demandez. » | la mise à jour automatique est éteinte | Mettre à jour maintenant |
 
 Un service qui tourne mais ne s'est pas signalé depuis quelques minutes (au
-réveil du Mac, par exemple) apparaît « À jour », pas en panne. Seul un service
+réveil du Mac, par exemple) apparaît « À jour », pas en panne — et là, « Mis à
+jour il y a… » date ce silence, puisqu'on ne sait rien d'autre. Seul un service
 qui ne s'est jamais signalé, ou dont le processus a disparu, mène à « La mise à
 jour automatique ne démarre pas ».
+
+Le compte des pages scannées en attente est relu toutes les quelques secondes,
+fenêtre ouverte ou fermée : la carte et le panneau de la barre des menus
+annoncent le même. Quand aucune n'attend, la carte dit « À jour » et rien
+d'autre : un motif d'attente sans rien à attendre dit moins que le silence. Tout
+l'état est aussi relu au moment où vous revenez sur Fouine ou ouvrez le panneau
+de la barre des menus, pour qu'il soit juste quand vous le regardez.
 
 ### Ce que l'essai ajoute à la carte
 

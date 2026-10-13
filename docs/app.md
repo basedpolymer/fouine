@@ -354,7 +354,9 @@ you. It holds only this:
 
 - a state sentence ("Up to date", "Reading scanned pages"…) and, under it, a
   detail when there is one ("Updated 3 min ago", "They will be read once the Mac
-  is plugged in.");
+  is plugged in."). "Updated … ago" dates the last document Fouine indexed, not
+  the last time it looked: on an index nothing has changed in for three weeks,
+  it reads "Updated 3 weeks ago";
 - during a job, a progress bar and, when it can be estimated, the time left
   ("about 2 h left"). The current document and the page count change
   constantly, so they are in the "Your index" window instead;
@@ -380,12 +382,12 @@ and preparing search by meaning stop the same way, with their own sentences.
 ### States of the card
 
 The card shows one state at a time, chosen in this order: checking, no folder, a
-pass started from the app, an action expected from you, another program
-writing, automatic updates, up to date.
+pass started from the app, folders that could not be read, an action expected
+from you, another program writing, automatic updates, up to date.
 
 | Title | Second line | Meaning | Button |
 |---|---|---|---|
-| Checking… | none | the state of the index is being read at launch | none |
+| Checking… | none | the state of the index is being read at launch, or the list of folders could not be read | none |
 | No folder to index | none | no folder has been added | Add a folder… |
 | Updating the index | the time left when known | going through the folders, extracting text | Stop *(pass started from the app)* |
 | Reading scanned pages | "about 2 h left" | recognising the text of scanned pages | Stop *(idem)* |
@@ -400,14 +402,22 @@ writing, automatic updates, up to date.
 | Automatic updates are not starting | "Restarting them usually fixes it…" | the service never reported, or stopped | Restart automatic updates |
 | Several copies of Fouine are installed | "Keep only the one in the Applications folder…" | two copies of Fouine.app are installed | Restart automatic updates |
 | Automatic updates are unavailable | "Fouine must be installed in the Applications folder…" | the app is not installed in Applications | Show in the Finder *(the copy to drop into Applications)* |
-| Up to date | "Updated 3 min ago" | nothing to do | none |
+| Up to date | "Updated 3 min ago" *(when the last document was indexed; nothing at all on an empty index)* | nothing to do | none |
 | Up to date — N scanned pages to read | "They are read automatically when the Mac is plugged in and idle." | the text is current, the scanned pages will follow | none |
 | Manual updates (— N scanned pages to read) | "Fouine only updates the index when you ask." | automatic updates are off | Update now |
 
 A service that is running but has been silent for a few minutes (after the Mac
-wakes from sleep, for example) shows as "Up to date", not as broken. Only a
-service that never reported, or whose process has disappeared, leads to
-"Automatic updates are not starting".
+wakes from sleep, for example) shows as "Up to date", not as broken — and there,
+"Updated … ago" dates that silence, since nothing else is known. Only a service
+that never reported, or whose process has disappeared, leads to "Automatic
+updates are not starting".
+
+The count of scanned pages waiting is read again every few seconds, window open
+or closed, so the card and the menu bar panel agree on it. When none is waiting,
+the card says "Up to date" and nothing else: a reason to wait with nothing to
+wait for says less than silence. The whole state is also read again the moment
+you come back to Fouine or open the menu bar panel, so it is current when you
+look at it.
 
 ### What the trial adds to the card
 
