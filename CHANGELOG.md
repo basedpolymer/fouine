@@ -34,6 +34,17 @@ See `RELEASING.md`.
   window nor menu bar icon. The progress of the index, the "Your index" window
   and the menu bar icon used to stop moving for the same reason, even though
   the index itself was working. Both now go on without waiting. *(PI1)*
+- **"Stop" in the "Your index" window answers the first click.** The button
+  stayed lit and could be clicked again and again until the update actually
+  stopped. It now dims straight away, with a spinner beside the sentence that
+  says what Fouine is waiting for — the same as in the Index card. *(PI3)*
+- **The "Updates" settings no longer flicker.** Turning
+  "Check for updates automatically" on or off, or choosing a frequency, redrew
+  the whole page and lost your place in it; a check that finished on its own
+  did the same without you touching anything. *(PI3)*
+- **VoiceOver says what the index is doing.** In the "Your index" window, the
+  progress bar shown while Fouine works without knowing a total announced
+  nothing at all; it now reads out what Fouine is doing. *(PI3)*
 
 ## [1.0.3] — 2026-09-25
 
