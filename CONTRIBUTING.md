@@ -135,29 +135,26 @@ with the product (`THIRD_PARTY_LICENSES.md`, copied into the bundle and the
 DMG): adding a dependency means adding its notice, and its entry in
 `LicensesCommand.notices`.
 
-**No network access in `Sources/`, except three named exceptions.** Fouine
+**No network access in `Sources/`, except two named exceptions.** Fouine
 talks to nobody while it indexes, reads or searches: that is the central claim
 of the product, and it is checked. Any `URLSession`, any socket, any telemetry
-is a change in the nature of the product rather than an improvement. Three
-exceptions exist, and there is no fourth:
+is a change in the nature of the product rather than an improvement. Two
+exceptions exist, and there is no third:
 
 1. **the update check** (Sparkle), outside `Sources/`, where the framework
    makes the call rather than our code;
 2. **the semantic model download**, in the single file
-   `Sources/FouineEmbed/ModelDownload.swift`;
-3. **licence activation and verification**, in the single file
-   `Sources/FouineLicense/LicenseClient.swift`.
+   `Sources/FouineEmbed/ModelDownload.swift`.
 
-All three meet the same three conditions, which are what the rule looks like
+Both meet the same three conditions, which are what the rule looks like
 once software is really distributed: **never automatic** (an explicit user
 gesture, never «on first launch»), **an announced address** (in the clear in
 the repository, and told to the user before the connection), and **nothing sent
 beyond what the request itself requires** (no profiling, nothing from the
-corpus; licence activation sends the key and the name of the Mac, and says so).
-A contribution that adds a fourth connection is refused until the need has been
-discussed in an issue.
+corpus). A contribution that adds a third connection is refused until the need
+has been discussed in an issue.
 
-**The check is not a `grep`.** `URLSession` appears in two files, and that is
+**The check is not a `grep`.** `URLSession` appears in one file, and that is
 true, but it is not what holds the promise. Fouine hands untrusted files to
 system components, and some of those components know how to fetch a remote
 resource named **inside the document**: the request then goes through no

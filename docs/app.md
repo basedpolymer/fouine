@@ -419,24 +419,6 @@ wait for says less than silence. The whole state is also read again the moment
 you come back to Fouine or open the menu bar panel, so it is current when you
 look at it.
 
-### What the trial adds to the card
-
-During the trial, a discreet line at the bottom of the card reads "Trial: 12
-days left · Buy". That line is the only reminder: nothing opens at launch and
-nothing counts down in large letters. The rest of the card shows what it would
-show anyway.
-
-When the trial ends, the card replaces its action button with the sentence
-"Your trial is over: searching still works, the index is no longer updated" and
-two buttons, **Enter licence key…** and **Buy**. The **Update now** button
-disappears, since it could no longer do anything.
-
-The switch does not change. Automatic updates stop by themselves, and greying out
-the switch would need an explanation right where the card has just given one.
-
-If the seller disabled your key, the card says "This key was disabled by the
-seller" and the same two buttons come back.
-
 ---
 
 ## 5. The Your index window
@@ -780,7 +762,7 @@ a page of your documents in a way you can check.
 
 ## 11. Settings
 
-Settings open with ⌘, and have seven tabs.
+Settings open with ⌘, and have six tabs.
 
 ### General
 
@@ -803,39 +785,6 @@ Settings open with ⌘, and have seven tabs.
   the box is never ticked when no notification can arrive.
 - **Spotlight**: see § 12.
 - **Keyboard shortcut**: a reminder of ⌥⌘F.
-
-### Licence
-
-This is the second tab, right after General. It is the one you open after
-buying, and the only place where you deal with the end of the trial.
-
-- The state, in one sentence: "Trial: 12 days left", "Your trial is over:
-  searching still works, the index is no longer updated", "Licensed — key ending
-  in ·····XYZ456" with the date of the last check, "This key was disabled by the
-  seller", or, when the monthly check finds that you released this Mac from your
-  customer portal, "This Mac was released from your customer portal. Enter your
-  key again to use it here."
-- A **Licence key** field and an **Activate** button, inactive while the field is
-  empty. The field accepts what you paste: spaces, line breaks and lower case are
-  cleaned up before sending.
-- A **Buy Fouine — €39** button, which opens the payment page in your browser.
-  Fouine never asks for a card number itself.
-- Once the key is in, the field is replaced by **Deactivate this Mac**, which
-  asks for confirmation: "This Mac will stop counting toward your 3 activations.
-  You can activate it again later."
-- Refusals appear under the field, each as one sentence with the step to take:
-  "No connection: connect to the Internet and try again.", "This key is not
-  recognised. Check for typos, or look for it in the e-mail Creem sent you.",
-  "This key is already in use on 3 Macs. Deactivate one of them from Settings, or
-  from your Creem customer portal.", "The licence service is unavailable right
-  now. Your trial continues; try again later."
-- The bottom of the tab lists what is sent and when, like the Updates tab: the
-  key and the name of this Mac, at activation, at release, and during one
-  background check a month. Nothing is sent while Fouine indexes or searches.
-  Details: the "Privacy" page of the documentation.
-
-The **Fouine ▸ Enter licence key…** menu item opens this tab directly, and
-**About Fouine** shows the state in one line.
 
 ### Folders
 

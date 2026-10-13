@@ -97,7 +97,6 @@ USAGE: fouine <subcommand>
 | `fouine backup` | online snapshot backup |
 | `fouine maintain` | database maintenance |
 | `fouine licenses` | the licence of Fouine and of the components it ships |
-| `fouine license` | your licence: trial, activation, deactivation |
 | `fouine mcp` | serve the index to an assistant |
 
 `--version` and `--help` are accepted at every level.
@@ -460,11 +459,10 @@ caffeinate -i fouine embed --budget-minutes 60
 
 ### `fouine model <download|status|remove>`
 
-Installs and manages the meaning model. Together with the app's update check and
-licence activation, this is one of the few Fouine commands that opens a
-connection, and it never does so without being asked: `embed`, `search
---hybrid`, `doctor` and indexing never download anything. See
-[privacy](privacy.md).
+Installs and manages the meaning model. Together with the app's update check,
+this is one of the two Fouine commands that opens a connection, and it never
+does so without being asked: `embed`, `search --hybrid`, `doctor` and indexing
+never download anything. See [privacy](privacy.md).
 
 ```
 fouine model download [--url <address>] [--force]
@@ -1682,100 +1680,6 @@ This command does not open the database, so it works even when the index is
 locked or absent. `fouine --version` is unchanged: it prints the number alone,
 and scripts read it.
 
-### `fouine license <status|activate|deactivate>`
-
-Singular, and not to be confused with `fouine licenses` above: this one is about
-your licence, the 30-day trial, the key you bought, and the Mac it is on.
-
-The trial lasts 30 days and includes everything. After that, search, preview and
-export keep working; only updating the index stops until a key is entered. A key
-costs €39, once, includes updates for life, and covers 3 Macs.
-
-```
-fouine license status [--json]
-fouine license activate <key> [--instance-name <name>]
-fouine license deactivate
-```
-
-- `status` shows where you stand. It does not start the trial: the start date is
-  set by the first launch of the app or the first `fouine crawl`, never by a
-  command that only reads. When a key is installed and was last checked more
-  than 30 days ago, `status` checks it first, as the app does at launch; offline,
-  or if the service does not answer, nothing changes and one warning line goes to
-  stderr (the JSON on stdout is unaffected).
-- `activate` installs the key on this Mac. The key is cleaned before being sent
-  (spaces, line breaks, lower case), so what you paste from an email works as it
-  is. `--instance-name` replaces the name of this Mac shown in the seller's
-  portal.
-- `deactivate` releases this Mac's activation, so the key can be used elsewhere.
-  If the seller answers that this Mac was already released (from the customer
-  portal, or by an earlier deactivation), the licence file is cleaned all the
-  same and the command succeeds with `This Mac was already released.`
-
-The JSON of `status`:
-
-```json
-{
-  "state": "trial",
-  "days_left": 30
-}
-```
-
-`state` is `trial`, `trial_over`, `licensed`, `revoked` or `released`;
-`days_left` appears only while the trial runs; `key_suffix` (the last six
-characters), `last_checked` (ISO 8601) and `activation_limit` appear only once a
-key is installed.
-
-`released` means the last check found that this Mac was released elsewhere, from
-the customer portal: the key is removed from the licence file, and the trial
-applies again (almost always over by then, so the index stops being updated;
-search keeps working). It differs from `revoked`, which is a key disabled by the
-seller and kept in the file. Enter the key again with `fouine license activate
-<key>` to use it on this Mac:
-
-```json
-{
-  "state": "released"
-}
-```
-
-A refused activation gives the reason on stderr: `this key is already in use on 3
-Macs` when the seller reports the activation limit, `this key was refused.
-Contact the seller with the e-mail you used to buy it.` for any other refusal.
-Both exit with code 7, and the seller's raw text follows as a warning.
-
-**Commands that write to the index refuse to run once the trial is over**:
-`crawl`, `extract`, `index`, `ocr`, `embed`, with one line and exit 6:
-
-```
-fouine: Trial over: enter a licence key (fouine license activate <key>) or buy
-one at https://www.creem.io/product/prod_5ZfJoGBRk7vxCN8xMqvOcR. Search still
-works.
-```
-
-`search`, `list`, `status`, `doctor`, `mcp`, `backup`, `config`, `root` and
-`maintain` work in every state: the end of the trial stops updates to the index,
-and what is already in it stays available. `embed --status` and `embed --bench`
-keep working for the same reason.
-
-Here is everything that goes out on the network. `activate` sends the key and the
-name of this computer (the name you will see in your customer portal, to
-recognise the Mac to release); `deactivate` sends the key and the activation id;
-`status` and the app's launch add a check at most once every 30 days, with the
-key and the activation id. Nothing else is sent, ever, and nothing about your
-documents; `crawl` and the other indexing commands never go online. Everything
-goes through a relay, `https://basedpolymer.eu/api/fouine/license`, which holds
-the merchant's API key: the app does not call the seller directly, and could
-not. `FOUINE_LICENSE_RELAY` replaces that address for testing (see the
-environment variables below). See [privacy](privacy.md).
-
-The licence file is `~/Library/Application Support/Fouine/license.json`, next to
-the database, so `FOUINE_DB` also moves it onto a throwaway copy.
-
-```sh
-fouine license status --json
-```
-
 ---
 
 ## Assistant
@@ -1928,9 +1832,6 @@ them failed or were skipped.
 | 3 | database failure, including locked by another process, index missing (a read command refuses rather than creating one), `FOUINE_DB` pointing at a folder, and a copy of the `.db` alone |
 | 4 | budget exhausted: the queue is consistent, run again to resume |
 | 5 | folder unreadable, missing, or no folder registered at all |
-| 6 | trial over: `crawl`, `extract`, `index`, `ocr` and `embed` refuse to update the index until a key is entered. Search keeps working |
-| 7 | licence key refused: unknown, disabled, expired, or already on 3 Macs. Deactivating a Mac that was already released is not a refusal: it cleans the file and exits 0 |
-| 8 | licence service unreachable: no network, or the relay does not answer. The trial continues and nothing is changed |
 | 64 | usage error: missing argument, folder refused by policy, query refused by the parser, unknown setting key, filter value the index contradicts (`--lang`, `--in`, `--only`, `roots.pinned`, `ocr.languages`), exclusion rule refused or not kept (`root ignore add`, `root ignore remove`) |
 
 ---
@@ -1944,7 +1845,6 @@ them failed or were skipped.
 | `FOUINE_MODEL_DIR` | directory of the meaning model |
 | `FOUINE_MODEL_URL` | address of the model archive (`https://` or `file://`) |
 | `FOUINE_MODEL_SHA256` | expected fingerprint of the archive. Setting it means you vouch for the archive instead of Fouine |
-| `FOUINE_LICENSE_RELAY` | address of the licence relay, for testing against the seller's sandbox. This address receives your key, so only `https://…` or `http://127.0.0.1:<port>` is accepted; anything else is ignored with a warning and the real relay is used |
 | `FOUINE_EMBED_COMPUTE` | CoreML back-end for inference: `cpu`, `gpu`, or `all` (default). `all` is 1.7× faster on a campaign; `cpu` divides memory by nearly six and is faster on a single search |
 | `FOUINE_OCR_TIMEOUT` | guard on one Vision page, in seconds (120) |
 | `FOUINE_RENDER_TIMEOUT` | guard on rendering one page, in seconds (120) |

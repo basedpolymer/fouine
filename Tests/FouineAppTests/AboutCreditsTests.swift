@@ -38,7 +38,8 @@ final class AboutCreditsTests: XCTestCase {
             licenseURL: nil, thirdPartyURL: nil, sourceURL: AboutCredits.sourceRepository)
         let text = credits.string
         // LI1 : « source-available », et surtout pas un nom de licence libre —
-        // le panneau est la seule surface où l'utilisateur lit ce qu'il a acheté.
+        // le panneau est la seule surface où l'utilisateur lit de quelle
+        // licence relève le code.
         XCTAssertTrue(text.contains("Source-available licence"), text)
         XCTAssertFalse(text.contains("AGPL"), text)
         XCTAssertTrue(text.contains("Read the licence"), text)

@@ -7,7 +7,7 @@ meet inside the same executable.
 
 ## The core, the application, the command line, the agent
 
-**Fouine Source-Available Licence**, version 1.0. Rights holder: Mathis Demory,
+**Fouine Source-Available Licence**, version 1.1. Rights holder: Mathis Demory,
 2026. Text: [`LICENSE`](LICENSE), whose **English version is authoritative**,
 followed by a French translation. SPDX identifier to use everywhere, file
 headers included: `LicenseRef-Fouine-Source-Available`. That is not a registry
@@ -16,14 +16,14 @@ prefix is exactly what SPDX provides for the case.
 
 The code is **readable and compilable by anyone**, for personal use or to
 propose a contribution; it is **not redistributable**, neither the sources,
-modified or not, nor a binary. The application is sold under a perpetual
-licence, updates included: one licence per person, up to three Macs in the same
-household, after a 30-day trial.
+modified or not, nor a binary. **Using the application is free of charge**, at
+home and at work alike, on as many computers as you use, updates included: the
+licence asks for no payment, no registration and no activation.
 
 This covers `Sources/FouineCore`, `FouineCrawl`, `FouineExtract`, `FouineOCR`,
-`FouineIndex`, `FouineEmbed`, `FouineLicense`, `FouineMCP`, `FouineApp`,
-`FouineAgent` and `fouine`, therefore `Fouine.app` and everything it embeds,
-therefore the published DMG.
+`FouineIndex`, `FouineEmbed`, `FouineMCP`, `FouineApp`, `FouineAgent` and
+`fouine`, therefore `Fouine.app` and everything it embeds, therefore the
+published DMG.
 
 ## The redistributed third-party components
 

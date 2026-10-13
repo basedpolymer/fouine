@@ -357,7 +357,7 @@ The script checks, in order: the binary exists and is **universal** (`lipo
 manifest version equals `VERSION`; then, on the reopened archive, that the zip
 is readable, that `manifest.json` is valid JSON, that `bin/fouine` is
 executable and that its signature survived archiving. Two escape hatches exist
-for a local trial and must **never** be used to publish: `MCPB_ALLOW_THIN=1`
+for local testing and must **never** be used to publish: `MCPB_ALLOW_THIN=1`
 (single-architecture binary) and `MCPB_ALLOW_ADHOC=1` (ad-hoc signature); the
 produced file name keeps no trace of either. `release.yml` builds the `.mcpb`
 automatically from the notarised, stapled binary in the bundle and attaches it
@@ -570,15 +570,12 @@ Nothing about it is built or published from here: no `site/` folder, no
 GitHub Pages workflow. What this repository owes it is the public privacy
 policy address the `.mcpb` manifest expects (step 7).
 
-Four pages there are part of the product, and a release checks them:
+Two pages there are part of the product, and a release checks them:
 
 | Page | What it is | Where it comes from |
 |---|---|---|
-| `/fouine/privacy`, `/fouine/fr/confidentialite` | the privacy policy Creem and the app's **What Fouine sends, in detail** button point at | the same text as `docs/privacy.md`, written directly in HTML and kept in step by hand (no conversion step); the French page is a summary and says the English text prevails. **Change both together** |
-| `/fouine/terms`, `/fouine/fr/conditions` | terms of sale and use: what a key buys, the trial, Creem as merchant of record, refunds, the licence, support | written by hand, dated |
-| `/fouine/thanks`, `/fouine/fr/merci` | where Creem sends a buyer after payment (`default_success_url` of the product) | by hand |
-| `api/fouine/license.js` | the licence relay, the only server-side code: holds `CREEM_API_KEY` (a Vercel environment variable, **Production**), forwards activate / validate / deactivate, and talks to Creem's sandbox by itself when the key starts with `creem_test_` | by hand |
+| `/fouine/privacy`, `/fouine/fr/confidentialite` | the privacy policy the app's **What Fouine sends, in detail** button points at | the same text as `docs/privacy.md`, written directly in HTML and kept in step by hand (no conversion step); the French page is a summary and says the English text prevails. **Change both together** |
+| `/fouine/terms`, `/fouine/fr/conditions` | terms of use: what the licence allows, and how to reach support | written by hand, dated |
 
-Creem reviews the store before opening payouts and wants, on the site, a
-reachable support address, a privacy policy, terms, and a trial download that
-does not return 404 (September 2026 review).
+The site carries no server-side code: nothing there answers the app, and the
+app asks it nothing.

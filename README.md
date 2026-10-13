@@ -89,23 +89,13 @@ download that only starts when you ask for it (Settings ▸ Search by meaning, o
 
 ---
 
-## Price, trial and key
+## Price
 
-The trial lasts 30 days and includes everything: every format, every folder,
-scanned page recognition, search by meaning. You don't need a card or an
-account.
+Fouine is free. Download it, use it at home or at work, on as many Macs as you
+like. There is nothing to buy and no account to create, and updates stay free.
 
-After that, Fouine costs €39, paid once. Updates are free for life, one key
-covers three Macs, and there is no subscription. Creem handles the sale, the
-payment and VAT; the key appears after payment and arrives by email.
-
-When the trial ends, search, preview, export, the assistant server and the
-read-only command line keep working on the index you have. Only updating the
-index stops, so everything you indexed stays searchable.
-
-To enter a key, use **Fouine ▸ Enter licence key…** (Settings ▸ Licence), or
-`fouine license activate <key>`. To free the Mac for another one, click
-**Deactivate this Mac**, or run `fouine license deactivate`.
+Everything is included: every format, every folder, scanned page recognition,
+search by meaning, the assistant server and the command line.
 
 ---
 
@@ -115,12 +105,10 @@ None of your documents, searches or usage data leaves your Mac. There is no
 account and no password to create, and Fouine sends no telemetry and no crash
 reports.
 
-Fouine makes five kinds of outgoing connection. Four happen only when you click
-or type something: checking for updates (off by default), downloading the
-search-by-meaning model, activating a licence key and releasing a Mac. The fifth
-is a licence check at launch, at most once every 30 days, and only if a key is
-installed. None of them sends anything about your documents, and nothing goes
-out while Fouine indexes, reads or searches.
+Fouine makes two kinds of outgoing connection, and neither happens unless you
+click or type something: checking for updates (off by default) and downloading
+the search-by-meaning model. Neither sends anything about your documents, and
+nothing goes out while Fouine indexes, reads or searches.
 
 An automated test checks that last sentence on every change to the code:
 `NetworkSilenceTests` runs a local server while an indexing pass reads
@@ -201,15 +189,16 @@ Trickier cases are in [`docs/pitfalls.md`](docs/pitfalls.md).
 ## Licence
 
 Fouine is source-available under [`LICENSE`](LICENSE) (Fouine Source-Available
-Licence 1.0, held by Mathis Demory), on the Aseprite model.
+Licence 1.1, held by Mathis Demory).
 
 You may read all the code, compile it, modify it for your own use and propose a
-contribution. You may install Fouine on the Macs you use, and keep backups.
+contribution. You may install Fouine on the Macs you use, at home or at work,
+and keep backups.
 
 You may not redistribute Fouine, as source (modified or not) or as a binary,
 including one you compiled yourself. You may not rent it, lend it or offer it as
-a service. The code is open to read, but it is not free software in the FSF
-sense: the app is sold under a perpetual licence.
+a service. The code is open to read, and the app costs nothing, but it is not
+free software in the FSF sense: the licence keeps the right to distribute it.
 
 By proposing a contribution, you grant the holder the right to use and
 redistribute it under any licence (article 4, and

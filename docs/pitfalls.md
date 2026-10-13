@@ -380,8 +380,8 @@ embedded in the application: `fouine model download` installs it, `fouine
 doctor` says whether it is there. Without it, `embed` refuses to start and says
 so, and `--hybrid` falls back to full-text search, which never needed it.
 
-Together with the update check and licence activation, it is one of the few
-commands that opens a connection. It contacts **two** hosts, `github.com` then
+Together with the update check, it is one of the two things in Fouine that
+opens a connection. It contacts **two** hosts, `github.com` then
 `release-assets.githubusercontent.com`, because GitHub serves release assets by
 redirection: an outbound firewall sees two requests, and that is normal.
 Nothing is installed if the SHA-256 does not match. On an offline machine, copy
@@ -790,9 +790,9 @@ merge two related items into one existing group rather than adding a group.
 Opening the settings window from a button or a menu item with
 `NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)` works
 on macOS 13 and does **nothing** from macOS 14 on: SwiftUI only logs "Please use
-SettingsLink for opening the Settings scene." **Enter licence key…** (menu item
-and Index card button), **Manage in Settings…** and **Open Settings** stayed
-silent that way from their creation until 14/09/2026, and no test could see it.
+SettingsLink for opening the Settings scene." **Manage in Settings…** and
+**Open Settings** stayed silent that way from their creation until 14/09/2026,
+and no test could see it.
 
 The remedy is SwiftUI's own action. `@Environment(\.openSettings)` exists only
 inside a view, and only from macOS 14, so `SettingsWindowRegistrar` (a

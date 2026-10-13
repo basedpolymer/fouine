@@ -24,7 +24,6 @@ import Foundation
 import Dispatch
 import FouineCore
 import FouineCrawl
-import FouineLicense
 import FouineOCR
 
 public struct AgentState: Equatable, Sendable {
@@ -35,10 +34,6 @@ public struct AgentState: Equatable, Sendable {
     public var lockHeldBySelf: Bool
     public var isStopping: Bool
     public var lastJournalRotationCheck: Date?
-    /// Dernière fois que l'agent a écrit « licence: trial over » (lot L1C).
-    /// Sans elle, un essai fini remplirait le journal d'une ligne par minute
-    /// jusqu'à la rotation.
-    public var lastLicenceNoticeAt: Date?
 
     public init(
         phase: AgentStatusRecord.Phase = .idle,
@@ -47,8 +42,7 @@ public struct AgentState: Equatable, Sendable {
         pollPeriod: Int = 60,
         lockHeldBySelf: Bool = false,
         isStopping: Bool = false,
-        lastJournalRotationCheck: Date? = nil,
-        lastLicenceNoticeAt: Date? = nil
+        lastJournalRotationCheck: Date? = nil
     ) {
         self.phase = phase
         self.lastVerdict = lastVerdict
@@ -57,7 +51,6 @@ public struct AgentState: Equatable, Sendable {
         self.lockHeldBySelf = lockHeldBySelf
         self.isStopping = isStopping
         self.lastJournalRotationCheck = lastJournalRotationCheck
-        self.lastLicenceNoticeAt = lastLicenceNoticeAt
     }
 }
 
@@ -71,8 +64,6 @@ public enum AgentAction: Equatable, Sendable {
     case publishStatus(phase: AgentStatusRecord.Phase, detail: String, done: Int?, total: Int?)
     case notifyQueueDrained
     case enforceLogRotation
-    /// L'essai est fini : une ligne de journal, rien d'autre (lot L1C).
-    case noteLicenceBlocked
     indirect case sequence([AgentAction])
 }
 
@@ -121,8 +112,6 @@ final class Agent: @unchecked Sendable {
     /// se refuserait à lui-même — flock verrouille la description ouverte.
     private var lockHeldBySelf = false
     private var lastVerdict: String?
-    /// Dernière ligne « licence: trial over » écrite (lot L1C).
-    private var lastLicenceNoticeAt: Date?
     /// Conditions du §5.7 relues PENDANT un lot de vecteurs, et la date de ce
     /// relevé : `shouldStop` est consulté toutes les quelques secondes, et
     /// chaque évaluation lance `pmset` en sous-processus (§6.2).
@@ -164,30 +153,11 @@ final class Agent: @unchecked Sendable {
         settings: SettingsSnapshot,
         ocrQueueLength: Int,
         pendingRoots: Set<Int64> = [],
-        embed: AgentEmbedSituation = .none,
-        licenceAllowsIndexing: Bool = true
+        embed: AgentEmbedSituation = .none
     ) -> (action: AgentAction, nextState: AgentState) {
         var nextState = state
         if nextState.isStopping {
             return (.none, nextState)
-        }
-
-        // 0. L'ESSAI EST-IL FINI ? (lot L1C) Avant tout le reste, et avant
-        //    toute sonde : un agent en fin d'essai ne fait RIEN — ni
-        //    extraction, ni OCR, ni préparation du sens. Il ne réclame rien
-        //    non plus : il n'y a pas de notification, pas de badge, pas de
-        //    fenêtre. C'est l'application qui porte le message, là où quelqu'un
-        //    peut le lire et agir ; le journal, lui, sert au dépanneur qui se
-        //    demande pourquoi l'index ne bouge plus.
-        //
-        //    UNE LIGNE PAR JOUR AU PLUS. Une par tic serait une ligne par
-        //    minute, soit 1 440 par jour pour dire la même chose.
-        if !licenceAllowsIndexing {
-            let due = nextState.lastLicenceNoticeAt
-                .map { clock.timeIntervalSince($0) >= 86_400 } ?? true
-            guard due else { return (.none, nextState) }
-            nextState.lastLicenceNoticeAt = clock
-            return (.noteLicenceBlocked, nextState)
         }
 
         // 1. Si des racines attendent une extraction, l'extraction a priorité absolue.
@@ -896,8 +866,7 @@ final class Agent: @unchecked Sendable {
             hasNotifiedQueueDrained: prevVerdict == AgentStatusDetail.queueDrained,
             pollPeriod: locked { timerPeriod },
             lockHeldBySelf: heldBySelf,
-            isStopping: isStopping,
-            lastLicenceNoticeAt: locked { lastLicenceNoticeAt }
+            isStopping: isStopping
         )
         let (action, nextState) = Self.tick(
             state: currentState,
@@ -906,16 +875,8 @@ final class Agent: @unchecked Sendable {
             settings: current,
             ocrQueueLength: queued,
             pendingRoots: rootsPending,
-            embed: embed,
-            // Le fichier de licence est relu À CHAQUE RÉVEIL, et pas mémorisé :
-            // une clé activée depuis l'application doit remettre l'agent au
-            // travail au tic suivant, sans redémarrage de launchd. Une lecture
-            // de quelques centaines d'octets par minute (lot L1C).
-            // AUCUN RÉSEAU ICI, JAMAIS : l'agent lit le verdict, il ne le
-            // demande à personne.
-            licenceAllowsIndexing: Self.licenceAllowsIndexing()
+            embed: embed
         )
-        locked { lastLicenceNoticeAt = nextState.lastLicenceNoticeAt }
         // LE MOTEUR NE SURVIT PAS À UN TIC QUI NE PRÉPARE RIEN (AG1). ~90 Mio
         // gardés sur une machine à 8 Gio pour un travail qu'on ne fait plus,
         // c'est le genre de démon qu'on finit par éteindre.
@@ -944,9 +905,6 @@ final class Agent: @unchecked Sendable {
         switch action {
         case .none, .sleep:
             break
-        case .noteLicenceBlocked:
-            log.info("licence: trial over, nothing to do — searching still "
-                     + "works; enter a licence key in Fouine to resume indexing")
         case .runExtraction(let rootIDs):
             enqueue(rootIDs: rootIDs)
         case .runOCRBatch(let minutes, let jobs, let queuedPages):
@@ -1030,17 +988,6 @@ final class Agent: @unchecked Sendable {
     }
 
     // MARK: - Préparation du sens : ce que l'exécutant doit à la décision (AG1)
-
-    /// Le verdict de licence, lu sur le disque (lot L1C).
-    ///
-    /// L'essai N'EST PAS DÉMARRÉ ici : c'est l'application ou `fouine crawl`
-    /// qui posent `trial_started`, jamais un démon qui tourne tout seul — un
-    /// agent qui consommerait le premier jour d'essai d'une machine où
-    /// personne n'a rien ouvert serait un vol de jour.
-    static func licenceAllowsIndexing() -> Bool {
-        let url = LicenseStore.fileURL(databaseURL: AgentPaths.databaseURL())
-        return LicenseState.compute(file: LicenseStore.load(at: url)).allowsIndexing
-    }
 
     /// L'action mène-t-elle à un lot de vecteurs ? (Une `sequence` en porte un.)
     static func leadsToEmbedBatch(_ action: AgentAction) -> Bool {

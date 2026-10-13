@@ -70,10 +70,6 @@ struct CrawlCommand: ParsableCommand {
     var delta = false
 
     func run() {
-        // La garde d'essai vient AVANT l'ouverture de la base : c'est aussi ici
-        // que `trial_started` se pose pour qui installe la ligne de commande
-        // sans jamais lancer l'application (lot L1C).
-        LicenseGate.requireIndexing()
         CLI.guarded {
             let store = try CLI.openStore()
             let mode: CrawlMode = full ? .full : .delta
@@ -99,7 +95,6 @@ struct ExtractCommand: ParsableCommand {
     var only: String?
 
     func run() {
-        LicenseGate.requireIndexing()
         CLI.guarded {
             let store = try CLI.openStore()
             try OnlyDocument.check(only, store: store)
@@ -126,7 +121,6 @@ struct IndexCommand: ParsableCommand {
     var budgetMinutes: Int?
 
     func run() {
-        LicenseGate.requireIndexing()
         CLI.guarded {
             let store = try CLI.openStore()
             try Pipeline.crawl(store: store, rootSelector: nil, mode: .delta)
@@ -166,7 +160,6 @@ struct OCRCommand: ParsableCommand {
     var only: String?
 
     func run() {
-        LicenseGate.requireIndexing()
         CLI.guarded {
             let store = try CLI.openStore()
             // Refus en 64 AVANT le verrou et le préchauffage de Vision : la

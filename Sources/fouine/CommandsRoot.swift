@@ -33,11 +33,6 @@ struct FouineCLI: ParsableCommand {
                       // pas) : les notices des composants redistribués devaient
                       // être atteignables depuis le binaire (audit B1-10/B1-22).
                       LicensesCommand.self,
-                      // AJOUT au §4.3 (lot L1C) : l'essai de 30 jours et la
-                      // clé d'achat. Au SINGULIER, et juste à côté de
-                      // `licenses` au pluriel — les deux résumés d'aide se
-                      // distinguent en une ligne.
-                      LicenseCommand.self,
                       // Palier 4 : le serveur MCP. Même règle — un AJOUT au
                       // §4.3, aucune sortie existante ne change (docs/mcp.md).
                       MCPCommand.self])

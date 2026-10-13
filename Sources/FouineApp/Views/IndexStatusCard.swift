@@ -21,12 +21,9 @@
 // test : ce qui se teste est en amont.
 
 import SwiftUI
-import FouineLicense
 
 struct IndexStatusCard: View {
     @EnvironmentObject private var app: AppModel
-    /// L'essai, la clé (lot L1C).
-    @EnvironmentObject private var license: LicenseModel
     /// Ouvre la fenêtre « Votre index » (IX2).
     @Environment(\.openWindow) private var openWindow
 
@@ -89,15 +86,7 @@ struct IndexStatusCard: View {
                 IndexProgressBar(bar: bar)
             }
 
-            // L'ESSAI FINI PREND LA PLACE DU BOUTON DE MISE À JOUR (lot L1C).
-            // Pas en plus de lui : proposer « Mettre à jour maintenant » à
-            // quelqu'un dont l'index ne peut plus se mettre à jour serait une
-            // promesse qui se casse au clic. L'interrupteur de mise à jour
-            // automatique, lui, reste tel quel — l'agent se tait de lui-même,
-            // et le rendre gris demanderait d'expliquer pourquoi.
-            if !license.allowsIndexing {
-                licenceBlock
-            } else if let action = summary.action {
+            if let action = summary.action {
                 Button(IndexStatusText.label(action)) {
                     app.performIndexAction(action)
                 }
@@ -111,13 +100,6 @@ struct IndexStatusCard: View {
                 // Un « Stop » déjà cliqué ne se reclique pas (ST1).
                 .disabled(summary.isStopping)
                 .accessibilityIdentifier("sidebar.index.action")
-            }
-
-            // Pendant l'essai : UNE ligne discrète, et rien d'autre. Pas de
-            // fenêtre au lancement, pas de badge, pas de compte à rebours en
-            // gros. Quelqu'un qui essaie un moteur de recherche veut chercher.
-            if case .trial(let daysLeft) = license.state {
-                trialLine(daysLeft: daysLeft)
             }
 
             // La place disque, seulement quand Fouine risque d'en manquer
@@ -141,52 +123,6 @@ struct IndexStatusCard: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(AccessibilityText.indexCard(summary))
         .accessibilityIdentifier("sidebar.index.card")
-    }
-
-    // MARK: - Ce que la licence ajoute à la carte (lot L1C)
-
-    /// La phrase de fin d'essai (ou de clé désactivée) et les deux gestes.
-    private var licenceBlock: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            wrapping(Text(verbatim: LicenseStatusText.headline(license.state))
-                .font(.caption)
-                .foregroundStyle(.secondary))
-            HStack(spacing: 6) {
-                Button("Enter licence key…") { openLicenceSettings() }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                    .accessibilityIdentifier("sidebar.licence.enter")
-                Button("Buy") { license.buy() }
-                    .controlSize(.small)
-                    .accessibilityIdentifier("sidebar.licence.buy")
-            }
-        }
-        .padding(.top, 1)
-    }
-
-    /// « Trial: N days left · Buy » — un lien, pas un bouton : rien à faire
-    /// aujourd'hui, tout marche.
-    private func trialLine(daysLeft: Int) -> some View {
-        HStack(spacing: 5) {
-            Text(verbatim: LicenseStatusText.cardTrialLine(daysLeft: daysLeft))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(verbatim: "·")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-            Button("Buy") { license.buy() }
-                .buttonStyle(.link)
-                .font(.caption)
-                // `.link` ne peint la teinte que sur un fond de fenêtre
-                // ordinaire : sur celui de la carte, le libellé sortait en
-                // blanc (BU-04, pièges connus).
-                .foregroundStyle(.tint)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("sidebar.licence.trial")
     }
 
     /// « Détails… » : la dernière ligne de la carte, et la porte vers tout ce

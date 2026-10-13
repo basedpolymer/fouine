@@ -442,25 +442,6 @@ d'autre : un motif d'attente sans rien à attendre dit moins que le silence. Tou
 l'état est aussi relu au moment où vous revenez sur Fouine ou ouvrez le panneau
 de la barre des menus, pour qu'il soit juste quand vous le regardez.
 
-### Ce que l'essai ajoute à la carte
-
-Pendant l'essai, une ligne discrète en bas de la carte indique « Essai : 12 jours
-restants · Acheter ». C'est le seul rappel : rien ne s'ouvre au lancement et
-aucun compte à rebours ne s'affiche en gros caractères. Le reste de la carte
-montre ce qu'il montrerait de toute façon.
-
-À la fin de l'essai, la carte remplace son bouton d'action par la phrase « Votre
-essai est terminé : la recherche fonctionne toujours, l'index ne se met plus à
-jour » et deux boutons, **Saisir une clé de licence…** et **Acheter**. Le bouton
-**Mettre à jour maintenant** disparaît, puisqu'il ne pourrait plus rien faire.
-
-L'interrupteur ne change pas. La mise à jour automatique s'arrête d'elle-même,
-et griser l'interrupteur demanderait une explication à l'endroit même où la
-carte vient d'en donner une.
-
-Si le vendeur a désactivé votre clé, la carte indique « Cette clé a été
-désactivée par le vendeur » et les deux mêmes boutons reviennent.
-
 ---
 
 ## 5. La fenêtre Votre index
@@ -829,7 +810,7 @@ vérifier.
 
 ## 11. Les réglages
 
-Les réglages s'ouvrent par ⌘, et comptent sept onglets.
+Les réglages s'ouvrent par ⌘, et comptent six onglets.
 
 ### Général
 
@@ -855,41 +836,6 @@ Les réglages s'ouvrent par ⌘, et comptent sept onglets.
   notification ne peut arriver.
 - **Spotlight** : voir le § 12.
 - **Raccourci clavier** : rappel de la combinaison ⌥⌘F.
-
-### Licence
-
-C'est le deuxième onglet, juste après Général. C'est celui qu'on ouvre après
-avoir acheté, et le seul endroit où l'on règle la fin de l'essai.
-
-- L'état, en une phrase : « Essai : 12 jours restants », « Votre essai est
-  terminé : la recherche fonctionne toujours, l'index ne se met plus à jour »,
-  « Sous licence — clé se terminant par ·····XYZ456 » avec la date du dernier
-  contrôle, « Cette clé a été désactivée par le vendeur », ou, quand la
-  vérification mensuelle constate que vous avez libéré ce Mac depuis votre
-  espace client, « Ce Mac a été libéré depuis votre espace client. Saisissez de
-  nouveau votre clé pour l’utiliser ici. »
-- Un champ **Clé de licence** et un bouton **Activer**, inactif tant que le champ
-  est vide. Le champ accepte ce que vous collez : espaces, retours à la ligne et
-  minuscules sont nettoyés avant l'envoi.
-- Un bouton **Acheter Fouine — 39 €**, qui ouvre la page de paiement dans votre
-  navigateur. L'application ne vous demande jamais de numéro de carte.
-- Une fois la clé saisie, le champ laisse la place à **Désactiver ce Mac**, qui
-  demande confirmation : « Ce Mac ne comptera plus parmi vos 3 activations. Vous
-  pourrez l'activer à nouveau plus tard. »
-- Les refus s'affichent sous le champ, chacun en une phrase avec la marche à
-  suivre : « Pas de connexion : connectez-vous à Internet, puis réessayez. »,
-  « Cette clé n'est pas reconnue. Vérifiez qu'il n'y a pas de faute de frappe, ou
-  retrouvez-la dans le courriel que Creem vous a envoyé. », « Cette clé est déjà
-  utilisée sur 3 Mac. Désactivez-en un depuis les réglages, ou depuis votre
-  espace client Creem. », « Le service de licence est indisponible pour le
-  moment. Votre essai continue ; réessayez plus tard. »
-- Le bas de l'onglet indique ce qui part et quand, comme celui des mises à jour :
-  la clé et le nom de ce Mac, à l'activation, à la libération, et lors d'une
-  vérification en arrière-plan par mois. Rien ne part pendant que Fouine indexe
-  ou cherche. Détail : la page « Privacy » de la documentation (en anglais).
-
-Le menu **Fouine ▸ Saisir une clé de licence…** ouvre directement cet onglet, et
-**À propos de Fouine** rappelle l'état en une ligne.
 
 ### Dossiers
 

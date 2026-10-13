@@ -95,11 +95,11 @@ final class WindowLifecycleTests: XCTestCase {
     // MARK: - Ouvrir les réglages sur un onglet (LB1)
 
     /// L'onglet demandé attend la fenêtre qui naît, et ne sert qu'une fois :
-    /// une ouverture par ⌘, plus tard ne doit pas retomber sur « Licence ».
+    /// une ouverture par ⌘, plus tard ne doit pas retomber sur « Dossiers ».
     @MainActor
     func testTheRequestedSettingsTabIsTakenOnce() {
-        SettingsWindow.pendingTab = .licence
-        XCTAssertEqual(SettingsWindow.takePendingTab(), .licence)
+        SettingsWindow.pendingTab = .folders
+        XCTAssertEqual(SettingsWindow.takePendingTab(), .folders)
         XCTAssertNil(SettingsWindow.takePendingTab())
         XCTAssertNil(SettingsWindow.pendingTab)
     }

@@ -67,7 +67,7 @@ enum OpenErrorDiagnosis: Equatable {
         case .newerVersion:
             return String(localized: "This index was created by a newer version of Fouine. Update Fouine.")
         case .tooOld:
-            return String(localized: "This index comes from an older trial version of Fouine and can no longer be used. Fouine has to build it again from your folders.")
+            return String(localized: "This index comes from an older version of Fouine and can no longer be used. Fouine has to build it again from your folders.")
         case .diskFull:
             return String(localized: "The disk is full. Free up some disk space, then try again.")
         case .missingOrInaccessible:

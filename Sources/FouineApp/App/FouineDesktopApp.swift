@@ -18,15 +18,8 @@ extension Notification.Name {
     /// premier plan et donner le focus au champ de recherche.
     static let fouineFocusSearch = Notification.Name("io.github.basedpolymer.fouine.focusSearch")
     /// Ouvrir les réglages sur un onglet précis (`SettingsTab` en `object`) :
-    /// « Enter licence key… » vise Licence (lot L1C), le refus du dossier
-    /// d'une application vise Dossiers.
+    /// le refus du dossier d'une application vise Dossiers.
     static let fouineShowSettingsTab = Notification.Name("io.github.basedpolymer.fouine.showSettingsTab")
-}
-
-/// Ouvre la fenêtre de réglages sur l'onglet « Licence ».
-@MainActor
-func openLicenceSettings() {
-    openSettings(on: .licence)
 }
 
 /// Ouvre la fenêtre de réglages sur l'onglet voulu.
@@ -34,8 +27,8 @@ func openLicenceSettings() {
 /// L'ACTION DE SWIFTUI, PAS LE SÉLECTEUR. Depuis macOS 14, envoyer
 /// `showSettingsWindow:` à l'application ne fait plus rien : SwiftUI écrit
 /// « Please use SettingsLink for opening the Settings scene » au journal, et
-/// aucune fenêtre ne vient. « Enter licence key… » (menu et carte), « Manage in
-/// Settings… » et « Open Settings » sont restés muets ainsi depuis leur
+/// aucune fenêtre ne vient. « Manage in Settings… » et « Open Settings » sont
+/// restés muets ainsi depuis leur
 /// création (constaté le 14/09/2026, build 908, macOS 15.7). L'action
 /// `openSettings` n'existe que dans l'environnement d'une vue : `SettingsWindow`
 /// la retient, comme `MainWindow` retient `openWindow`.
@@ -208,11 +201,6 @@ struct FouineDesktopApp: App {
     /// que l'élément de menu déclenche. Son initialiseur ne sort JAMAIS sur le
     /// réseau — voir l'en-tête de `Updates.swift`.
     @StateObject private var updates = UpdatesController()
-    /// L'essai, la clé, l'état (lot L1C). Porté par l'`App` : la carte
-    /// « Index » de la barre latérale, l'onglet des réglages et « À propos »
-    /// lisent le même objet, et la revalidation mensuelle ne doit pas mourir
-    /// avec une fenêtre.
-    @StateObject private var license: LicenseModel
     /// Installation du modèle sémantique (audit D6). Porté par l'`App` et non
     /// par l'onglet de réglages : un transfert de 220 Mo ne doit pas mourir
     /// parce qu'on a fermé la fenêtre ⌘, — et l'état doit être retrouvé intact
@@ -254,8 +242,6 @@ struct FouineDesktopApp: App {
         _allDocuments = StateObject(
             wrappedValue: AllDocumentsModel(service: service))
         _menuSearch = StateObject(wrappedValue: MenuBarSearchModel(service: service))
-        let license = LicenseModel()
-        _license = StateObject(wrappedValue: license)
         searchModel = search
         self.service = service
 
@@ -266,15 +252,8 @@ struct FouineDesktopApp: App {
         // base, §12), et prendre le raccourci global ⌥⌘F — dont l'intérêt est
         // justement de servir quand Fouine n'est pas devant.
         FouineAppDelegate.launch = {
-            // L'ESSAI DÉMARRE ICI, avant tout le reste (lot L1C) : au premier
-            // lancement, et une seule fois. Purement local — aucune connexion.
-            license.start()
             await app.start()
             await search.refreshSemanticAvailability()
-            // La vérification silencieuse de la clé, s'il y en a une et si elle
-            // n'a pas été vue depuis 30 jours. Hors ligne, il ne se passe
-            // rien du tout et on réessaiera au prochain lancement.
-            await license.revalidateIfDue()
             app.globalHotKeyAvailable = GlobalHotKey.registerOptionCommandF {
                 NSApp.activate(ignoringOtherApps: true)
                 NotificationCenter.default.post(name: .fouineFocusSearch,
@@ -327,8 +306,6 @@ struct FouineDesktopApp: App {
                 // La barre latérale lit `agent.prepareMeaning` (AG1) : le même
                 // objet que l'onglet Indexation, pour la même décision.
                 .environmentObject(settings)
-                // La carte « Index » dit où en est l'essai (lot L1C).
-                .environmentObject(license)
                 // 900 × 560 (audit U6) : 1080 × 620 ne tenait pas sur un 13"
                 // à côté d'une autre fenêtre. Les minimums des trois colonnes
                 // ont suivi (230 + 350 + 300 = 880 + deux séparateurs).
@@ -415,14 +392,6 @@ struct FouineDesktopApp: App {
             // alors désactivé, et son `.help` dit pourquoi — sans clé de
             // signature publique, aucune vérification n'est possible.
             CommandGroup(after: .appInfo) {
-                // « Enter licence key… » (lot L1C). Dans le même groupe que
-                // « Rechercher les mises à jour… », et pas dans un groupe à
-                // lui : `commands` n'accepte que dix enfants, et ces deux
-                // éléments parlent de la même chose — l'application elle-même,
-                // pas l'index. TOUJOURS présent, même une fois la clé posée :
-                // c'est aussi par là qu'on la remplace.
-                Button("Enter licence key…") { openLicenceSettings() }
-                    .help("Opens the Licence settings, where you can enter the key you bought, or buy one.")
                 Button("Check for updates…") {
                     updates.checkForUpdates()
                 }
@@ -587,7 +556,6 @@ struct FouineDesktopApp: App {
                 // Sparkle a son onglet dans la MÊME fenêtre (palier 2.9) : deux
                 // fenêtres de réglages sur macOS, il n'y en a jamais qu'une.
                 .environmentObject(updates)
-                .environmentObject(license)
         }
     }
 }

@@ -409,7 +409,6 @@ the base is open waits in `DeepLinkQueue`.
 | Index | `~/Library/Application Support/Fouine/fouine.db` (+ `-wal`, `-shm`) | `FOUINE_DB` |
 | Write lock | `~/Library/Application Support/Fouine/fouine.lock` | follows `FOUINE_DB` |
 | Campaign lock | `~/Library/Application Support/Fouine/fouine-embed.lock` | follows `FOUINE_DB` |
-| Licence file | `~/Library/Application Support/Fouine/license.json` | follows `FOUINE_DB` |
 | Semantic model | `~/Library/Application Support/Fouine/models/e5-small` | `FOUINE_MODEL_DIR` (source: `FOUINE_MODEL_URL`) |
 | Agent log | `~/Library/Logs/Fouine/fouine.log` (rotates at 10 MiB to `.log.1`) | `FOUINE_AGENT_LOG` |
 | Preferences | `~/Library/Preferences/io.github.basedpolymer.fouine.plist` | — |
@@ -461,7 +460,6 @@ Sources/FouineIndex/    the shared indexing pass, Spotlight donation, app source
 Sources/FouineOCR/      page rendering, Vision engine, thermal governor, OCR loop
 Sources/FouineEmbed/    e5-small CoreML model, tokenizer, vectorisation campaign,
                         model download (the only URLSession under Sources/)
-Sources/FouineLicense/  30-day trial, licence file, five states, monthly check, relay client
 Sources/FouineMCPKit/   MCP framing, JSON-RPC, router, budgets (MIT, no dependency)
 Sources/FouineMCP/      the MCP server itself: read-only store and tools
 Sources/fouine/         swift-argument-parser CLI (see cli.md)
@@ -475,22 +473,11 @@ docs/                   this documentation
 SPEC.md                 the implementation contract
 ```
 
-Two targets deserve a note.
+One target deserves a note.
 
 **`FouineMCPKit` has no dependency**, not even on `FouineCore`. That is what
 makes its MIT licence real rather than decorative, and one line of
 `Package.swift` would undo it. See [`../LICENSING.md`](../LICENSING.md).
-
-**`FouineLicense` depends on Foundation alone.** The verdict «may the index
-update?» is taken by all three executables, and the agent must be able to take
-it at every wake-up without opening the base. `license.json` is derived from
-`databaseURL.deletingLastPathComponent()`, so `FOUINE_DB` isolates it and no
-test can write into the owner's real folder. Writing is atomic (temporary file
-then `replaceItemAt`, mode `0600`); an unreadable file counts as absent and the
-trial starts again. Only indexing depends on the verdict: search, preview,
-export, the MCP server and every read command work in all five states. What a
-monthly check changes to the file is decided once, in `LicenseCheck`, for the
-two callers that run it: the app at launch and `fouine license status`.
 
 **Where a shared sentence lives.** A phrase or a predicate that two surfaces
 publish belongs to the module that owns the *fact*, never to the surfaces: the
