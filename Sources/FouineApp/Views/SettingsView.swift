@@ -36,9 +36,9 @@ import FouineCore
 import FouineEmbed
 import FouineIndex
 
-/// Les sept onglets, nommés pour qu'un élément de menu puisse en viser un.
+/// Les six onglets, nommés pour qu'un élément de menu puisse en viser un.
 enum SettingsTab: Hashable {
-    case general, licence, folders, indexing, meaning, updates, advanced
+    case general, folders, indexing, meaning, updates, advanced
 }
 
 struct SettingsView: View {
@@ -46,10 +46,9 @@ struct SettingsView: View {
     @EnvironmentObject private var search: SearchModel
     @EnvironmentObject private var settings: SettingsModel
     @EnvironmentObject private var updates: UpdatesController
-    @EnvironmentObject private var license: LicenseModel
 
-    /// L'onglet montré. Ne servait à rien tant qu'aucun élément de menu ne
-    /// visait un onglet précis ; « Enter licence key… » en vise un (lot L1C).
+    /// L'onglet montré : un élément de menu ou le refus d'un dossier
+    /// d'application peut en viser un.
     @State private var tab: SettingsTab = .general
 
     var body: some View {
@@ -57,13 +56,6 @@ struct SettingsView: View {
             GeneralSettingsTab()
                 .tabItem { Label("General", systemImage: "gearshape") }
                 .tag(SettingsTab.general)
-            // LICENCE, juste après « Général » (lot L1C) : c'est le deuxième
-            // onglet qu'on ouvre après avoir payé, et le seul endroit où un
-            // essai qui se termine se dénoue. Il vient AVANT « Dossiers » pour
-            // cette raison, et pas parce qu'il est important à nos yeux.
-            LicenseSettingsTab(license: license)
-                .tabItem { Label("Licence", systemImage: "key") }
-                .tag(SettingsTab.licence)
             FoldersSettingsTab()
                 .tabItem { Label("Folders", systemImage: "folder") }
                 .tag(SettingsTab.folders)
@@ -82,8 +74,8 @@ struct SettingsView: View {
                 .tabItem { Label("Advanced", systemImage: "wrench.and.screwdriver") }
                 .tag(SettingsTab.advanced)
         }
-        // « Fouine ▸ Enter licence key… » (et « Open Settings » d'un refus de
-        // dossier d'application) dépose l'onglet, ouvre la fenêtre, PUIS
+        // « Open Settings » (le refus du dossier d'une application) dépose
+        // l'onglet, ouvre la fenêtre, PUIS
         // l'annonce par une notification, comme ⌥⌘F pour le champ de
         // recherche. Un élément de menu vit hors de la hiérarchie de vues et
         // n'a pas d'autre moyen d'atteindre un `@State` d'ici. Une fenêtre qui

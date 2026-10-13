@@ -12,13 +12,15 @@
 // promet un code lisible — une promesse sans lien vers le dépôt ne vaudrait
 // rien —, et MIT et Apache-2.0 continuent d'exiger leurs notices.
 //
+// RIEN SUR UN ACHAT (GR1) : Fouine est gratuit, le panneau n'a plus d'état de
+// licence à dire — seulement de quelle licence relève le CODE.
+//
 // Les deux premiers liens pointent sur des fichiers DU BUNDLE : hors bundle
 // (`swift run FouineApp`) ils n'existent pas, et la ligne reste alors du texte
 // simple — un lien mort serait pire que pas de lien.
 
 import AppKit
 import Foundation
-import FouineLicense
 
 enum AboutCredits {
 
@@ -27,14 +29,9 @@ enum AboutCredits {
 
     // MARK: - Le texte, pur
 
-    /// - Parameter licenceState: la phrase d'état de l'achat (lot L1C), ou
-    ///   `nil` quand on ne la connaît pas. « À propos » est le second endroit
-    ///   où quelqu'un cherche « ai-je payé, et pour quelle clé ? » — le premier
-    ///   étant les réglages.
     static func attributed(licenseURL: URL?,
                            thirdPartyURL: URL?,
-                           sourceURL: URL,
-                           licenceState: String? = nil) -> NSAttributedString {
+                           sourceURL: URL) -> NSAttributedString {
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
         paragraph.lineSpacing = 2
@@ -54,11 +51,6 @@ enum AboutCredits {
         append(String(localized: "Fouine reads your documents on this Mac and nothing leaves it."))
         append("\n\n")
 
-        if let licenceState {
-            append(licenceState)
-            append("\n\n")
-        }
-
         append(String(localized: "Source-available licence") + " — ")
         append(String(localized: "Read the licence"), link: licenseURL)
         append("\n")
@@ -73,21 +65,12 @@ enum AboutCredits {
 
     /// Les deux fichiers sont cherchés dans `Bundle.main` — le .app lui-même —
     /// et non par `Bundle.module` : voir GuideLocator et docs/i18n.md.
-    /// - Parameter licenceState: laissé à `nil`, l'état est relu sur le disque.
-    ///   Le fichier de licence fait quelques centaines d'octets et « À propos »
-    ///   s'ouvre une fois par mois : passer par le modèle observable
-    ///   demanderait de faire descendre un `@EnvironmentObject` jusque dans une
-    ///   structure `Commands`, où il n'y en a pas.
     @MainActor
-    static func show(bundle: Bundle = .main, licenceState: String? = nil) {
-        let licenceState = licenceState ?? LicenseStatusText.headline(
-            LicenseState.compute(file: LicenseStore.load(
-                at: LicenseStore.fileURL(databaseURL: AppPaths.databaseURL()))))
+    static func show(bundle: Bundle = .main) {
         let credits = attributed(
             licenseURL: bundle.url(forResource: "LICENSE", withExtension: nil),
             thirdPartyURL: bundle.url(forResource: "THIRD_PARTY_LICENSES", withExtension: "md"),
-            sourceURL: sourceRepository,
-            licenceState: licenceState)
+            sourceURL: sourceRepository)
         NSApp.activate(ignoringOtherApps: true)
         NSApp.orderFrontStandardAboutPanel(options: [.credits: credits])
     }

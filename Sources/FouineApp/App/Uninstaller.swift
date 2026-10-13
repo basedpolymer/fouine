@@ -44,7 +44,6 @@ import AppKit
 import ServiceManagement
 import FouineCore
 import FouineIndex
-import FouineLicense
 
 enum Uninstaller {
 
@@ -196,28 +195,15 @@ enum Uninstaller {
         if directory.lastPathComponent == supportDirectoryName {
             return [target(directory, home: home, fileManager: fileManager)]
         }
-        // Le fichier de base, ses deux fichiers de travail SQLite, et le
-        // fichier de licence. Rien d'autre du dossier : ce qui s'y trouve
+        // Le fichier de base et ses deux fichiers de travail SQLite, qu'ils
+        // existent ou non : `-wal` disparaît à chaque fermeture propre, et une
+        // ligne qui clignote d'une ouverture à l'autre serait pire qu'une
+        // ligne toujours là. Rien d'autre du dossier : ce qui s'y trouve
         // n'appartient pas à Fouine.
-        //
-        // `license.json` est ici et pas ailleurs (lot L1C) : dans le cas
-        // ordinaire — le dossier s'appelle « Fouine » — il part avec le dossier
-        // entier, à la ligne du dessus. Base déplacée par `FOUINE_DB`, il la
-        // suit, et il faut donc le nommer.
-        //
-        // Il n'est nommé QUE s'il existe, contrairement aux trois fichiers
-        // SQLite : ceux-là se montrent même absents (`-wal` disparaît à chaque
-        // fermeture propre, et une ligne qui clignote d'une ouverture à
-        // l'autre serait pire qu'une ligne toujours là). Une licence, elle,
-        // n'existe pas tant que rien n'a été acheté, et annoncer son effacement
-        // à quelqu'un qui n'en a pas ne lui apprendrait rien.
-        let licence = target(databaseURL.deletingLastPathComponent()
-                                .appendingPathComponent(LicenseStore.fileName),
-                             home: home, fileManager: fileManager)
         return ["", "-wal", "-shm"].map { suffix in
             target(URL(fileURLWithPath: databaseURL.path + suffix),
                    home: home, fileManager: fileManager)
-        } + (licence.exists ? [licence] : [])
+        }
     }
 
     static func target(_ url: URL, home: URL,
@@ -334,20 +320,6 @@ enum Uninstaller {
         //    d'une application disparue s'éteignent d'eux-mêmes.
         try? SpotlightDonor().deleteAll()
 
-        // 0 bis. LIBÉRER L'ACTIVATION DE CE MAC, AU MIEUX (lot L1C).
-        //
-        //     Une clé couvre trois Mac. Désinstaller sans rien dire au vendeur
-        //     laisserait une activation prise par une application qui n'existe
-        //     plus — et la personne se retrouverait, deux Mac plus tard,
-        //     devant un refus qu'elle ne comprendrait pas.
-        //
-        //     AU MIEUX, ET PAS PLUS : 5 s, aucune attente visible au-delà,
-        //     aucun échec remonté. Une désinstallation ne se met pas en travers
-        //     d'un réseau absent, et le portail Creem permet de libérer un Mac
-        //     à la main. Elle n'a lieu QUE si l'index part : garder l'index
-        //     tout en libérant l'activation n'aurait aucun sens.
-        if options.deleteIndex { releaseLicenceActivation() }
-
         // 1. L'agent, d'abord — et on attend qu'il lâche le verrou.
         //
         // Le statut est consulté AVANT : `unregister` sur un agent qui n'a
@@ -414,24 +386,6 @@ enum Uninstaller {
             }
         }
         return outcome
-    }
-
-    /// Dit au vendeur que ce Mac ne compte plus (lot L1C). Silencieuse, bornée
-    /// à 5 s, et sans conséquence : le fichier part de toute façon juste après.
-    ///
-    /// **N'EST PAS TESTÉE AUTOMATIQUEMENT** : elle sort sur le réseau, comme le
-    /// reste de `perform`, qui désenregistre un agent launchd.
-    private static func releaseLicenceActivation() {
-        let url = LicenseStore.fileURL(databaseURL: FouinePaths.databaseURL())
-        guard let file = LicenseStore.load(at: url), file.hasKey,
-              let key = file.key, let instance = file.instanceID else { return }
-        let client = LicenseClient(version: FouineVersionString)
-        let done = DispatchSemaphore(value: 0)
-        Task {
-            _ = try? await client.deactivate(key: key, instanceID: instance)
-            done.signal()
-        }
-        _ = done.wait(timeout: .now() + 5)
     }
 
     /// Le rappel de `recycle` arrive d'une file qui n'est pas la nôtre : la
