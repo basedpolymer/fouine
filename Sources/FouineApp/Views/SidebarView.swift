@@ -131,6 +131,13 @@ struct SidebarView: View {
             // s'activer tout seul dès qu'il y a de quoi chercher (§12).
             Task { await search.refreshSemanticAvailability() }
             Task { await app.refreshHealth() }
+            // ET L'ÉTAT DE L'INDEX LUI-MÊME (PI-08). La sonde décide sa cadence
+            // APRÈS avoir rafraîchi : au retour de l'app devant, le premier
+            // tour à 2 s n'arrive qu'au bout du sommeil de 30 s déjà engagé. La
+            // carte pouvait donc dire « À jour » une demi-minute pendant que la
+            // mise à jour automatique travaillait — au moment précis où
+            // quelqu'un la regarde. L'appel est idempotent.
+            Task { await app.refreshAgentActivity() }
         }
     }
 
