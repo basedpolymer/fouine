@@ -15,6 +15,10 @@ The authoritative version number lives in the `VERSION` file and in
 `Sources/FouineCore/Version.swift`; the two must agree (`make check-version`).
 See `RELEASING.md`.
 
+## [1.0.4] — unreleased
+
+### Fixed
+
 ## [1.0.3] — 2026-09-25
 
 ### Fixed
