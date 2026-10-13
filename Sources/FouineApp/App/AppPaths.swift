@@ -73,8 +73,8 @@ enum AppPaths {
     /// dépôt, et un utilisateur qui lit « ce que Fouine envoie » a tout intérêt
     /// à lire la version publiée, datée, plutôt qu'une copie figée au jour de
     /// la compilation). Le 14/09/2026 le bouton pointait sur GitHub : 404 tant
-    /// que le dépôt est privé, et Creem a refusé la boutique pour cette raison.
-    /// Le site sert la même page à une adresse qui ne dépend pas du dépôt.
+    /// que le dépôt était privé. Le site sert la même page à une adresse qui ne
+    /// dépend pas du dépôt.
     static let privacyDocumentURL = URL(
         string: "https://basedpolymer.eu/fouine/privacy")!
 

@@ -110,6 +110,26 @@ final class AgentTests: XCTestCase {
         XCTAssertFalse(state1.hasNotifiedQueueDrained)
     }
 
+    /// L'AGENT INDEXE SANS CONDITION (GR1). Fouine est gratuit : rien, hors
+    /// des six conditions du §5.7, ne peut faire taire une passe. Le test le
+    /// prouve par la SIGNATURE autant que par le résultat — `tick` ne prend
+    /// aucune autorisation en paramètre, et il n'y a plus un seul fichier dont
+    /// la présence ou le contenu puisse changer sa décision.
+    func testTheAgentIndexesWithoutAnyPermissionToCheck() {
+        let settings = makeSettingsSnapshot()
+        let verdict = AgentConditions.Verdict(ok: true, blockers: [])
+
+        let (action, _) = Agent.tick(
+            state: AgentState(phase: .idle),
+            conditions: verdict,
+            settings: settings,
+            ocrQueueLength: 100,
+            pendingRoots: [7]
+        )
+
+        XCTAssertEqual(action, .runExtraction(rootIDs: [7]))
+    }
+
     /// Priorité absolue à l'extraction sur l'OCR
     func testTickPendingExtractionTakesPrecedenceOverOCR() {
         let settings = makeSettingsSnapshot()

@@ -43,24 +43,6 @@ To turn it off: the same switch, or the same pane of System Settings.
 
 Two independent loops, and one background job.
 
-**Before anything: the trial.** At every wake-up the agent re-reads
-`~/Library/Application Support/Fouine/license.json`, a file of a few hundred
-bytes next to the database. If the 30-day trial is over and no key is
-installed, it does nothing at all: no watching, no extraction, no recognition,
-no meaning preparation. It writes one line in its log, **at most once a day**:
-
-```
-licence: trial over, nothing to do — searching still works; enter a licence key
-in Fouine to resume indexing
-```
-
-It demands nothing, notifies nothing, displays nothing: the app carries that
-message, where someone can read it and act. **The agent never touches the
-network**, not even for the licence: it reads the verdict rather than asking
-anyone for it. A key activated from the app puts it back to work at the next
-tick, within a minute, with no `launchd` restart. A missing or unreadable file
-counts as a fresh trial, and the agent works.
-
 **Watching.** The agent listens to your folders through FSEvents, with a
 three-second latency. On each burst it walks what changed and extracts the new
 documents. That is immediate and cheap: only files that changed are touched.

@@ -17,6 +17,20 @@ See `RELEASING.md`.
 
 ## [1.0.4] — unreleased
 
+### Changed
+
+- **Fouine is free.** There is nothing to buy, nothing to activate and nothing
+  that runs out: install Fouine, add your folders, and the index keeps itself
+  up to date, at home and at work, on as many Macs as you use. Updates stay
+  free. If you paid for a key, you have nothing to do — Fouine no longer asks
+  for one, and the file it used to keep about it is simply left alone. The
+  source code keeps the same licence, now in version 1.1, which says plainly
+  that using the application costs nothing. *(GR1)*
+- **The `fouine license` command is gone**, along with the "Licence" tab in the
+  settings, the "Enter licence key…" menu item and exit codes 6, 7 and 8.
+  `fouine licenses`, which prints the notices of the components Fouine ships
+  with, is unchanged. *(GR1)*
+
 ### Fixed
 
 - **A second Fouine icon no longer appears in the Dock.** While the index

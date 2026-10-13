@@ -22,7 +22,6 @@
 import Foundation
 import FouineCore
 import FouineIndex
-import FouineLicense
 import FouineOCR
 
 struct IndexingState: Sendable, Equatable {
@@ -91,33 +90,6 @@ final class IndexingService: @unchecked Sendable {
     private weak var sink: Sink?
 
     init(store: GRDBStore) { self.store = store }
-
-    // MARK: - La garde d'essai (lot L1C)
-
-    /// L'index a-t-il le droit de se mettre à jour ?
-    ///
-    /// Relu à chaque passe, comme les réglages, et pour la même raison : une
-    /// clé activée dans la fenêtre de réglages doit rendre la mise à jour
-    /// possible sans redémarrer l'application. Le fichier suit la base
-    /// (`FOUINE_DB` l'emmène sur une copie jetable dans les tests).
-    private func licenceAllowsIndexing() -> Bool {
-        let databaseURL = store.databaseURL ?? AppPaths.databaseURL()
-        let url = LicenseStore.fileURL(databaseURL: databaseURL)
-        return LicenseState.compute(file: LicenseStore.load(at: url)).allowsIndexing
-    }
-
-    /// L'état terminal d'un refus. UN ÉTAT PUBLIÉ, PAS UNE ALERTE : les trois
-    /// pompes sont appelées par la carte « Index », par la fenêtre « Votre
-    /// index » et par la feuille d'indexation, et une alerte modale surgissant
-    /// d'une pompe de fond serait au mieux surprenante. La carte dit déjà la
-    /// chose, avec les deux gestes.
-    private func trialOverState(activity: IndexActivity) -> IndexingState {
-        var state = IndexingState(running: false, activity: activity, phase: "")
-        // La MÊME phrase que la carte « Index » et l'onglet des réglages : trois
-        // formulations de la même chose, c'est trois occasions de se contredire.
-        state.summary = LicenseStatusText.headline(.trialOver)
-        return state.stamped()
-    }
 
     /// Les réglages, relus au démarrage de CHAQUE passe (audit U2).
     ///
@@ -192,7 +164,6 @@ final class IndexingService: @unchecked Sendable {
     private func runSync(budgetMinutes: Int?,
                          progress: @escaping @Sendable (IndexingState) -> Void)
         -> IndexingState {
-        guard licenceAllowsIndexing() else { return trialOverState(activity: .updating) }
         let sink = Sink(progress: progress)
         lock.lock(); self.sink = sink; lock.unlock()
         // Un « Stop » arrivé AVANT que l'observateur ne soit enregistré serait
@@ -426,9 +397,6 @@ final class IndexingService: @unchecked Sendable {
     private func runOCRSync(budgetMinutes: Int?, only: String?, label: String?,
                             progress: @escaping @Sendable (IndexingState) -> Void)
         -> IndexingState {
-        guard licenceAllowsIndexing() else {
-            return trialOverState(activity: .readingScans)
-        }
         let scoped = !(only ?? "").isEmpty
         let target = label ?? String(localized: "this document")
         var state = IndexingState(

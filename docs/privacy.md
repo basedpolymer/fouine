@@ -1,28 +1,22 @@
 # Privacy
 
-This is the privacy policy of Fouine, the Mac application, and of the licence
-service behind it. Last updated 24 September 2026.
+This is the privacy policy of Fouine, the Mac application. Last updated
+13 October 2026.
 
 Fouine reads all your documents; that is what it is for. So the question “where
 does that text go?” needs an answer you can check, not just a promise.
 
 The answer: nowhere. No document, no search and no usage data leaves your Mac.
-Fouine makes five kinds of outgoing connection, listed below. Four happen only
-when you click or type something. The fifth is a licence check, at most once
-every 30 days, and only if a key is installed.
+Fouine makes two kinds of outgoing connection, listed below, and neither happens
+unless you click or type something.
 
 | | What triggers it | What it contacts | What it sends |
 |---|---|---|---|
 | Update check | **Off by default**. The **Check for updates…** menu item, or the switch in Settings | `github.com` ([details](updates.md)) | nothing |
 | Downloading the search-by-meaning model | The `fouine model download` command, or the button in Settings | `github.com`, then `release-assets.githubusercontent.com` | nothing |
-| Activating a licence key | The **Activate** button (Settings ▸ Licence), or `fouine license activate` | `basedpolymer.eu` (hosted by Vercel), which passes the request on to **Creem**, the seller | your key, and the **name of your Mac** |
-| Releasing a Mac | The **Deactivate this Mac** button, or `fouine license deactivate`; also attempted when you uninstall | the same | your key, and the activation ID |
-| Background key check | Launching the app, or `fouine license status`, **at most once every 30 days**, and only if a key is installed | the same | your key, and the activation ID |
 
-None of them sends anything about your documents. Your Mac's name is sent once,
-at activation, for one reason: it is the label you will see in your Creem
-customer portal when you want to free one of the three Macs your key covers.
-Without it, you would see three identical lines.
+Neither sends anything about your documents, and neither sends anything about
+your Mac: no name, no serial number, no identifier of any kind.
 
 **Nothing goes out while Fouine indexes, reads your documents or searches.** An
 automated test checks that sentence on every change to the code (see below).
@@ -31,23 +25,20 @@ automated test checks that sentence on every change to the code (see below).
 
 ## 1. What Fouine does not do
 
-- **Only two files in the code open a network connection.** The first,
-  `Sources/FouineEmbed/ModelDownload.swift`, downloads the search-by-meaning
+- **Only one file in the code opens a network connection.**
+  `Sources/FouineEmbed/ModelDownload.swift` downloads the search-by-meaning
   model when you ask for it: a private session that writes no cookies or cache
   to disk, a single `GET` with a single `User-Agent: Fouine/1.0.0` header, and a
-  SHA-256 check of the file before it is installed. The second,
-  `Sources/FouineLicense/LicenseClient.swift`, talks to the licence relay: the
-  three calls described below, also in a private session, with the same single
-  header, a JSON object of two or three fields, and a 15-second timeout. The
+  SHA-256 check of the file before it is installed. The
   update check is not Fouine's code at all. It is Sparkle, an open-source
   updater, and it ships switched off: with `SUEnableAutomaticChecks` set to
   `false`, Sparkle does not even ask whether to check. When you do check, it
   fetches one XML file from the project's releases page and sends no identifier,
   no description of your Mac and nothing about your documents. See
   [updates](updates.md).
-- **There is no account.** Fouine is sold, and a key is activated online (table
-  above), but you never sign up or sign in. Activation uses only the key you
-  bought, and nothing links one launch to the next or one Mac to another.
+- **There is no account.** Fouine is free to use, and you never sign up, sign
+  in, or enter a key. Nothing links one launch to the next, or one Mac to
+  another.
 - **There is no telemetry.** Fouine collects no usage statistics and sends no
   crash reports.
 - **Everything is analysed on your Mac.** Text recognition is Apple's Vision
@@ -81,7 +72,7 @@ automated test checks that sentence on every change to the code (see below).
 
 This is a design rule, written into [`CONTRIBUTING.md`](../CONTRIBUTING.md):
 adding a network session, a socket or any telemetry would change what the
-product is, not improve it. Three exceptions have been allowed, each under the
+product is, not improve it. Two exceptions have been allowed, each under the
 same conditions: a published address, full disclosure to the user, and no call
 unless the user did something that asks for it.
 
@@ -89,13 +80,8 @@ unless the user did something that asks for it.
    other way to get a security fix to people who have already downloaded it.
 2. **The search-by-meaning model**, because making people build it themselves
    with Python and `torch` would keep half the product for developers.
-3. **The licence**, because Fouine is sold: a key must be installable on one
-   Mac, removable from another, and must stop working if the purchase is
-   refunded. It is the only exception with a call that no click triggers, the
-   background check, and that call happens at most once a month, only if a key
-   is installed, and changes nothing when you are offline.
 
-A fourth exception would need the same discussion.
+A third exception would need the same discussion.
 
 Indexing is the harder case. Fouine hands your files to macOS components
 (PDFKit, Vision, the rich-text importers in AppKit), and some of them can fetch
@@ -156,41 +142,6 @@ you do type it, the command says what it is about to do, then:
 from a USB stick (`file:///…/e5-small-v1.zip`). Fouine then opens no connection
 at all. That is the recommended way on a Mac kept offline.
 
-### What activating a key does, step by step
-
-Nothing, until you paste a key and click **Activate** (or type `fouine license
-activate`). Then, and only then, Fouine sends one JSON object with three fields
-(the action, `activate`; the key; and your Mac's name as macOS knows it) to
-`https://basedpolymer.eu/api/fouine/license`.
-
-- **Fouine does not call Creem directly, for a reason.** Creem's licence service
-  requires the seller's secret API key. An app that carried that key would hand
-  it to everyone who downloads it. The relay keeps it on a server, in one place;
-  the app never has it, so it cannot leak it. The relay is hosted by Vercel, and
-  its code is part of the website (`api/fouine/license.js`).
-- **Your Mac's name** is the only fact about your machine that Fouine ever
-  sends. It is not an identifier made up for tracking: it is the label you will
-  see in your Creem customer portal, to know which Mac to free. You can replace
-  it with anything you like: `fouine license activate <key> --instance-name
-  "Laptop"`.
-- **Nothing else is sent**: not your serial number or any other hardware
-  identifier, not a byte of your documents, and no usage statistics. Like any
-  website, the server sees the IP address the request comes from; Fouine adds
-  nothing to it.
-- **The reply is saved in a plain text file** that you can open and read:
-  `~/Library/Application Support/Fouine/license.json`. It holds the date your
-  trial started, the key, the activation ID, your Mac's name and two timestamps.
-  That is everything Fouine keeps about your purchase. You can delete the file
-  at any time; Fouine then goes back to trial mode.
-- **The background check** happens when the app launches, at most once every 30
-  days, and only if a key is installed. It sends the key and the activation ID.
-  If you are offline or the service does not answer, nothing changes: not your
-  licence, not even the date of the last check. Fouine tries again at the next
-  launch. Nobody loses their software because a server was down, or because they
-  worked offline for a month.
-- **The background indexing agent never goes online.** It only reads
-  `license.json`.
-
 ---
 
 ## 2. How to check it yourself
@@ -222,12 +173,10 @@ codesign -dv --verbose=4 /Applications/Fouine.app
 names who signed the app. On a copy you built yourself, `TeamIdentifier=not set`
 is normal: that is an ad-hoc signature.
 
-**The source code, and why reading it is not enough.** Two files in Fouine open
-a connection, and only two: `Sources/FouineEmbed/ModelDownload.swift`, the model
-download, and `Sources/FouineLicense/LicenseClient.swift`, the three licence
-calls. Everything is in them, with comments: the addresses as constants (in
-`LicenseTerms.swift` for the second), the private sessions, the single header,
-the SHA-256 check, and the exact JSON object that activation sends.
+**The source code, and why reading it is not enough.** One file in Fouine opens
+a connection, and only one: `Sources/FouineEmbed/ModelDownload.swift`, the model
+download. Everything is in it, with comments: the address as a constant, the
+private session, the single header and the SHA-256 check.
 
 An earlier version of this page suggested `grep 'URLSession\|https://' Sources/`
 as proof. It proved nothing, for two reasons:
@@ -272,13 +221,10 @@ search: Fouine never shows up. Then trigger the connections one at a time:
 - `fouine model download` makes one request to `github.com`, **then a second to
   `release-assets.githubusercontent.com`** (the redirect that serves the file).
   Block them, and the command stops with a message and installs nothing;
-  full-text search never needed the model;
-- **Settings ▸ Licence ▸ Activate**, or `fouine license activate <key>`, makes
-  one request, to `basedpolymer.eu`. Block it: Fouine shows “No connection” and
-  writes nothing. The same goes for **Deactivate this Mac**.
+  full-text search never needed the model.
 
-Those are the only connections Fouine can make, and you have just triggered all
-of them.
+Those are the only two connections Fouine can make, and you have just triggered
+both.
 
 ---
 
@@ -309,7 +255,6 @@ Other locations:
 | | Path |
 |---|---|
 | Write lock | `~/Library/Application Support/Fouine/fouine.lock` |
-| **Licence**: trial start date, key, activation ID, Mac name, two timestamps | `~/Library/Application Support/Fouine/license.json` (a plain file you can read, permissions `0600`) |
 | Search-by-meaning model | `~/Library/Application Support/Fouine/models/e5-small` |
 | Background agent log | `~/Library/Logs/Fouine/fouine.log` (+ `.log.1`) |
 | Preferences | `~/Library/Preferences/io.github.basedpolymer.fouine.plist` |
@@ -346,12 +291,6 @@ are deleted if you leave their boxes ticked. Then `Fouine.app` goes to the
 Trash. If you moved the database with `FOUINE_DB` to a place outside
 `~/Library`, its path is shown but it is not deleted: that one is yours to
 delete, knowingly.
-
-If a licence key is installed, uninstalling frees this Mac with the seller
-first, so your key can be used elsewhere. That is one call, five seconds at
-most, and no wait at all if the network is down. You can always free the Mac
-from your Creem customer portal instead. The `license.json` file is deleted with
-the rest.
 
 If you installed Fouine with Homebrew, remove it with Homebrew:
 
@@ -404,8 +343,8 @@ breaks, and how to grant it again: [permissions](permissions.md).
 ## 6. Reporting a problem
 
 Any network connection from Fouine **other than those in the table at the top**,
-that is, without your clicking “Check for updates…”, running `fouine model
-download` or doing something with your licence key, would be a security
+that is, without your clicking “Check for updates…” or running `fouine model
+download`, would be a security
 vulnerability in itself, and it is explicitly covered by
 [`SECURITY.md`](../SECURITY.md). Please don't report it in a public issue: use
 GitHub's private reporting form.

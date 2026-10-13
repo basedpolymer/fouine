@@ -2591,23 +2591,6 @@
         }
       }
     },
-    "Activate": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Activate"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Activer"
-          }
-        }
-      }
-    },
     "Active filters": {
       "extractionState": "manual",
       "localizations": {
@@ -3492,40 +3475,6 @@
         }
       }
     },
-    "Buy": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buy"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Acheter"
-          }
-        }
-      }
-    },
-    "Buy Fouine — %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buy Fouine — %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Acheter Fouine — %@"
-          }
-        }
-      }
-    },
     "card %lld": {
       "extractionState": "manual",
       "localizations": {
@@ -3675,23 +3624,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Revérifier les dossiers"
-          }
-        }
-      }
-    },
-    "Checked on %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Checked on %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vérifiée le %@"
           }
         }
       }
@@ -4393,57 +4325,6 @@
         }
       }
     },
-    "Deactivate": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deactivate"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Désactiver"
-          }
-        }
-      }
-    },
-    "Deactivate this Mac": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deactivate this Mac"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Désactiver ce Mac"
-          }
-        }
-      }
-    },
-    "Deactivate this Mac?": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deactivate this Mac?"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Désactiver ce Mac ?"
-          }
-        }
-      }
-    },
     "Delete the index and the settings": {
       "extractionState": "manual",
       "localizations": {
@@ -4801,57 +4682,6 @@
         }
       }
     },
-    "Enter another key below, or contact the seller with the e-mail you used to buy it.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enter another key below, or contact the seller with the e-mail you used to buy it."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saisissez une autre clé ci-dessous, ou écrivez au vendeur depuis l’adresse avec laquelle vous avez acheté."
-          }
-        }
-      }
-    },
-    "Enter licence key…": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enter licence key…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saisir une clé de licence…"
-          }
-        }
-      }
-    },
-    "Enter your key below, or buy one. Everything you have already indexed stays searchable.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enter your key below, or buy one. Everything you have already indexed stays searchable."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saisissez votre clé ci-dessous, ou achetez-en une. Tout ce qui est déjà indexé reste consultable."
-          }
-        }
-      }
-    },
     "Error: %@": {
       "extractionState": "manual",
       "localizations": {
@@ -4967,23 +4797,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tout ce que Fouine a lu dans vos documents sera supprimé, y compris le texte reconnu sur les pages scannées. Il faudra tout relire, ce qui peut prendre plusieurs heures. Vos documents, eux, ne sont jamais touchés."
-          }
-        }
-      }
-    },
-    "Everything works during the trial. A key costs %@, once, and covers %lld Macs.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Everything works during the trial. A key costs %@, once, and covers %lld Macs."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tout fonctionne pendant l’essai. Une clé coûte %@, une seule fois, et couvre %lld Mac."
           }
         }
       }
@@ -5719,23 +5532,6 @@
         }
       }
     },
-    "Fouine contacts the shop at three moments only: when you activate this Mac, when you release it, and once a month to check that your key is still valid. It sends your key and the name of this Mac, so you can tell your Macs apart the day you want to free one.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fouine contacts the shop at three moments only: when you activate this Mac, when you release it, and once a month to check that your key is still valid. It sends your key and the name of this Mac, so you can tell your Macs apart the day you want to free one."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fouine ne contacte la boutique qu’à trois moments : quand vous activez ce Mac, quand vous le libérez, et une fois par mois pour vérifier que votre clé est toujours valable. Elle envoie votre clé et le nom de ce Mac, pour que vous sachiez lequel libérer le jour venu."
-          }
-        }
-      }
-    },
     "Fouine copies the text of your notes into its own folder so it can search them; nothing leaves this Mac.": {
       "extractionState": "manual",
       "localizations": {
@@ -5868,23 +5664,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fouine n’a pas pu programmer la relecture de cette page."
-          }
-        }
-      }
-    },
-    "Fouine could not update its licence file. Check that your disk is not full, then try again.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fouine could not update its licence file. Check that your disk is not full, then try again."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fouine n’a pas pu enregistrer vos informations de licence. Vérifiez qu’il reste de la place sur le disque, puis réessayez."
           }
         }
       }
@@ -7674,57 +7453,6 @@
         }
       }
     },
-    "Licence": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Licence"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Licence"
-          }
-        }
-      }
-    },
-    "Licence key": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Licence key"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clé de licence"
-          }
-        }
-      }
-    },
-    "Licensed — key ending in %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Licensed — key ending in %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sous licence — clé se terminant par %@"
-          }
-        }
-      }
-    },
     "Limits the next searches to the documents now in the list": {
       "extractionState": "manual",
       "localizations": {
@@ -8300,23 +8028,6 @@
         }
       }
     },
-    "No connection: connect to the Internet and try again.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No connection: connect to the Internet and try again."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pas de connexion : connectez-vous à Internet, puis réessayez."
-          }
-        }
-      }
-    },
     "No document": {
       "extractionState": "manual",
       "localizations": {
@@ -8687,23 +8398,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pas quand le Mac chauffe"
-          }
-        }
-      }
-    },
-    "Nothing about your documents ever leaves this Mac, and nothing is sent while Fouine indexes or searches.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nothing about your documents ever leaves this Mac, and nothing is sent while Fouine indexes or searches."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rien de vos documents ne quitte jamais ce Mac, et rien n’est envoyé pendant que Fouine met à jour son index ou cherche."
           }
         }
       }
@@ -9554,23 +9248,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ouvre le guide de Fouine : la fenêtre, l’index, les réglages et les raccourcis clavier."
-          }
-        }
-      }
-    },
-    "Opens the Licence settings, where you can enter the key you bought, or buy one.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Opens the Licence settings, where you can enter the key you bought, or buy one."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ouvre les réglages de licence, où saisir la clé que vous avez achetée, ou en acheter une."
           }
         }
       }
@@ -13275,40 +12952,6 @@
         }
       }
     },
-    "The key was accepted, but Fouine could not save it. Check that your disk is not full, then try again.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The key was accepted, but Fouine could not save it. Check that your disk is not full, then try again."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La clé a été acceptée, mais Fouine n’a pas pu l’enregistrer. Vérifiez qu’il reste de la place sur le disque, puis réessayez."
-          }
-        }
-      }
-    },
-    "The licence service is unavailable right now. Your trial continues; try again later.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The licence service is unavailable right now. Your trial continues; try again later."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le service de licence est indisponible pour le moment. Votre essai continue ; réessayez plus tard."
-          }
-        }
-      }
-    },
     "The log says what happened while the index was updating by itself: folders that could not be read, pages that failed.": {
       "extractionState": "manual",
       "localizations": {
@@ -13894,6 +13537,23 @@
         }
       }
     },
+    "This index comes from an older version of Fouine and can no longer be used. Fouine has to build it again from your folders.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This index comes from an older version of Fouine and can no longer be used. Fouine has to build it again from your folders."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cet index vient d’une ancienne version de Fouine et ne peut plus servir. Fouine doit le refaire à partir de vos dossiers."
+          }
+        }
+      }
+    },
     "This index was created by a newer version of Fouine. Update Fouine.": {
       "extractionState": "manual",
       "localizations": {
@@ -13924,108 +13584,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Voici ce que rapporte l’outil de diagnostic de Fouine. Copiez-le dans un rapport de bogue si vous avez besoin d’aide."
-          }
-        }
-      }
-    },
-    "This key cannot be used any more. Contact the seller with the e-mail you used to buy it.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This key cannot be used any more. Contact the seller with the e-mail you used to buy it."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cette clé n’est plus utilisable. Écrivez au vendeur depuis l’adresse avec laquelle vous avez acheté."
-          }
-        }
-      }
-    },
-    "This key is already in use on 3 Macs. Deactivate one of them from Settings, or from your Creem customer portal.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This key is already in use on 3 Macs. Deactivate one of them from Settings, or from your Creem customer portal."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cette clé est déjà utilisée sur 3 Mac. Désactivez-en un depuis les réglages, ou depuis votre espace client Creem."
-          }
-        }
-      }
-    },
-    "This key is not recognised. Check for typos, or look for it in the e-mail Creem sent you.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This key is not recognised. Check for typos, or look for it in the e-mail Creem sent you."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cette clé n’est pas reconnue. Vérifiez qu’il n’y a pas de faute de frappe, ou retrouvez-la dans le courriel que Creem vous a envoyé."
-          }
-        }
-      }
-    },
-    "This key was disabled by the seller": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This key was disabled by the seller"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cette clé a été désactivée par le vendeur"
-          }
-        }
-      }
-    },
-    "This Mac was released from your customer portal. Enter your key again to use it here.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This Mac was released from your customer portal. Enter your key again to use it here."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ce Mac a été libéré depuis votre espace client. Saisissez de nouveau votre clé pour l’utiliser ici."
-          }
-        }
-      }
-    },
-    "This Mac will stop counting toward your %lld activations. You can activate it again later.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This Mac will stop counting toward your %lld activations. You can activate it again later."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ce Mac ne comptera plus parmi vos %lld activations. Vous pourrez l’activer à nouveau plus tard."
           }
         }
       }
@@ -14414,47 +13972,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "mis par écrit depuis le son"
-          }
-        }
-      }
-    },
-    "Trial: %lld days left": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Trial: %lld day left"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Trial: %lld days left"
-                }
-              }
-            }
-          }
-        },
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Essai : %lld jour restant"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Essai : %lld jours restants"
-                }
-              }
-            }
           }
         }
       }
@@ -16799,40 +16316,6 @@
         }
       }
     },
-    "Your licence": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your licence"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Votre licence"
-          }
-        }
-      }
-    },
-    "Your trial is over: searching still works, the index is no longer updated": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your trial is over: searching still works, the index is no longer updated"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Votre essai est terminé : la recherche fonctionne toujours, l’index ne se met plus à jour"
-          }
-        }
-      }
-    },
     "Your whole home folder cannot be added: it holds your system files, the caches and Fouine's own index. Choose a folder inside it: Documents, Desktop, a folder of books…": {
       "extractionState": "manual",
       "localizations": {
@@ -17397,23 +16880,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Index non supprimé"
-          }
-        }
-      }
-    },
-    "This index comes from an older trial version of Fouine and can no longer be used. Fouine has to build it again from your folders.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This index comes from an older trial version of Fouine and can no longer be used. Fouine has to build it again from your folders."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cet index vient d’une ancienne version d’essai de Fouine et ne peut plus servir. Fouine doit le refaire à partir de vos dossiers."
           }
         }
       }
