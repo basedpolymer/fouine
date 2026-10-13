@@ -257,6 +257,19 @@ enum IndexStatusEvaluator {
                             stoppable: !input.indexing.cancelled)
         }
 
+        // 1 bis. LES DOSSIERS N'ONT PAS PU ÊTRE LUS (PI-09). Base occupée,
+        //    schéma illisible : `roots` est la liste précédente — ou rien — et
+        //    on ne sait donc pas ce qu'il y a à indexer. La carte traversait
+        //    tout et finissait sur « À jour », pastille verte, pendant que la
+        //    section « Vos dossiers » affichait le triangle orange et la phrase
+        //    d'échec deux lignes plus bas. « On ne sait pas » se dit déjà :
+        //    « Vérification… », sans bouton.
+        //
+        //    APRÈS la passe de l'application, et c'est voulu : celle-ci est
+        //    connue de CE processus, pas de la base, et elle doit rester
+        //    affichée et arrêtable (ST1) quoi que dise la lecture des dossiers.
+        if input.rootsError != nil { return .checking }
+
         // 2. Ce qui réclame un geste. Un dossier illisible ou un disque absent
         //    empêche l'index d'être complet ; une mise à jour automatique qui
         //    ne démarre pas trahit une promesse.
