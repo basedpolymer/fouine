@@ -160,6 +160,18 @@ Spotlight at all. What the agent indexes and recognises goes to Spotlight at the
 next **opening of the app**, which catches up on everything that changed
 ([`app.md`](app.md), Spotlight).
 
+That same inherited `Info.plist` used to give the agent a tile in the Dock: the
+first `PDFDocument` of a pass checked the process in with LaunchServices as a
+foreground application, and a second «Fouine» icon bounced, then stayed
+([`pitfalls.md`](pitfalls.md), "A second Fouine icon bounces in the Dock"). The
+first executable statement of `Sources/FouineAgent/main.swift` is therefore
+`NSApplication.shared.setActivationPolicy(.prohibited)`, and it has to stay
+first: posted after the fact, it only demotes a registration the Dock has
+already shown. The agent also accepts `--dock-self-check`, a mode reserved for
+the `make ci-bundle-dock` check, which touches PDFKit, prints one line and waits
+four seconds so the check can read the process type; it opens no database, reads
+no settings, writes no log and hands nothing to Spotlight.
+
 ---
 
 ## 3. Where it has got to

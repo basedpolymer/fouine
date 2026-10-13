@@ -19,6 +19,11 @@ See `RELEASING.md`.
 
 ### Fixed
 
+- **A second Fouine icon no longer appears in the Dock.** While the index
+  was being kept up to date in the background, a second Fouine icon could
+  show up in the Dock, bounce for a few seconds and then sit there doing
+  nothing. It is gone. *(DK1)*
+
 ## [1.0.3] — 2026-09-25
 
 ### Fixed
